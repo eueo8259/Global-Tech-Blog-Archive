@@ -1,6 +1,6 @@
-package com.globaltechblogarchive.article;
+package com.globaltechblogarchive.article.domain;
 
-import com.globaltechblogarchive.source.BlogSource;
+import com.globaltechblogarchive.source.domain.BlogSource;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

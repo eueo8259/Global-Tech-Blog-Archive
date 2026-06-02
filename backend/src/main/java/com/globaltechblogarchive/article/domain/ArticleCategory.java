@@ -1,4 +1,4 @@
-package com.globaltechblogarchive.article;
+package com.globaltechblogarchive.article.domain;
 
 public enum ArticleCategory {
     FRONTEND,
