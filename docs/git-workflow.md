@@ -1,5 +1,18 @@
 ## Git Workflow
 
+This workflow is an implementation gate, not just a commit convention.
+
+Before code implementation or repo-tracked file edits for a feature/change:
+
+1. Check the current branch.
+2. Do not implement on `main`.
+3. Create or confirm a GitHub Issue.
+4. Create a working branch from `develop`.
+5. Proceed only after the branch matches the issue-based branch naming rules below.
+
+Planning discussion alone does not require a branch.
+Repository documentation, backend/frontend code, DB schema, dependencies, migrations, and tests do require this gate when they are part of an implementation change.
+
 ### Branch Strategy
 
 * `main` is the production-ready branch.

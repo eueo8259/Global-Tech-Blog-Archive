@@ -20,15 +20,22 @@ docs/         # Detailed design notes and decisions
 
 ```text
 backend/
-├── src/main/java/       # Backend application source code
-├── src/test/java/       # Backend tests
-└── build.gradle         # Backend build and dependency configuration
+|-- src/main/java/       # Backend application source code
+|-- src/test/java/       # Backend tests
+|-- src/main/resources/  # Backend configuration files
+`-- build.gradle         # Backend build and dependency configuration
 
 frontend/
-└── TBD                  # Frontend application source code after Vite setup
+|-- src/                 # Frontend application source code
+|-- package.json         # Frontend scripts and dependencies
+`-- vite.config.ts       # Vite configuration
 
 docs/
-└── git-workflow.md      # Branch, issue, commit, and PR workflow rules
+|-- git-workflow.md              # Branch, issue, commit, and PR workflow rules
+|-- article-source-strategy.md   # Article source, company, and category strategy
+|-- architecture.md              # MVP system architecture and responsibility boundaries
+|-- domain-model.md              # MVP database schema and domain model
+`-- documentation-workflow.md    # Repo docs and Notion documentation workflow
 ```
 
 ## Commands
@@ -36,26 +43,26 @@ docs/
 ```bash
 # Backend
 cd backend
-./gradlew test        # 단위 테스트
-./gradlew build       # 빌드
-./gradlew bootRun     # 개발 서버 (포트: 8080)
+./gradlew test        # Unit tests
+./gradlew build       # Build
+./gradlew bootRun     # Development server (port: 8080)
 
 # Frontend
 cd frontend
-npm install           # 의존성 설치
-npm run dev           # 개발 서버 (포트: 5173)
-npm run build         # 타입체크 + 프로덕션 빌드
-npm run lint          # 린터
+npm install           # Install dependencies
+npm run dev           # Development server (port: 5173)
+npm run build         # Typecheck + production build
+npm run lint          # Lint
 
 # Database
-docker compose up -d mysql    # MySQL 개발 DB 실행 (포트: 3306)
-docker compose down           # MySQL 개발 DB 중지
+docker compose up -d mysql    # Start MySQL development DB (port: 3306)
+docker compose down           # Stop MySQL development DB
 ```
 
 - Backend typecheck: included in `./gradlew build`
 - Frontend typecheck: included in `npm run build`
 - E2E test: TBD
-- 작업 완료 전 필수 체크: `cd backend && ./gradlew test build`, `cd frontend && npm run build && npm run lint`
+- Required checks before completion: `cd backend && ./gradlew test build`, `cd frontend && npm run build && npm run lint`
 
 ## Engineering Principles
 
@@ -74,15 +81,26 @@ Discuss the following changes before implementation:
 * Database schema changes
 * New dependency additions
 
+### Implementation Gate
+
+Before code implementation or repo-tracked file edits for a feature/change:
+
+* Check the current branch.
+* Do not implement on `main`.
+* If not already on an issue branch, stop and create or ask for the GitHub Issue and branch first.
+* Working branches must follow docs/git-workflow.md.
+
 ### Documentation
 
 - Detailed design decisions belong in docs/.
 - Detailed Git workflow rules belong in docs/git-workflow.md.
-
+- Article source and category strategy belongs in docs/article-source-strategy.md.
+- Architecture and domain model decisions belong in docs/architecture.md and docs/domain-model.md.
+- Notion documentation workflow belongs in docs/documentation-workflow.md.
 
 ## Common Mistakes to Avoid
 
-TDB
+TBD
 
 ## Git Workflow
 
