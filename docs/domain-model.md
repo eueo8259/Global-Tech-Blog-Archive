@@ -36,6 +36,7 @@ Database table: `articles`
 | summary | TEXT | no | Feed summary, page description, or extracted short description |
 | original_url | VARCHAR(2000) | yes | User-facing source-of-truth URL |
 | normalized_url | VARCHAR(2000) | yes | Deduplication URL generated before persistence |
+| normalized_url_hash | VARCHAR(64) | yes | SHA-256 hash of `normalized_url` used for the unique constraint |
 | category | VARCHAR(30) | yes | Java enum value stored as a string |
 | published_at | DATETIME | yes | Source publication time; use collection time when source publication time is missing |
 | created_at | DATETIME | yes | Row creation time; also the first collection time |
@@ -45,7 +46,7 @@ Required constraints and indexes:
 
 ```sql
 CONSTRAINT fk_articles_source FOREIGN KEY (source_id) REFERENCES blog_sources(id);
-UNIQUE KEY uq_source_normalized_url (source_id, normalized_url);
+UNIQUE KEY uq_source_normalized_url_hash (source_id, normalized_url_hash);
 INDEX idx_category_published (category, published_at);
 INDEX idx_published (published_at);
 ```
@@ -125,6 +126,7 @@ The aggregate includes:
 - source reference
 - title and summary
 - original URL and normalized URL
+- normalized URL hash
 - category
 - publication and persistence timestamps
 
@@ -147,7 +149,8 @@ The aggregate does not include:
 - Each article has exactly one stored category.
 - The original URL is preserved and used as the article link returned to the frontend.
 - The normalized URL is used only for deduplication.
-- Duplicate articles are blocked by `UNIQUE(source_id, normalized_url)`.
+- `normalized_url_hash` is the SHA-256 hash of `normalized_url`.
+- Duplicate articles are blocked by `UNIQUE(source_id, normalized_url_hash)`.
 - When a duplicate is detected, the article is skipped.
 - The duplicate handling implementation may use `INSERT IGNORE`, `ON DUPLICATE KEY UPDATE`, or exception handling.
 - If the source does not provide a publication time, set `published_at` to the collection time.

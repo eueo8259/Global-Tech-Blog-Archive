@@ -55,7 +55,7 @@ npm run build         # Typecheck + production build
 npm run lint          # Lint
 
 # Database
-docker compose up -d mysql    # Start MySQL development DB (port: 3306)
+docker compose up -d mysql    # Start MySQL development DB (host port: 3307)
 docker compose down           # Stop MySQL development DB
 ```
 
