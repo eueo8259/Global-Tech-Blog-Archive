@@ -76,7 +76,7 @@ AI -> Devops -> Architecture -> Backend -> Frontend -> Else
    - the source does not provide an RSS or Atom feed
    - the feed omits one or more MVP-required fields: title, original URL, published date, summary, or company/source identity
    - the feed contains only product/news entries while the source has a separate engineering article list page
-3. Store title, original URL, normalized URL, summary, company, published date, collected date, and category.
+3. Store title, original URL, normalized URL, normalized URL hash, summary, company, published date, row creation time, and category.
 4. Do not fetch article detail pages only to discover canonical URLs in the MVP.
 
 ## Future Considerations

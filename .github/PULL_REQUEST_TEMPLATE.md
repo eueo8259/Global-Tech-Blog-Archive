@@ -1,6 +1,8 @@
 ## Related Issue
 
-Closes #
+Issue: #
+
+After this PR is merged into `develop`, close the linked Issue if GitHub did not close it automatically.
 
 ## Summary
 

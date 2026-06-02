@@ -95,12 +95,14 @@ React Frontend
 
 ## 5. Storage Policy
 
-- Store article metadata: original URL, normalized URL, title, summary, published date, collected date, company name, and category.
+- Store article metadata: original URL, normalized URL, normalized URL hash, title, summary, published date, row creation time, company name, and category.
 - The original article URL is the source of truth.
 - Use normalized URL only for deduplication.
+- Store a SHA-256 normalized URL hash for the database unique constraint.
 - Each article has one primary category.
 - `ALL` is a UI/API filter option, not a stored article category.
-- Deduplicate articles by `source_id` and `normalized_url`.
+- Deduplicate articles by `source_id` and `normalized_url_hash`.
+- Do not store a separate `collected_at`; `created_at` represents the first collection time.
 - Do not store full article bodies in the MVP.
 
 ## 6. Search Strategy

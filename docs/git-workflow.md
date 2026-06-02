@@ -30,7 +30,11 @@ Before starting any work:
 3. Implement the change.
 4. Create a Pull Request linked to the Issue.
 5. Merge the Pull Request into `develop`.
-6. Close the Issue automatically when the Pull Request is merged.
+6. Close the linked Issue when the Pull Request is merged into `develop`.
+
+`develop` is the completion point for issue work in this repository.
+Because GitHub only auto-closes issues from closing keywords when a Pull Request is merged into the repository default branch, do not rely on `Closes #<issue>` alone while `main` remains the default branch.
+After a Pull Request is merged into `develop`, close the linked Issue manually if GitHub did not close it automatically.
 
 ### Branch Naming
 
@@ -84,12 +88,11 @@ chore: update dependencies
 * Keep Pull Requests focused on a single purpose.
 * Do not mix features, refactoring, and formatting changes in the same Pull Request.
 * Include a summary of what changed and why.
-* Link the Pull Request to the Issue using GitHub closing keywords.
+* Link the Pull Request to the Issue in the PR body.
+* When the Pull Request is merged into `develop`, ensure the linked Issue is closed.
 
 Example:
 
 ```text
-Closes #12
-Fixes #15
-Resolves #18
+Issue: #12
 ```

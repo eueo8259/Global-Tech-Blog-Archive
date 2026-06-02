@@ -1,4 +1,4 @@
-package com.globaltechblogarchive.source;
+package com.globaltechblogarchive.source.domain;
 
 public enum CollectionMethod {
     RSS,

@@ -1,6 +1,6 @@
-package com.globaltechblogarchive.article;
+package com.globaltechblogarchive.article.domain;
 
-import com.globaltechblogarchive.source.BlogSource;
+import com.globaltechblogarchive.source.domain.BlogSource;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -21,8 +21,8 @@ import java.time.LocalDateTime;
 @Table(
         name = "articles",
         uniqueConstraints = @UniqueConstraint(
-                name = "uq_source_normalized_url",
-                columnNames = {"source_id", "normalized_url"}
+                name = "uq_source_normalized_url_hash",
+                columnNames = {"source_id", "normalized_url_hash"}
         )
 )
 public class Article {
@@ -46,6 +46,9 @@ public class Article {
 
     @Column(name = "normalized_url", nullable = false, length = 2000)
     private String normalizedUrl;
+
+    @Column(name = "normalized_url_hash", nullable = false, length = 64)
+    private String normalizedUrlHash;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 30)
@@ -98,6 +101,10 @@ public class Article {
 
     public String getNormalizedUrl() {
         return normalizedUrl;
+    }
+
+    public String getNormalizedUrlHash() {
+        return normalizedUrlHash;
     }
 
     public ArticleCategory getCategory() {
