@@ -1,8 +1,8 @@
-## Related Issue
+# Related Issue
 
-Issue: #
+## 🎯 이슈 번호
 
-After this PR is merged into `develop`, close the linked Issue if GitHub did not close it automatically.
+close {#이슈 번호 기입}
 
 ## Summary
 
