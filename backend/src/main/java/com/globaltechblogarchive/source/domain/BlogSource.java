@@ -11,8 +11,13 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "blog_sources")
 public class BlogSource {
 
@@ -54,7 +59,20 @@ public class BlogSource {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    protected BlogSource() {
+    public static BlogSource create(
+            String companyKey,
+            String companyName,
+            String siteUrl,
+            String feedUrl,
+            CollectionMethod collectionMethod
+    ) {
+        BlogSource source = new BlogSource();
+        source.companyKey = companyKey;
+        source.companyName = companyName;
+        source.siteUrl = siteUrl;
+        source.feedUrl = feedUrl;
+        source.collectionMethod = collectionMethod;
+        return source;
     }
 
     @PrePersist
@@ -67,53 +85,5 @@ public class BlogSource {
     @PreUpdate
     void preUpdate() {
         updatedAt = LocalDateTime.now();
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getCompanyKey() {
-        return companyKey;
-    }
-
-    public String getCompanyName() {
-        return companyName;
-    }
-
-    public String getSiteUrl() {
-        return siteUrl;
-    }
-
-    public String getFeedUrl() {
-        return feedUrl;
-    }
-
-    public CollectionMethod getCollectionMethod() {
-        return collectionMethod;
-    }
-
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public LocalDateTime getLastCollectedAt() {
-        return lastCollectedAt;
-    }
-
-    public LocalDateTime getLastErrorAt() {
-        return lastErrorAt;
-    }
-
-    public String getLastErrorMsg() {
-        return lastErrorMsg;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
     }
 }

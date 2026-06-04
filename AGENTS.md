@@ -13,8 +13,21 @@ Engineering team blog archive service. Built for developers who want to discover
 ```text
 backend/      # Java 21, Spring Boot, Spring Data JPA
 frontend/     # React, TypeScript, Vite
-docs/         # Detailed design notes and decisions
+docs/         # Repository-wide design notes and decisions
 ```
+
+## Scope-specific Instructions
+
+Use the nearest `AGENTS.md` for detailed instructions. Rules become more specific as the directory scope gets narrower.
+[
+```text
+AGENTS.md              # Repository-wide rules
+backend/AGENTS.md      # Backend-specific rules
+frontend/AGENTS.md     # Frontend-specific rules, if added later
+
+```
+
+When working in a subdirectory, follow this file first, then the nearest lower-scope `AGENTS.md`. Lower-scope files may add concrete implementation and testing rules for that area.
 
 ## Key Files
 
@@ -23,6 +36,7 @@ backend/
 |-- src/main/java/       # Backend application source code
 |-- src/test/java/       # Backend tests
 |-- src/main/resources/  # Backend configuration files
+|-- docs/                # Backend-specific implementation guidance
 `-- build.gradle         # Backend build and dependency configuration
 
 frontend/
@@ -39,6 +53,8 @@ docs/
 ```
 
 ## Commands
+
+Use these as project entrypoints. For scope-specific verification, follow the nearest `AGENTS.md`.
 
 ```bash
 # Backend
@@ -62,7 +78,7 @@ docker compose down           # Stop MySQL development DB
 - Backend typecheck: included in `./gradlew build`
 - Frontend typecheck: included in `npm run build`
 - E2E test: TBD
-- Required checks before completion: `cd backend && ./gradlew test build`, `cd frontend && npm run build && npm run lint`
+- Required checks before completion depend on the touched scope.
 
 ## Engineering Principles
 
@@ -92,15 +108,19 @@ Before code implementation or repo-tracked file edits for a feature/change:
 
 ### Documentation
 
-- Detailed design decisions belong in docs/.
-- Detailed Git workflow rules belong in docs/git-workflow.md.
-- Article source and category strategy belongs in docs/article-source-strategy.md.
-- Architecture and domain model decisions belong in docs/architecture.md and docs/domain-model.md.
-- Notion documentation workflow belongs in docs/documentation-workflow.md.
+- Repository-wide design decisions belong in root `docs/`.
+- Scope-specific implementation guidance belongs under that scope, such as `backend/docs/`.
+- Detailed Git workflow rules belong in `docs/git-workflow.md`.
+- Article source and category strategy belongs in `docs/article-source-strategy.md`.
+- System architecture and domain model decisions belong in `docs/architecture.md` and `docs/domain-model.md`.
+- Backend implementation architecture, coding, API, persistence, and testing rules belong in `backend/docs/`.
+- Notion documentation workflow belongs in `docs/documentation-workflow.md`.
 
 ## Common Mistakes to Avoid
 
-TBD
+- Ignoring a lower-scope `AGENTS.md` when working in a subdirectory.
+- Duplicating narrow implementation rules in root-level docs.
+- Mixing unrelated scope changes in one PR.
 
 ## Git Workflow
 
