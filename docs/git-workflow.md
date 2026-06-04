@@ -89,10 +89,3 @@ chore: update dependencies
 * Do not mix features, refactoring, and formatting changes in the same Pull Request.
 * Include a summary of what changed and why.
 * Link the Pull Request to the Issue in the PR body.
-* When the Pull Request is merged into `develop`, ensure the linked Issue is closed.
-
-Example:
-
-```text
-Issue: #12
-```
