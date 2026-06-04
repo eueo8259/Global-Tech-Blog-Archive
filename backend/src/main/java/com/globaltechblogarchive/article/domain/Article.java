@@ -16,8 +16,13 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
         name = "articles",
         uniqueConstraints = @UniqueConstraint(
@@ -64,7 +69,26 @@ public class Article {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    protected Article() {
+    public static Article create(
+            BlogSource source,
+            String title,
+            String summary,
+            String originalUrl,
+            String normalizedUrl,
+            String normalizedUrlHash,
+            ArticleCategory category,
+            LocalDateTime publishedAt
+    ) {
+        Article article = new Article();
+        article.source = source;
+        article.title = title;
+        article.summary = summary;
+        article.originalUrl = originalUrl;
+        article.normalizedUrl = normalizedUrl;
+        article.normalizedUrlHash = normalizedUrlHash;
+        article.category = category;
+        article.publishedAt = publishedAt;
+        return article;
     }
 
     @PrePersist
@@ -77,49 +101,5 @@ public class Article {
     @PreUpdate
     void preUpdate() {
         updatedAt = LocalDateTime.now();
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public BlogSource getSource() {
-        return source;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public String getSummary() {
-        return summary;
-    }
-
-    public String getOriginalUrl() {
-        return originalUrl;
-    }
-
-    public String getNormalizedUrl() {
-        return normalizedUrl;
-    }
-
-    public String getNormalizedUrlHash() {
-        return normalizedUrlHash;
-    }
-
-    public ArticleCategory getCategory() {
-        return category;
-    }
-
-    public LocalDateTime getPublishedAt() {
-        return publishedAt;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
     }
 }
