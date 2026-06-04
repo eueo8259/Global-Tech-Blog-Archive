@@ -125,3 +125,5 @@ Before code implementation or repo-tracked file edits for a feature/change:
 ## Git Workflow
 
 Follow docs/git-workflow.md.
+
+When creating a Pull Request, include `Closes #<issue-number>` in the PR body. After a Pull Request is merged into `develop`, verify the linked Issue state and close it manually with the completed reason if GitHub did not close it automatically.
