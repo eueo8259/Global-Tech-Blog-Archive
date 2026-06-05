@@ -75,6 +75,33 @@ public class BlogSource {
         return source;
     }
 
+    public void markCollected(LocalDateTime collectedAt) {
+        lastCollectedAt = collectedAt;
+        lastErrorAt = null;
+        lastErrorMsg = null;
+    }
+
+    public void updateCollectionTarget(String siteUrl, String feedUrl, CollectionMethod collectionMethod) {
+        this.siteUrl = siteUrl;
+        this.feedUrl = feedUrl;
+        this.collectionMethod = collectionMethod;
+    }
+
+    public void markCollectionFailed(LocalDateTime failedAt, String errorMessage) {
+        lastErrorAt = failedAt;
+        lastErrorMsg = truncateErrorMessage(errorMessage);
+    }
+
+    private String truncateErrorMessage(String errorMessage) {
+        if (errorMessage == null) {
+            return null;
+        }
+        if (errorMessage.length() <= 500) {
+            return errorMessage;
+        }
+        return errorMessage.substring(0, 500);
+    }
+
     @PrePersist
     void prePersist() {
         LocalDateTime now = LocalDateTime.now();

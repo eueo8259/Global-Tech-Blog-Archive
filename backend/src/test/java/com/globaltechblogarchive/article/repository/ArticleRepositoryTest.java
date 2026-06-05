@@ -61,7 +61,7 @@ class ArticleRepositoryTest {
 
     private BlogSource persistSource() {
         BlogSource source = BlogSource.create(
-                "openai",
+                "test-openai",
                 "OpenAI",
                 "https://openai.com/news/",
                 "https://openai.com/news/rss.xml",
