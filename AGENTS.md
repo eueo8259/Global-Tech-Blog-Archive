@@ -126,4 +126,6 @@ Before code implementation or repo-tracked file edits for a feature/change:
 
 Follow docs/git-workflow.md.
 
+Pull Request titles must use the same Conventional Commit style as commit messages, for example `feat: collect article candidates by source` or `refactor: reorganize crawl architecture`. Do not add tool or agent prefixes such as `[codex]`, `[ai]`, or similar labels to PR titles unless I explicitly ask for them.
+
 When creating a Pull Request, include `Closes #<issue-number>` in the PR body. After a Pull Request is merged into `develop`, verify the linked Issue state and close it manually with the completed reason if GitHub did not close it automatically.
