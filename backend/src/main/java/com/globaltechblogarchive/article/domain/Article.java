@@ -43,9 +43,6 @@ public class Article {
     @Column(name = "title", nullable = false, length = 500)
     private String title;
 
-    @Column(name = "summary", columnDefinition = "TEXT")
-    private String summary;
-
     @Column(name = "original_url", nullable = false, length = 2000)
     private String originalUrl;
 
@@ -72,7 +69,6 @@ public class Article {
     public static Article create(
             BlogSource source,
             String title,
-            String summary,
             String originalUrl,
             String normalizedUrl,
             String normalizedUrlHash,
@@ -82,7 +78,6 @@ public class Article {
         Article article = new Article();
         article.source = source;
         article.title = title;
-        article.summary = summary;
         article.originalUrl = originalUrl;
         article.normalizedUrl = normalizedUrl;
         article.normalizedUrlHash = normalizedUrlHash;

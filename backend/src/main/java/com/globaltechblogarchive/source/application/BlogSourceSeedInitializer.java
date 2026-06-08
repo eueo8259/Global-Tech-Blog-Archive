@@ -36,23 +36,24 @@ public class BlogSourceSeedInitializer implements ApplicationRunner {
 
     private List<BlogSource> sources() {
         return List.of(
-                html("openai", "OpenAI", "https://openai.com/news/"),
-                html("anthropic", "Anthropic", "https://www.anthropic.com/news"),
+                rss("openai", "OpenAI", "https://openai.com/news/", "https://openai.com/news/rss.xml"),
+                sitemap("anthropic", "Anthropic", "https://www.anthropic.com/engineering", "https://www.anthropic.com/sitemap.xml"),
+                html("claude", "Claude", "https://claude.com/blog"),
                 rss("netflix", "Netflix", "https://netflixtechblog.com/", "https://netflixtechblog.com/feed"),
-                html("figma", "Figma", "https://www.figma.com/blog/engineering/"),
+                atom("figma", "Figma", "https://www.figma.com/blog/engineering/", "https://www.figma.com/blog/feed/atom.xml"),
                 rss("meta", "Meta", "https://engineering.fb.com/", "https://engineering.fb.com/feed/"),
                 html("uber", "Uber", "https://www.uber.com/blog/engineering"),
-                html("airbnb", "Airbnb", "https://airbnb.tech/"),
-                html("stripe", "Stripe", "https://stripe.com/blog/engineering"),
-                html("cloudflare", "Cloudflare", "https://blog.cloudflare.com/"),
+                rss("airbnb", "Airbnb", "https://medium.com/airbnb-engineering", "https://medium.com/feed/airbnb-engineering"),
+                rss("pinterest", "Pinterest", "https://medium.com/pinterest-engineering", "https://medium.com/feed/pinterest-engineering"),
+                rss("stripe", "Stripe", "https://stripe.com/blog/engineering", "https://stripe.com/blog/feed.rss"),
+                rss("cloudflare", "Cloudflare", "https://blog.cloudflare.com/", "https://blog.cloudflare.com/tag/engineering/rss/"),
                 rss("github", "GitHub", "https://github.blog/engineering/", "https://github.blog/engineering/feed/"),
                 html("linkedin", "LinkedIn", "https://engineering.linkedin.com/content/engineering/en-us/blog"),
-                wordpressRest("doordash", "DoorDash", "https://careersatdoordash.com/", "https://careersatdoordash.com/wp-json/wp/v2/posts?per_page=20&categories=8"),
                 html("discord", "Discord", "https://discord.com/category/engineering"),
-                html("shopify", "Shopify", "https://shopify.engineering/"),
-                html("datadog", "Datadog", "https://www.datadoghq.com/blog/engineering/"),
+                sitemap("shopify", "Shopify", "https://shopify.engineering/", "https://shopify.engineering/sitemap.xml"),
+                rss("datadog", "Datadog", "https://www.datadoghq.com/blog/engineering/", "https://www.datadoghq.com/blog/engineering/index.xml"),
                 rss("slack", "Slack", "https://slack.engineering/", "https://slack.engineering/feed/"),
-                html("amazon-science", "Amazon Science", "https://www.amazon.science/blog")
+                rss("amazon-science", "Amazon Science", "https://www.amazon.science/blog", "https://www.amazon.science/index.rss")
         );
     }
 
@@ -64,7 +65,12 @@ public class BlogSourceSeedInitializer implements ApplicationRunner {
         return BlogSource.create(companyKey, companyName, siteUrl, feedUrl, CollectionMethod.RSS);
     }
 
-    private BlogSource wordpressRest(String companyKey, String companyName, String siteUrl, String feedUrl) {
-        return BlogSource.create(companyKey, companyName, siteUrl, feedUrl, CollectionMethod.WORDPRESS_REST);
+    private BlogSource atom(String companyKey, String companyName, String siteUrl, String feedUrl) {
+        return BlogSource.create(companyKey, companyName, siteUrl, feedUrl, CollectionMethod.ATOM);
     }
+
+    private BlogSource sitemap(String companyKey, String companyName, String siteUrl, String feedUrl) {
+        return BlogSource.create(companyKey, companyName, siteUrl, feedUrl, CollectionMethod.SITEMAP);
+    }
+
 }

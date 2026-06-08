@@ -7,10 +7,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.globaltechblogarchive.collection.application.ArticleCrawlResult;
-import com.globaltechblogarchive.collection.application.ArticleCrawlService;
-import com.globaltechblogarchive.collection.application.SourceCrawlResult;
-import com.globaltechblogarchive.collection.domain.ArticleCandidate;
+import com.globaltechblogarchive.crawl.api.ArticleCrawlController;
+import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
+import com.globaltechblogarchive.crawl.application.ArticleCrawlService;
+import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
+import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
+import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +43,7 @@ class ArticleCrawlControllerTest {
                 "https://stripe.com/blog/scaling-apis",
                 "hash",
                 false,
+                ArticleCandidateDecisionStatus.NEW,
                 List.of()
         );
         ArticleCrawlResult result = new ArticleCrawlResult(
@@ -52,6 +55,11 @@ class ArticleCrawlControllerTest {
                 0,
                 1,
                 1,
+                1,
+                0,
+                0,
+                0,
+                0,
                 List.of(SourceCrawlResult.success(
                         com.globaltechblogarchive.source.domain.BlogSource.create(
                                 "stripe",
@@ -70,9 +78,15 @@ class ArticleCrawlControllerTest {
                 .andExpect(jsonPath("$.runId").value(1))
                 .andExpect(jsonPath("$.sourceCount").value(1))
                 .andExpect(jsonPath("$.storedCount").value(1))
+                .andExpect(jsonPath("$.aiApprovedCount").value(1))
+                .andExpect(jsonPath("$.aiRejectedCount").value(0))
+                .andExpect(jsonPath("$.aiFailedCount").value(0))
+                .andExpect(jsonPath("$.previouslyApprovedCount").value(0))
+                .andExpect(jsonPath("$.previouslyRejectedCount").value(0))
                 .andExpect(jsonPath("$.sources[0].companyKey").value("stripe"))
                 .andExpect(jsonPath("$.sources[0].candidates[0].originalTitle").value("Scaling APIs"))
                 .andExpect(jsonPath("$.sources[0].candidates[0].duplicate").value(false))
+                .andExpect(jsonPath("$.sources[0].candidates[0].decisionStatus").value("NEW"))
                 .andExpect(jsonPath("$.sources[0].candidates[0].validationWarnings").isArray())
                 .andExpect(jsonPath("$.sources[0].qualityWarnings").isArray());
 

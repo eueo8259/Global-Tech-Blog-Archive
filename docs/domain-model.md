@@ -32,12 +32,12 @@ Database table: `articles`
 | --- | --- | --- | --- |
 | id | BIGINT | yes | Primary key |
 | source_id | BIGINT | yes | Foreign key to `blog_sources.id` |
-| title | VARCHAR(500) | yes | Article title |
-| summary | TEXT | no | Feed summary, page description, or extracted short description |
+| title | VARCHAR(500) | yes | User-facing title. AI-approved article rows store the translated Korean title. |
+| summary | TEXT | no | Legacy DB column. It is not mapped by the backend `Article` entity and is not exposed by the public article API. |
 | original_url | VARCHAR(2000) | yes | User-facing source-of-truth URL |
 | normalized_url | VARCHAR(2000) | yes | Deduplication URL generated before persistence |
 | normalized_url_hash | VARCHAR(64) | yes | SHA-256 hash of `normalized_url` used for the unique constraint |
-| category | VARCHAR(30) | yes | Java enum value stored as a string |
+| category | VARCHAR(30) | yes | AI decision category for approved articles. `ELSE` is not stored in `articles` for AI-reviewed rows. |
 | published_at | DATETIME | yes | Source publication time; use collection time when source publication time is missing |
 | created_at | DATETIME | yes | Row creation time; also the first collection time |
 | updated_at | DATETIME | yes | Row update time |
@@ -80,6 +80,33 @@ ELSE
 ```
 
 `ALL` is a UI/API filter option only. It must not be stored in the database.
+
+### Article AI Decision
+
+`ArticleAiDecision` stores the AI review result for a collected candidate.
+
+Database table: `article_ai_decisions`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | yes | Primary key |
+| source_id | BIGINT | yes | Foreign key to `blog_sources.id` |
+| normalized_url_hash | VARCHAR(64) | yes | SHA-256 hash used with source and prompt version as the AI decision identity |
+| original_url | VARCHAR(2000) | yes | URL seen during crawl |
+| original_title | VARCHAR(500) | yes | Title seen during crawl |
+| translated_title | VARCHAR(500) | yes | Korean title returned by AI |
+| category | VARCHAR(30) | yes | AI category: `FRONTEND`, `BACKEND`, `DEVOPS`, `ARCHITECTURE`, `AI`, or `ELSE` |
+| save_target | TINYINT(1) | yes | Whether this candidate should be saved to `articles` |
+| model | VARCHAR(100) | yes | Model used for the decision |
+| prompt_version | VARCHAR(50) | yes | Prompt version used for re-review control |
+| created_at | DATETIME | yes | Row creation time |
+| updated_at | DATETIME | yes | Row update time |
+
+Required constraints:
+
+```sql
+UNIQUE KEY uq_article_ai_decision_source_hash_prompt (source_id, normalized_url_hash, prompt_version);
+```
 
 ### Source
 
@@ -124,7 +151,7 @@ The aggregate includes:
 
 - article identity
 - source reference
-- title and summary
+- translated title
 - original URL and normalized URL
 - normalized URL hash
 - category
@@ -132,6 +159,7 @@ The aggregate includes:
 
 The aggregate does not include:
 
+- summary
 - full article body
 - article tags
 - user-specific state
@@ -145,16 +173,32 @@ The aggregate does not include:
 - The collector reads only `blog_sources` rows where `enabled = 1`.
 - RSS and Atom collection use `feed_url`.
 - HTML scraping uses `site_url`.
-- Article category assignment is handled by the classifier before persistence.
+- Article category assignment is handled by AI decision before persistence.
 - Each article has exactly one stored category.
 - The original URL is preserved and used as the article link returned to the frontend.
 - The normalized URL is used only for deduplication.
 - `normalized_url_hash` is the SHA-256 hash of `normalized_url`.
-- Duplicate articles are blocked by `UNIQUE(source_id, normalized_url_hash)`.
-- When a duplicate is detected, the article is skipped.
-- The duplicate handling implementation may use `INSERT IGNORE`, `ON DUPLICATE KEY UPDATE`, or exception handling.
+- Duplicate article rows are blocked by `UNIQUE(source_id, normalized_url_hash)` as the final database safety net.
+- AI re-review and crawl pre-processing use `article_ai_decisions`, not `articles`, as the primary cache/gate.
+- `article_ai_decisions.save_target=true` and `category != ELSE` allows saving to `articles`.
+- `article_ai_decisions.save_target=false` or `category=ELSE` prevents saving to `articles`.
+- Previously approved decisions may save article rows without calling AI again.
+- Previously rejected decisions do not call AI again and do not save article rows.
+- AI failures are recorded in crawl logs as `AI_FAILED`; no decision row is created because no valid AI decision exists.
+- If the prompt changes, increment `prompt_version` to allow re-review.
 - If the source does not provide a publication time, set `published_at` to the collection time.
 - `created_at` represents the first time the article row was stored.
 - Source collection success updates `last_collected_at`.
 - Source collection failure updates `last_error_at` and `last_error_msg`.
-- Full collection history is not stored in the MVP.
+- Collection run logs store discovered candidates and their decision status.
+
+Candidate decision statuses used in crawl logs:
+
+```text
+NEW
+PREVIOUSLY_APPROVED
+PREVIOUSLY_REJECTED
+AI_APPROVED
+AI_REJECTED
+AI_FAILED
+```
