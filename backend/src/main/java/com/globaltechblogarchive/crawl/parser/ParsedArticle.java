@@ -2,7 +2,7 @@ package com.globaltechblogarchive.crawl.parser;
 
 import java.time.LocalDateTime;
 
-public record ParsedArticleCard(
+public record ParsedArticle(
         String originalTitle,
         String originalUrl,
         LocalDateTime publishedAt,

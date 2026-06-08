@@ -1,6 +1,6 @@
 package com.globaltechblogarchive.article.domain;
 
-import com.globaltechblogarchive.source.domain.BlogSource;
+import com.globaltechblogarchive.company.domain.Company;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -27,7 +27,7 @@ import lombok.NoArgsConstructor;
         name = "articles",
         uniqueConstraints = @UniqueConstraint(
                 name = "uq_source_normalized_url_hash",
-                columnNames = {"source_id", "normalized_url_hash"}
+                columnNames = {"company_id", "normalized_url_hash"}
         )
 )
 public class Article {
@@ -37,8 +37,8 @@ public class Article {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "source_id", nullable = false)
-    private BlogSource source;
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 
     @Column(name = "title", nullable = false, length = 500)
     private String title;
@@ -67,7 +67,7 @@ public class Article {
     private LocalDateTime updatedAt;
 
     public static Article create(
-            BlogSource source,
+            Company company,
             String title,
             String originalUrl,
             String normalizedUrl,
@@ -76,7 +76,7 @@ public class Article {
             LocalDateTime publishedAt
     ) {
         Article article = new Article();
-        article.source = source;
+        article.company = company;
         article.title = title;
         article.originalUrl = originalUrl;
         article.normalizedUrl = normalizedUrl;

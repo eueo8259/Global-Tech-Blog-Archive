@@ -1,6 +1,6 @@
 package com.globaltechblogarchive.article.domain;
 
-import com.globaltechblogarchive.source.domain.BlogSource;
+import com.globaltechblogarchive.company.domain.Company;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -27,7 +27,7 @@ import lombok.NoArgsConstructor;
         name = "article_ai_decisions",
         uniqueConstraints = @UniqueConstraint(
                 name = "uq_article_ai_decision_source_hash_prompt",
-                columnNames = {"source_id", "normalized_url_hash", "prompt_version"}
+                columnNames = {"company_id", "normalized_url_hash", "prompt_version"}
         )
 )
 public class ArticleAiDecision {
@@ -37,8 +37,8 @@ public class ArticleAiDecision {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "source_id", nullable = false)
-    private BlogSource source;
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 
     @Column(name = "normalized_url_hash", nullable = false, length = 64)
     private String normalizedUrlHash;
@@ -72,7 +72,7 @@ public class ArticleAiDecision {
     private LocalDateTime updatedAt;
 
     public static ArticleAiDecision create(
-            BlogSource source,
+            Company company,
             String normalizedUrlHash,
             String originalUrl,
             String originalTitle,
@@ -83,7 +83,7 @@ public class ArticleAiDecision {
             String promptVersion
     ) {
         ArticleAiDecision decision = new ArticleAiDecision();
-        decision.source = source;
+        decision.company = company;
         decision.normalizedUrlHash = normalizedUrlHash;
         decision.originalUrl = originalUrl;
         decision.originalTitle = originalTitle;

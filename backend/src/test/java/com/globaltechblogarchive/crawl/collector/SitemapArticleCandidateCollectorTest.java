@@ -2,6 +2,7 @@ package com.globaltechblogarchive.crawl.collector.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
@@ -15,8 +16,9 @@ class SitemapArticleCandidateCollectorTest {
     @Test
     void collectBuildsCardsFromSitemapAndDetailMetadata() {
         BlogSource source = BlogSource.create(
-                "anthropic",
-                "Anthropic",
+                Company.create("anthropic", "Anthropic"),
+                "anthropic-engineering",
+                "Anthropic Engineering",
                 "https://www.anthropic.com/engineering",
                 "https://www.anthropic.com/sitemap.xml",
                 CollectionMethod.SITEMAP

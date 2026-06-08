@@ -7,6 +7,6 @@ public interface ArticleListParser {
 
     boolean supports(BlogSource source);
 
-    List<ParsedArticleCard> parse(BlogSource source, String html);
+    List<ParsedArticle> parse(BlogSource source, String html);
 }
 

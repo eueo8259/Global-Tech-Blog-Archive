@@ -50,7 +50,7 @@ Define TypeScript types for API responses.
 export interface ArticleSummary {
   id: number;
   title: string;
-  sourceCompanyName: string;
+  companyName: string;
 }
 ```
 

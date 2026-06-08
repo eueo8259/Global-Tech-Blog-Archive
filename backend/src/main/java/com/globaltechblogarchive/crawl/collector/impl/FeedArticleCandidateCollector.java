@@ -2,7 +2,7 @@ package com.globaltechblogarchive.crawl.collector.impl;
 
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
-import com.globaltechblogarchive.crawl.parser.ParsedArticleCard;
+import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.crawl.support.ArticleDateParser;
 import com.globaltechblogarchive.crawl.support.ArticleCandidateCollectionPolicy;
 import com.globaltechblogarchive.crawl.support.TextCleaner;
@@ -31,14 +31,14 @@ public class FeedArticleCandidateCollector implements ArticleCandidateCollector 
     }
 
     @Override
-    public List<ParsedArticleCard> collect(BlogSource source) {
+    public List<ParsedArticle> collect(BlogSource source) {
         if (source.getFeedUrl() == null || source.getFeedUrl().isBlank()) {
-            throw new IllegalArgumentException("Feed URL is required for " + source.getCompanyKey());
+            throw new IllegalArgumentException("Feed URL is required for " + source.getSourceKey());
         }
         return ArticleCandidateCollectionPolicy.apply(parse(source, fetcher.fetch(source.getFeedUrl())));
     }
 
-    List<ParsedArticleCard> parse(BlogSource source, String xml) {
+    List<ParsedArticle> parse(BlogSource source, String xml) {
         Element root = XmlDocumentSupport.parseRoot(xml, "Feed XML parsing failed");
         if ("feed".equalsIgnoreCase(root.getTagName())) {
             return parseAtom(source, root);
@@ -46,9 +46,9 @@ public class FeedArticleCandidateCollector implements ArticleCandidateCollector 
         return parseRss(source, root);
     }
 
-    private List<ParsedArticleCard> parseRss(BlogSource source, Element root) {
+    private List<ParsedArticle> parseRss(BlogSource source, Element root) {
         NodeList items = root.getElementsByTagName("item");
-        List<ParsedArticleCard> cards = new ArrayList<>();
+        List<ParsedArticle> cards = new ArrayList<>();
         for (int index = 0; index < items.getLength(); index++) {
             Element item = (Element) items.item(index);
             String title = text(item, "title");
@@ -57,7 +57,7 @@ public class FeedArticleCandidateCollector implements ArticleCandidateCollector 
                 continue;
             }
             String absoluteUrl = UrlNormalizer.absolute(source.getSiteUrl(), link);
-            cards.add(new ParsedArticleCard(
+            cards.add(new ParsedArticle(
                     TextCleaner.clean(title),
                     absoluteUrl,
                     ArticleDateParser.parseFeedDate(firstNonBlank(text(item, "pubDate"), text(item, "dc:date"))),
@@ -67,9 +67,9 @@ public class FeedArticleCandidateCollector implements ArticleCandidateCollector 
         return cards;
     }
 
-    private List<ParsedArticleCard> parseAtom(BlogSource source, Element root) {
+    private List<ParsedArticle> parseAtom(BlogSource source, Element root) {
         NodeList entries = root.getElementsByTagName("entry");
-        List<ParsedArticleCard> cards = new ArrayList<>();
+        List<ParsedArticle> cards = new ArrayList<>();
         for (int index = 0; index < entries.getLength(); index++) {
             Element entry = (Element) entries.item(index);
             String title = text(entry, "title");
@@ -77,7 +77,7 @@ public class FeedArticleCandidateCollector implements ArticleCandidateCollector 
             if (title.isBlank() || link.isBlank()) {
                 continue;
             }
-            cards.add(new ParsedArticleCard(
+            cards.add(new ParsedArticle(
                     TextCleaner.clean(title),
                     UrlNormalizer.absolute(source.getSiteUrl(), link),
                     ArticleDateParser.parseFeedDate(firstNonBlank(text(entry, "published"), text(entry, "updated"))),

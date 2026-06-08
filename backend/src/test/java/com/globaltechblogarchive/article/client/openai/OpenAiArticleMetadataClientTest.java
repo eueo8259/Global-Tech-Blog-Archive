@@ -19,8 +19,7 @@ class OpenAiArticleMetadataClientTest {
     private final OpenAiArticleMetadataClient client = new OpenAiArticleMetadataClient(
             (RestClient) null,
             objectMapper,
-            "test-key",
-            "gpt-5-mini"
+            new OpenAiProperties("test-key", "gpt-5-mini")
     );
 
     @Test

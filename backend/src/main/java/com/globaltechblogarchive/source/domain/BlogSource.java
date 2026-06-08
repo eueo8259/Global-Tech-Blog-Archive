@@ -1,12 +1,16 @@
 package com.globaltechblogarchive.source.domain;
 
+import com.globaltechblogarchive.company.domain.Company;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -25,11 +29,15 @@ public class BlogSource {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "company_key", nullable = false, unique = true, length = 50)
-    private String companyKey;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 
-    @Column(name = "company_name", nullable = false, length = 100)
-    private String companyName;
+    @Column(name = "source_key", nullable = false, unique = true, length = 80)
+    private String sourceKey;
+
+    @Column(name = "source_name", nullable = false, length = 100)
+    private String sourceName;
 
     @Column(name = "site_url", nullable = false, length = 500)
     private String siteUrl;
@@ -60,15 +68,17 @@ public class BlogSource {
     private LocalDateTime updatedAt;
 
     public static BlogSource create(
-            String companyKey,
-            String companyName,
+            Company company,
+            String sourceKey,
+            String sourceName,
             String siteUrl,
             String feedUrl,
             CollectionMethod collectionMethod
     ) {
         BlogSource source = new BlogSource();
-        source.companyKey = companyKey;
-        source.companyName = companyName;
+        source.company = company;
+        source.sourceKey = sourceKey;
+        source.sourceName = sourceName;
         source.siteUrl = siteUrl;
         source.feedUrl = feedUrl;
         source.collectionMethod = collectionMethod;
@@ -79,12 +89,6 @@ public class BlogSource {
         lastCollectedAt = collectedAt;
         lastErrorAt = null;
         lastErrorMsg = null;
-    }
-
-    public void updateCollectionTarget(String siteUrl, String feedUrl, CollectionMethod collectionMethod) {
-        this.siteUrl = siteUrl;
-        this.feedUrl = feedUrl;
-        this.collectionMethod = collectionMethod;
     }
 
     public void markCollectionFailed(LocalDateTime failedAt, String errorMessage) {

@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "article_collections")
-public class ArticleCollectionItem {
+public class ArticleDiscoveryLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -76,12 +76,12 @@ public class ArticleCollectionItem {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    public static ArticleCollectionItem create(
+    public static ArticleDiscoveryLog create(
             ArticleCollectionRun run,
             BlogSource source,
             ArticleCandidate candidate
     ) {
-        ArticleCollectionItem item = new ArticleCollectionItem();
+        ArticleDiscoveryLog item = new ArticleDiscoveryLog();
         item.run = run;
         item.source = source;
         item.companyKey = candidate.companyKey();

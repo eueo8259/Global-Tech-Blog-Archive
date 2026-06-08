@@ -31,7 +31,7 @@ Database table: `articles`
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | id | BIGINT | yes | Primary key |
-| source_id | BIGINT | yes | Foreign key to `blog_sources.id` |
+| company_id | BIGINT | yes | Foreign key to `companies.id` |
 | title | VARCHAR(500) | yes | User-facing title. AI-approved article rows store the translated Korean title. |
 | summary | TEXT | no | Legacy DB column. It is not mapped by the backend `Article` entity and is not exposed by the public article API. |
 | original_url | VARCHAR(2000) | yes | User-facing source-of-truth URL |
@@ -45,8 +45,8 @@ Database table: `articles`
 Required constraints and indexes:
 
 ```sql
-CONSTRAINT fk_articles_source FOREIGN KEY (source_id) REFERENCES blog_sources(id);
-UNIQUE KEY uq_source_normalized_url_hash (source_id, normalized_url_hash);
+CONSTRAINT fk_articles_company FOREIGN KEY (company_id) REFERENCES companies(id);
+UNIQUE KEY uq_company_normalized_url_hash (company_id, normalized_url_hash);
 INDEX idx_category_published (category, published_at);
 INDEX idx_published (published_at);
 ```
@@ -55,7 +55,7 @@ INDEX idx_published (published_at);
 
 `Company` is the publishing organization represented by a stable key and display name.
 
-There is no separate `companies` table in the MVP. Company fields are stored on `blog_sources`.
+Database table: `companies`
 
 Required fields:
 
@@ -90,8 +90,8 @@ Database table: `article_ai_decisions`
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | id | BIGINT | yes | Primary key |
-| source_id | BIGINT | yes | Foreign key to `blog_sources.id` |
-| normalized_url_hash | VARCHAR(64) | yes | SHA-256 hash used with source and prompt version as the AI decision identity |
+| company_id | BIGINT | yes | Foreign key to `companies.id` |
+| normalized_url_hash | VARCHAR(64) | yes | SHA-256 hash used with company and prompt version as the AI decision identity |
 | original_url | VARCHAR(2000) | yes | URL seen during crawl |
 | original_title | VARCHAR(500) | yes | Title seen during crawl |
 | translated_title | VARCHAR(500) | yes | Korean title returned by AI |
@@ -105,7 +105,7 @@ Database table: `article_ai_decisions`
 Required constraints:
 
 ```sql
-UNIQUE KEY uq_article_ai_decision_source_hash_prompt (source_id, normalized_url_hash, prompt_version);
+UNIQUE KEY uq_article_ai_decision_company_hash_prompt (company_id, normalized_url_hash, prompt_version);
 ```
 
 ### Source
@@ -117,8 +117,9 @@ Database table: `blog_sources`
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | id | BIGINT | yes | Primary key |
-| company_key | VARCHAR(50) | yes | Stable lowercase key, unique |
-| company_name | VARCHAR(100) | yes | Display name |
+| company_id | BIGINT | yes | Foreign key to `companies.id` |
+| source_key | VARCHAR(80) | yes | Stable lowercase source key, unique |
+| source_name | VARCHAR(100) | yes | Display name for this source |
 | site_url | VARCHAR(500) | yes | Blog home or engineering page URL |
 | feed_url | VARCHAR(500) | no | RSS/Atom URL; null for HTML scraping |
 | collection_method | VARCHAR(30) | yes | Java enum value: `RSS`, `ATOM`, or `HTML_SCRAPING` |
@@ -132,7 +133,7 @@ Database table: `blog_sources`
 Required constraints:
 
 ```sql
-UNIQUE KEY uq_blog_sources_company_key (company_key);
+UNIQUE KEY uq_blog_sources_source_key (source_key);
 ```
 
 Field rules:
@@ -150,7 +151,7 @@ Field rules:
 The aggregate includes:
 
 - article identity
-- source reference
+- company reference
 - translated title
 - original URL and normalized URL
 - normalized URL hash
@@ -165,7 +166,7 @@ The aggregate does not include:
 - user-specific state
 - collection run history
 
-`Source` is referenced by `source_id`. Updating source configuration must not require updating existing articles.
+`Company` is referenced by `company_id`. Updating source configuration must not require updating existing articles.
 
 ## 5. Business Rules
 
@@ -178,7 +179,7 @@ The aggregate does not include:
 - The original URL is preserved and used as the article link returned to the frontend.
 - The normalized URL is used only for deduplication.
 - `normalized_url_hash` is the SHA-256 hash of `normalized_url`.
-- Duplicate article rows are blocked by `UNIQUE(source_id, normalized_url_hash)` as the final database safety net.
+- Duplicate article rows are blocked by `UNIQUE(company_id, normalized_url_hash)` as the final database safety net.
 - AI re-review and crawl pre-processing use `article_ai_decisions`, not `articles`, as the primary cache/gate.
 - `article_ai_decisions.save_target=true` and `category != ELSE` allows saving to `articles`.
 - `article_ai_decisions.save_target=false` or `category=ELSE` prevents saving to `articles`.

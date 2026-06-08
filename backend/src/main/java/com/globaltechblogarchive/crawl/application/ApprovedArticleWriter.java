@@ -32,7 +32,7 @@ public class ApprovedArticleWriter {
                 continue;
             }
             articleRepository.save(Article.create(
-                    source,
+                    source.getCompany(),
                     decision.getTranslatedTitle(),
                     candidate.originalUrl(),
                     candidate.normalizedUrl(),

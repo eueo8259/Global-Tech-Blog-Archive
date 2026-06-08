@@ -2,7 +2,7 @@ package com.globaltechblogarchive.crawl.collector.impl;
 
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
-import com.globaltechblogarchive.crawl.parser.ParsedArticleCard;
+import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.crawl.support.ArticleDateParser;
 import com.globaltechblogarchive.crawl.support.ArticleCandidateCollectionPolicy;
 import com.globaltechblogarchive.crawl.support.HtmlMetadataExtractor;
@@ -33,12 +33,12 @@ public class SitemapArticleCandidateCollector implements ArticleCandidateCollect
     }
 
     @Override
-    public List<ParsedArticleCard> collect(BlogSource source) {
+    public List<ParsedArticle> collect(BlogSource source) {
         String sitemapUrl = source.getFeedUrl();
         if (sitemapUrl == null || sitemapUrl.isBlank()) {
             sitemapUrl = source.getSiteUrl().replaceAll("/+$", "") + "/sitemap.xml";
         }
-        List<ParsedArticleCard> cards = parse(source, fetcher.fetch(sitemapUrl)).stream()
+        List<ParsedArticle> cards = parse(source, fetcher.fetch(sitemapUrl)).stream()
                 .filter(entry -> isArticleUrl(source, entry.location()))
                 .filter(entry -> isRecent(entry.lastModified()))
                 .sorted(Comparator.comparing(SitemapEntry::lastModified, Comparator.nullsLast(Comparator.reverseOrder())))
@@ -62,7 +62,7 @@ public class SitemapArticleCandidateCollector implements ArticleCandidateCollect
                 .toList();
     }
 
-    private ParsedArticleCard toCard(BlogSource source, SitemapEntry entry) {
+    private ParsedArticle toCard(BlogSource source, SitemapEntry entry) {
         String html = fetcher.fetch(entry.location());
         String title = firstNonBlank(
                 HtmlMetadataExtractor.metaContent(html, "og:title"),
@@ -82,8 +82,8 @@ public class SitemapArticleCandidateCollector implements ArticleCandidateCollect
                 )),
                 entry.lastModified()
         );
-        return new ParsedArticleCard(
-                cleanTitle(title, source.getCompanyName()),
+        return new ParsedArticle(
+                cleanTitle(title, source.getCompany().getCompanyName()),
                 entry.location(),
                 publishedAt,
                 TextCleaner.shortContext(description, title)
@@ -92,10 +92,10 @@ public class SitemapArticleCandidateCollector implements ArticleCandidateCollect
 
     private boolean isArticleUrl(BlogSource source, String url) {
         String lower = url.toLowerCase(Locale.ROOT);
-        if ("anthropic".equals(source.getCompanyKey())) {
+        if ("anthropic-engineering".equals(source.getSourceKey())) {
             return lower.contains("anthropic.com/engineering/") && !lower.endsWith("/engineering/");
         }
-        if ("shopify".equals(source.getCompanyKey())) {
+        if ("shopify".equals(source.getSourceKey())) {
             return lower.matches("https://shopify\\.engineering/[^/?#]+/?");
         }
         return lower.startsWith(source.getSiteUrl().toLowerCase(Locale.ROOT));

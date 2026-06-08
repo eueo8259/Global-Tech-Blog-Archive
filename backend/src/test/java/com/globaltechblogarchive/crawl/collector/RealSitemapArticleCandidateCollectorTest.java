@@ -2,8 +2,9 @@ package com.globaltechblogarchive.crawl.collector.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
-import com.globaltechblogarchive.crawl.parser.ParsedArticleCard;
+import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.util.List;
@@ -22,14 +23,21 @@ class RealSitemapArticleCandidateCollectorTest {
     @ParameterizedTest(name = "{0} sitemap returns article cards")
     @MethodSource("sitemapSources")
     void collectFromRealSitemapReturnsArticleCards(
-            String companyKey,
+            String sourceKey,
             String companyName,
             String siteUrl,
             String sitemapUrl
     ) {
-        BlogSource source = BlogSource.create(companyKey, companyName, siteUrl, sitemapUrl, CollectionMethod.SITEMAP);
+        BlogSource source = BlogSource.create(
+                Company.create(sourceKey, companyName),
+                sourceKey,
+                companyName,
+                siteUrl,
+                sitemapUrl,
+                CollectionMethod.SITEMAP
+        );
 
-        List<ParsedArticleCard> cards = collector.collect(source);
+        List<ParsedArticle> cards = collector.collect(source);
 
         assertThat(cards).isNotEmpty();
         assertThat(cards).allSatisfy(card -> {
@@ -42,7 +50,7 @@ class RealSitemapArticleCandidateCollectorTest {
 
     private static Stream<Arguments> sitemapSources() {
         return Stream.of(
-                Arguments.of("anthropic", "Anthropic", "https://www.anthropic.com/engineering", "https://www.anthropic.com/sitemap.xml"),
+                Arguments.of("anthropic-engineering", "Anthropic", "https://www.anthropic.com/engineering", "https://www.anthropic.com/sitemap.xml"),
                 Arguments.of("shopify", "Shopify", "https://shopify.engineering/", "https://shopify.engineering/sitemap.xml")
         );
     }

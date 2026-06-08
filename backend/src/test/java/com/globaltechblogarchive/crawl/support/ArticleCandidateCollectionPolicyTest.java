@@ -2,7 +2,7 @@ package com.globaltechblogarchive.crawl.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.globaltechblogarchive.crawl.parser.ParsedArticleCard;
+import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,17 +13,17 @@ class ArticleCandidateCollectionPolicyTest {
     @Test
     void applyKeepsRecentCandidatesOnlyAndLimitsToTwenty() {
         LocalDateTime now = LocalDateTime.now();
-        List<ParsedArticleCard> cards = new ArrayList<>();
+        List<ParsedArticle> cards = new ArrayList<>();
         for (int index = 0; index < 25; index++) {
             cards.add(card("recent-" + index, now.minusHours(index)));
         }
         cards.add(card("old", now.minusDays(3)));
-        cards.add(new ParsedArticleCard("missing date", "https://example.com/missing-date", null, "missing date"));
+        cards.add(new ParsedArticle("missing date", "https://example.com/missing-date", null, "missing date"));
 
-        List<ParsedArticleCard> filtered = ArticleCandidateCollectionPolicy.apply(cards);
+        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards);
 
         assertThat(filtered).hasSize(20);
-        assertThat(filtered).extracting(ParsedArticleCard::originalTitle)
+        assertThat(filtered).extracting(ParsedArticle::originalTitle)
                 .containsExactly(
                         "recent-0",
                         "recent-1",
@@ -48,7 +48,7 @@ class ArticleCandidateCollectionPolicyTest {
                 );
     }
 
-    private ParsedArticleCard card(String title, LocalDateTime publishedAt) {
-        return new ParsedArticleCard(title, "https://example.com/" + title, publishedAt, title);
+    private ParsedArticle card(String title, LocalDateTime publishedAt) {
+        return new ParsedArticle(title, "https://example.com/" + title, publishedAt, title);
     }
 }

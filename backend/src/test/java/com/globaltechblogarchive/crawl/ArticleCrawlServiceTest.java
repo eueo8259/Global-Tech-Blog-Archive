@@ -28,11 +28,12 @@ import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
 import com.globaltechblogarchive.crawl.domain.ArticleCollectionRun;
-import com.globaltechblogarchive.crawl.parser.ParsedArticleCard;
-import com.globaltechblogarchive.crawl.repository.ArticleCollectionItemRepository;
+import com.globaltechblogarchive.crawl.parser.ParsedArticle;
+import com.globaltechblogarchive.crawl.repository.ArticleDiscoveryLogRepository;
 import com.globaltechblogarchive.crawl.repository.ArticleCollectionRunRepository;
 import com.globaltechblogarchive.crawl.support.UrlHash;
 import com.globaltechblogarchive.crawl.support.UrlNormalizer;
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
@@ -65,7 +66,7 @@ class ArticleCrawlServiceTest {
     private ArticleCollectionRunRepository collectionRunRepository;
 
     @Mock
-    private ArticleCollectionItemRepository collectionItemRepository;
+    private ArticleDiscoveryLogRepository collectionItemRepository;
 
     @Mock
     private ArticleCandidateCollectorRegistry collectorRegistry;
@@ -102,13 +103,13 @@ class ArticleCrawlServiceTest {
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(failing, succeeding));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
         when(collector.collect(failing)).thenThrow(new IllegalStateException("network failed"));
-        when(collector.collect(succeeding)).thenReturn(List.of(new ParsedArticleCard(
+        when(collector.collect(succeeding)).thenReturn(List.of(new ParsedArticle(
                 "Scaling systems",
                 "https://example.com/scaling?utm_source=test#section",
                 LocalDateTime.of(2026, 6, 1, 10, 0),
                 "Architecture context"
         )));
-        when(decisionRepository.findBySourceIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
+        when(decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of());
         when(aiClient.decide(anyList())).thenReturn(List.of(
                 new ArticleMetadataDecision(0, "Translated scaling systems", ArticleCategory.ARCHITECTURE, true, null)
@@ -133,13 +134,13 @@ class ArticleCrawlServiceTest {
     @Test
     void runStoresOnlyAiApprovedCandidatesAsArticles() {
         BlogSource source = source(1L, "openai");
-        ParsedArticleCard approvedCard = new ParsedArticleCard(
+        ParsedArticle approvedCard = new ParsedArticle(
                 "How we scaled inference",
                 "https://openai.com/news/approved",
                 null,
                 ""
         );
-        ParsedArticleCard rejectedCard = new ParsedArticleCard(
+        ParsedArticle rejectedCard = new ParsedArticle(
                 "Introducing GPT-Rosalind",
                 "https://openai.com/news/rejected",
                 LocalDateTime.of(2026, 6, 1, 10, 0),
@@ -149,7 +150,7 @@ class ArticleCrawlServiceTest {
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
         when(collector.collect(source)).thenReturn(List.of(approvedCard, rejectedCard));
-        when(decisionRepository.findBySourceIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
+        when(decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of());
         when(aiClient.decide(anyList())).thenReturn(List.of(
                 new ArticleMetadataDecision(0, "Inference scaling", ArticleCategory.AI, true, null),
@@ -186,13 +187,13 @@ class ArticleCrawlServiceTest {
     @Test
     void runSkipsAiForPreviousRejectedAndStoresPreviousApprovedArticle() {
         BlogSource source = source(1L, "openai");
-        ParsedArticleCard approvedCard = new ParsedArticleCard(
+        ParsedArticle approvedCard = new ParsedArticle(
                 "Approved post",
                 "https://openai.com/news/approved",
                 null,
                 ""
         );
-        ParsedArticleCard rejectedCard = new ParsedArticleCard(
+        ParsedArticle rejectedCard = new ParsedArticle(
                 "Rejected post",
                 "https://openai.com/news/rejected",
                 null,
@@ -204,7 +205,7 @@ class ArticleCrawlServiceTest {
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
         when(collector.collect(source)).thenReturn(List.of(approvedCard, rejectedCard));
-        when(decisionRepository.findBySourceIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
+        when(decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of(
                         decision(source, approvedHash, true, ArticleCategory.AI),
                         decision(source, rejectedHash, false, ArticleCategory.ELSE)
@@ -230,7 +231,7 @@ class ArticleCrawlServiceTest {
     @Test
     void runMarksNewCandidatesFailedWhenAiClientFails() {
         BlogSource source = source(1L, "openai");
-        ParsedArticleCard card = new ParsedArticleCard(
+        ParsedArticle card = new ParsedArticle(
                 "How we scaled inference",
                 "https://openai.com/news/failed",
                 null,
@@ -240,7 +241,7 @@ class ArticleCrawlServiceTest {
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
         when(collector.collect(source)).thenReturn(List.of(card));
-        when(decisionRepository.findBySourceIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
+        when(decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of());
         when(aiClient.decide(anyList())).thenThrow(new IllegalStateException("ai failed"));
 
@@ -257,7 +258,7 @@ class ArticleCrawlServiceTest {
     @Test
     void runSkipsAiAndArticleSaveWhenArticleAlreadyExists() {
         BlogSource source = source(1L, "openai");
-        ParsedArticleCard card = new ParsedArticleCard(
+        ParsedArticle card = new ParsedArticle(
                 "How we scaled inference",
                 "https://openai.com/news/duplicate",
                 null,
@@ -268,9 +269,9 @@ class ArticleCrawlServiceTest {
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
         when(collector.collect(source)).thenReturn(List.of(card));
-        when(decisionRepository.findBySourceIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
+        when(decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of());
-        when(articleRepository.existsBySourceIdAndNormalizedUrlHash(1L, hash)).thenReturn(true);
+        when(articleRepository.existsByCompanyIdAndNormalizedUrlHash(1L, hash)).thenReturn(true);
 
         ArticleCrawlResult result = articleCrawlService.run();
 
@@ -288,7 +289,7 @@ class ArticleCrawlServiceTest {
     @Test
     void runSkipsArticleSaveWhenPreviousApprovedDecisionAlreadyHasArticle() {
         BlogSource source = source(1L, "openai");
-        ParsedArticleCard card = new ParsedArticleCard(
+        ParsedArticle card = new ParsedArticle(
                 "Approved post",
                 "https://openai.com/news/approved-duplicate",
                 null,
@@ -299,9 +300,9 @@ class ArticleCrawlServiceTest {
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
         when(collector.collect(source)).thenReturn(List.of(card));
-        when(decisionRepository.findBySourceIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
+        when(decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of(decision(source, hash, true, ArticleCategory.AI)));
-        when(articleRepository.existsBySourceIdAndNormalizedUrlHash(1L, hash)).thenReturn(true);
+        when(articleRepository.existsByCompanyIdAndNormalizedUrlHash(1L, hash)).thenReturn(true);
 
         ArticleCrawlResult result = articleCrawlService.run();
 
@@ -323,7 +324,10 @@ class ArticleCrawlServiceTest {
     }
 
     private BlogSource source(Long id, String companyKey) {
+        Company company = Company.create(companyKey, companyKey);
+        ReflectionTestUtils.setField(company, "id", id);
         BlogSource source = BlogSource.create(
+                company,
                 companyKey,
                 companyKey,
                 "https://example.com/",
@@ -341,7 +345,7 @@ class ArticleCrawlServiceTest {
             ArticleCategory category
     ) {
         return ArticleAiDecision.create(
-                source,
+                source.getCompany(),
                 normalizedUrlHash,
                 "https://example.com/" + normalizedUrlHash,
                 "Original",

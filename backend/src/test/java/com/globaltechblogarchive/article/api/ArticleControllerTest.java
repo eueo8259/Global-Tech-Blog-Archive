@@ -11,6 +11,7 @@ import com.globaltechblogarchive.article.api.dto.ArticlePageResponse;
 import com.globaltechblogarchive.article.api.dto.ArticleResponse;
 import com.globaltechblogarchive.article.application.ArticleService;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
+import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.global.error.GlobalExceptionHandler;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import java.time.LocalDateTime;
@@ -77,7 +78,7 @@ class ArticleControllerTest {
     @Test
     void getArticlesRejectsInvalidCategory() throws Exception {
         when(articleService.getArticles("Backend", 0, 20))
-                .thenThrow(new InvalidInputException("Unsupported category: Backend"));
+                .thenThrow(new InvalidInputException(ErrorCode.INVALID_INPUT_VALUE, "Unsupported category: Backend"));
 
         mockMvc.perform(get("/api/articles")
                         .param("category", "Backend"))

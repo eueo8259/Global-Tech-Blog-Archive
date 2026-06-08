@@ -90,7 +90,7 @@ public class ArticleDecisionProcessor {
 
             boolean saveTarget = isSaveTarget(metadataDecision.save(), metadataDecision.category());
             ArticleAiDecision decision = ArticleAiDecision.create(
-                    source,
+                    source.getCompany(),
                     candidate.normalizedUrlHash(),
                     candidate.originalUrl(),
                     candidate.originalTitle(),

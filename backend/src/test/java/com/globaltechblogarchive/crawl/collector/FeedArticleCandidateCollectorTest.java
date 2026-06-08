@@ -2,6 +2,7 @@ package com.globaltechblogarchive.crawl.collector.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import org.junit.jupiter.api.Test;
@@ -56,7 +57,14 @@ class FeedArticleCandidateCollectorTest {
     }
 
     private BlogSource source(CollectionMethod method) {
-        return BlogSource.create("example", "Example", "https://example.com/blog/", "https://example.com/feed", method);
+        return BlogSource.create(
+                Company.create("example", "Example"),
+                "example",
+                "Example Blog",
+                "https://example.com/blog/",
+                "https://example.com/feed",
+                method
+        );
     }
 }
 

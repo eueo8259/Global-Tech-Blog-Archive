@@ -10,8 +10,8 @@ public record ArticleResponse(
         String originalUrl,
         ArticleCategory category,
         LocalDateTime publishedAt,
-        String sourceCompanyKey,
-        String sourceCompanyName
+        String companyKey,
+        String companyName
 ) {
 
     public static ArticleResponse from(Article article) {
@@ -21,8 +21,8 @@ public record ArticleResponse(
                 article.getOriginalUrl(),
                 article.getCategory(),
                 article.getPublishedAt(),
-                article.getSource().getCompanyKey(),
-                article.getSource().getCompanyName()
+                article.getCompany().getCompanyKey(),
+                article.getCompany().getCompanyName()
         );
     }
 }

@@ -4,7 +4,11 @@ import com.globaltechblogarchive.global.error.ErrorCode;
 
 public class InvalidInputException extends BusinessException {
 
-    public InvalidInputException(String message) {
-        super(ErrorCode.INVALID_INPUT_VALUE, message);
+    public InvalidInputException(ErrorCode errorCode) {
+        super(errorCode);
+    }
+
+    public InvalidInputException(ErrorCode errorCode, String message) {
+        super(errorCode, message);
     }
 }

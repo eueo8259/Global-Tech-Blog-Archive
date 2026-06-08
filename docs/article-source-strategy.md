@@ -13,8 +13,7 @@ The MVP collects articles only from the following companies:
 | Company | Main Topics |
 | --- | --- |
 | OpenAI | AI, Agentic AI, Engineering, Safety, Security |
-| Anthropic | Agentic AI, Evals, Context Engineering, AI Safety, Developer Tools |
-| Claude | Claude Code, Agents, Enterprise AI, Developer Workflows |
+| Anthropic | Agentic AI, Evals, Context Engineering, AI Safety, Developer Tools, Claude Code |
 | Netflix | Distributed Systems, Streaming, Data Platform, Personalization, Reliability |
 | Figma | Infrastructure, Realtime Collaboration, Frontend Performance, Database/Storage, Developer Experience |
 | Meta | Infrastructure, AI/ML, Mobile, Data Infrastructure, Security, Open Source |
@@ -85,11 +84,11 @@ AI -> Devops -> Architecture -> Backend -> Frontend -> Else
 
 ## Current Source Methods
 
-| Company | Method | Feed URL |
-| --- | --- | --- |
-| OpenAI | RSS | `https://openai.com/news/rss.xml` |
-| Anthropic | SITEMAP | `https://www.anthropic.com/sitemap.xml` |
-| Claude | HTML_SCRAPING | N/A |
+| Company | Source | Method | Feed URL |
+| --- | --- | --- | --- |
+| OpenAI | OpenAI News | RSS | `https://openai.com/news/rss.xml` |
+| Anthropic | Anthropic Engineering | SITEMAP | `https://www.anthropic.com/sitemap.xml` |
+| Anthropic | Claude Blog | HTML_SCRAPING | N/A |
 | Netflix | RSS | `https://netflixtechblog.com/feed` |
 | Figma | ATOM | `https://www.figma.com/blog/feed/atom.xml` |
 | Meta | RSS | `https://engineering.fb.com/feed/` |

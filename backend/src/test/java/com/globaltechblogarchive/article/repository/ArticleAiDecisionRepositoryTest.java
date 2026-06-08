@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.globaltechblogarchive.article.domain.ArticleAiDecision;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.util.List;
@@ -18,7 +19,10 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 
-@DataJpaTest
+@DataJpaTest(properties = {
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.sql.init.mode=never"
+})
 @ActiveProfiles("local")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ArticleAiDecisionRepositoryTest {
@@ -33,7 +37,7 @@ class ArticleAiDecisionRepositoryTest {
     void saveStoresDecisionValues() {
         BlogSource source = persistSource("openai");
         ArticleAiDecision decision = decisionRepository.save(ArticleAiDecision.create(
-                source,
+                source.getCompany(),
                 "hash-approved",
                 "https://openai.com/news/scaling",
                 "Scaling systems",
@@ -48,7 +52,7 @@ class ArticleAiDecisionRepositoryTest {
 
         ArticleAiDecision found = decisionRepository.findById(decision.getId()).orElseThrow();
 
-        assertThat(found.getSource().getId()).isEqualTo(source.getId());
+        assertThat(found.getCompany().getId()).isEqualTo(source.getCompany().getId());
         assertThat(found.getNormalizedUrlHash()).isEqualTo("hash-approved");
         assertThat(found.getOriginalUrl()).isEqualTo("https://openai.com/news/scaling");
         assertThat(found.getOriginalTitle()).isEqualTo("Scaling systems");
@@ -62,7 +66,7 @@ class ArticleAiDecisionRepositoryTest {
     }
 
     @Test
-    void findBySourceIdAndNormalizedUrlHashInAndPromptVersionReturnsMatchingDecisions() {
+    void findByCompanyIdAndNormalizedUrlHashInAndPromptVersionReturnsMatchingDecisions() {
         BlogSource source = persistSource("source-a");
         BlogSource otherSource = persistSource("source-b");
         ArticleAiDecision included = persistDecision(source, "hash-1", "v1", true, ArticleCategory.AI);
@@ -71,8 +75,8 @@ class ArticleAiDecisionRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        List<ArticleAiDecision> decisions = decisionRepository.findBySourceIdAndNormalizedUrlHashInAndPromptVersion(
-                source.getId(),
+        List<ArticleAiDecision> decisions = decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(
+                source.getCompany().getId(),
                 List.of("hash-1", "hash-2"),
                 "v1"
         );
@@ -88,7 +92,7 @@ class ArticleAiDecisionRepositoryTest {
         entityManager.flush();
 
         ArticleAiDecision duplicate = ArticleAiDecision.create(
-                source,
+                source.getCompany(),
                 "same-hash",
                 "https://example.com/blog/duplicate",
                 "Duplicate",
@@ -107,7 +111,10 @@ class ArticleAiDecisionRepositoryTest {
 
     private BlogSource persistSource(String companyKey) {
         String uniqueCompanyKey = companyKey + "-" + UUID.randomUUID().toString().substring(0, 8);
+        Company company = Company.create(uniqueCompanyKey, "Test Company " + uniqueCompanyKey);
+        entityManager.persist(company);
         BlogSource source = BlogSource.create(
+                company,
                 uniqueCompanyKey,
                 "Test Source " + uniqueCompanyKey,
                 "https://example.com/" + uniqueCompanyKey,
@@ -126,7 +133,7 @@ class ArticleAiDecisionRepositoryTest {
             ArticleCategory category
     ) {
         ArticleAiDecision decision = ArticleAiDecision.create(
-                source,
+                source.getCompany(),
                 normalizedUrlHash,
                 "https://example.com/blog/" + normalizedUrlHash,
                 "Original " + normalizedUrlHash,

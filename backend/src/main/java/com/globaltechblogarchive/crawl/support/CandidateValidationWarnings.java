@@ -1,6 +1,6 @@
 package com.globaltechblogarchive.crawl.support;
 
-import com.globaltechblogarchive.crawl.parser.ParsedArticleCard;
+import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import java.net.URI;
 import java.util.ArrayList;
@@ -37,7 +37,7 @@ public final class CandidateValidationWarnings {
     private CandidateValidationWarnings() {
     }
 
-    public static List<String> from(BlogSource source, ParsedArticleCard card, String normalizedUrl) {
+    public static List<String> from(BlogSource source, ParsedArticle card, String normalizedUrl) {
         List<String> warnings = new ArrayList<>();
         String title = TextCleaner.clean(card.originalTitle());
         String context = TextCleaner.clean(card.shortContext());
@@ -80,7 +80,7 @@ public final class CandidateValidationWarnings {
         if (candidateHost.equalsIgnoreCase(sourceHost)) {
             return true;
         }
-        return "airbnb".equals(source.getCompanyKey())
+        return "airbnb".equals(source.getSourceKey())
                 && "medium.com".equalsIgnoreCase(candidateHost);
     }
 }

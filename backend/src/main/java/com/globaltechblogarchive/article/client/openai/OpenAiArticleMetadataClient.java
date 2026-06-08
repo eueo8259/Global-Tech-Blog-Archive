@@ -6,11 +6,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient;
-import com.globaltechblogarchive.article.exception.ArticleMetadataAiClientException;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
+import com.globaltechblogarchive.article.exception.ArticleMetadataAiClientException;
 import java.util.ArrayList;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -19,47 +18,36 @@ import org.springframework.web.client.RestClient;
 public class OpenAiArticleMetadataClient implements ArticleMetadataAiClient {
 
     private static final String RESPONSES_PATH = "/v1/responses";
-    private static final String DEFAULT_MODEL = "gpt-5-mini";
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
-    private final String model;
-    private final String apiKey;
+    private final OpenAiProperties properties;
 
     public OpenAiArticleMetadataClient(
-            RestClient.Builder restClientBuilder,
+            RestClient openAiRestClient,
             ObjectMapper objectMapper,
-            @Value("${openai.api-key:}") String apiKey,
-            @Value("${openai.model:" + DEFAULT_MODEL + "}") String model
+            OpenAiProperties properties
     ) {
-        this.restClient = restClientBuilder.baseUrl("https://api.openai.com").build();
+        this.restClient = openAiRestClient;
         this.objectMapper = objectMapper;
-        this.apiKey = apiKey;
-        this.model = model;
-    }
-
-    OpenAiArticleMetadataClient(RestClient restClient, ObjectMapper objectMapper, String apiKey, String model) {
-        this.restClient = restClient;
-        this.objectMapper = objectMapper;
-        this.apiKey = apiKey;
-        this.model = model;
+        this.properties = properties;
     }
 
     @Override
     public String model() {
-        return model;
+        return properties.modelOrDefault();
     }
 
     @Override
     public List<ArticleMetadataDecision> decide(List<ArticleMetadataInput> inputs) {
-        if (apiKey == null || apiKey.isBlank()) {
+        if (properties.apiKey() == null || properties.apiKey().isBlank()) {
             throw new ArticleMetadataAiClientException("OPENAI_API_KEY is required");
         }
         JsonNode request = buildRequest(inputs);
         String responseBody = restClient.post()
                 .uri(RESPONSES_PATH)
                 .contentType(MediaType.APPLICATION_JSON)
-                .headers(headers -> headers.setBearerAuth(apiKey))
+                .headers(headers -> headers.setBearerAuth(properties.apiKey()))
                 .body(request)
                 .retrieve()
                 .body(String.class);
@@ -68,7 +56,7 @@ public class OpenAiArticleMetadataClient implements ArticleMetadataAiClient {
 
     JsonNode buildRequest(List<ArticleMetadataInput> inputs) {
         ObjectNode request = objectMapper.createObjectNode();
-        request.put("model", model);
+        request.put("model", model());
         request.set("input", inputMessages(inputs));
         ObjectNode text = request.putObject("text");
         text.set("format", responseFormatSchema());

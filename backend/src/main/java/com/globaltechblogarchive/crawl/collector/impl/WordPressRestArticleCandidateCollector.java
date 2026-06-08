@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
-import com.globaltechblogarchive.crawl.parser.ParsedArticleCard;
+import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.crawl.support.ArticleDateParser;
 import com.globaltechblogarchive.crawl.support.ArticleCandidateCollectionPolicy;
 import com.globaltechblogarchive.crawl.support.TextCleaner;
@@ -31,27 +31,27 @@ public class WordPressRestArticleCandidateCollector implements ArticleCandidateC
     }
 
     @Override
-    public List<ParsedArticleCard> collect(BlogSource source) {
+    public List<ParsedArticle> collect(BlogSource source) {
         if (source.getFeedUrl() == null || source.getFeedUrl().isBlank()) {
-            throw new IllegalArgumentException("WordPress REST URL is required for " + source.getCompanyKey());
+            throw new IllegalArgumentException("WordPress REST URL is required for " + source.getSourceKey());
         }
         return ArticleCandidateCollectionPolicy.apply(parse(fetcher.fetch(source.getFeedUrl())));
     }
 
-    List<ParsedArticleCard> parse(String json) {
+    List<ParsedArticle> parse(String json) {
         try {
             JsonNode root = objectMapper.readTree(json);
             if (!root.isArray()) {
                 throw new IllegalArgumentException("WordPress REST response must be an array");
             }
-            List<ParsedArticleCard> cards = new ArrayList<>();
+            List<ParsedArticle> cards = new ArrayList<>();
             for (JsonNode post : root) {
                 String title = TextCleaner.clean(post.path("title").path("rendered").asText(""));
                 String link = post.path("link").asText("");
                 if (title.isBlank() || link.isBlank()) {
                     continue;
                 }
-                cards.add(new ParsedArticleCard(
+                cards.add(new ParsedArticle(
                         title,
                         link,
                         ArticleDateParser.parseWordPressDate(post.path("date").asText("")),
