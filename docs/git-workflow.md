@@ -88,20 +88,11 @@ chore: update dependencies
 * Keep Pull Requests focused on a single purpose.
 * Do not mix features, refactoring, and formatting changes in the same Pull Request.
 * Include a summary of what changed and why.
-* Link the Pull Request to the Issue in the PR body with a closing keyword.
 
-Use this format in the PR body:
+Pull Request titles must use the same Conventional Commit style as commit messages, for example `feat: collect article candidates by source` or `refactor: reorganize crawl architecture`. Do not add tool or agent prefixes such as `[codex]`, `[ai]`, or similar labels to PR titles unless explicitly requested.
 
-```text
-Closes #<issue-number>
-```
+When creating a Pull Request through any automation, connector, CLI, or AI agent, first read `.github/PULL_REQUEST_TEMPLATE.md` if it exists. Use that template as the PR body structure instead of writing a custom summary. Fill the related issue, summary, motivation, changes, notes, and verification fields. After creation, verify the PR title, base branch, draft state, related issue section, and body format match repository conventions.
 
-Do not use only:
-
-```text
-Related: #<issue-number>
-```
-
-When creating a PR through an automation, connector, CLI, or AI agent, do not assume the GitHub Pull Request template was applied automatically. Inspect or construct the PR body explicitly and verify that the closing keyword is present before considering PR creation complete.
+When creating a PR through an automation, connector, CLI, or AI agent, do not assume the GitHub Pull Request template was applied automatically. Inspect or construct the PR body explicitly and verify that the repository template structure is present before considering PR creation complete.
 
 Because issue work completes when the PR is merged into `develop`, check the linked Issue after the merge. If the Issue remains open and the PR completed its scope, close it manually with the completed reason.

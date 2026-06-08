@@ -28,5 +28,16 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'real'
+    }
+}
+
+tasks.register('realTest', Test) {
+    description = 'Runs tests against real external article sources.'
+    group = 'verification'
+    useJUnitPlatform {
+        includeTags 'real'
+    }
+    shouldRunAfter test
 }

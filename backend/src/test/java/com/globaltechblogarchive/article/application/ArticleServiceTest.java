@@ -99,7 +99,6 @@ class ArticleServiceTest {
         Article article = Article.create(
                 source,
                 "Article " + id,
-                "Summary " + id,
                 "https://openai.com/news/article-" + id,
                 "https://openai.com/news/article-" + id,
                 "hash-" + id,

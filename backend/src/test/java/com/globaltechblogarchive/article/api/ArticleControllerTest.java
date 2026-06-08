@@ -7,10 +7,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.globaltechblogarchive.article.application.ArticleService;
 import com.globaltechblogarchive.article.api.dto.ArticlePageResponse;
+import com.globaltechblogarchive.article.api.dto.ArticleResponse;
+import com.globaltechblogarchive.article.application.ArticleService;
+import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.global.error.GlobalExceptionHandler;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,14 +35,25 @@ class ArticleControllerTest {
 
     @Test
     void getArticlesUsesDefaultQueryValues() throws Exception {
-        ArticlePageResponse response = new ArticlePageResponse(List.of(), 0, 20, 0, 0, false);
+        ArticleResponse article = new ArticleResponse(
+                1L,
+                "Translated title",
+                "https://example.com/article",
+                ArticleCategory.AI,
+                LocalDateTime.of(2026, 6, 1, 10, 0),
+                "openai",
+                "OpenAI"
+        );
+        ArticlePageResponse response = new ArticlePageResponse(List.of(article), 0, 20, 1, 1, false);
         when(articleService.getArticles("ALL", 0, 20)).thenReturn(response);
 
         mockMvc.perform(get("/api/articles"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(20))
-                .andExpect(jsonPath("$.articles").isArray());
+                .andExpect(jsonPath("$.articles").isArray())
+                .andExpect(jsonPath("$.articles[0].title").value("Translated title"))
+                .andExpect(jsonPath("$.articles[0].summary").doesNotExist());
 
         verify(articleService).getArticles("ALL", 0, 20);
     }

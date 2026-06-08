@@ -126,4 +126,8 @@ Before code implementation or repo-tracked file edits for a feature/change:
 
 Follow docs/git-workflow.md.
 
-When creating a Pull Request, include `Closes #<issue-number>` in the PR body. After a Pull Request is merged into `develop`, verify the linked Issue state and close it manually with the completed reason if GitHub did not close it automatically.
+Pull Request titles must use the same Conventional Commit style as commit messages, for example `feat: collect article candidates by source` or `refactor: reorganize crawl architecture`. Do not add tool or agent prefixes such as `[codex]`, `[ai]`, or similar labels to PR titles unless I explicitly ask for them.
+
+When creating a Pull Request through any automation, connector, CLI, or AI agent, first read `.github/PULL_REQUEST_TEMPLATE.md` if it exists. Use that template as the PR body structure instead of writing a custom summary. Fill the related issue, summary, motivation, changes, notes, and verification fields. After creation, verify the PR title, base branch, draft state, related issue section, and body format match repository conventions.
+
+After a Pull Request is merged into `develop`, verify the linked Issue state and close it manually with the completed reason if GitHub did not close it automatically.
