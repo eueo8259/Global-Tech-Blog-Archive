@@ -109,7 +109,7 @@ class ArticleCrawlServiceTest {
                 LocalDateTime.of(2026, 6, 1, 10, 0),
                 "Architecture context"
         )));
-        when(decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
+        when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of());
         when(aiClient.decide(anyList())).thenReturn(List.of(
                 new ArticleMetadataDecision(0, "Translated scaling systems", ArticleCategory.ARCHITECTURE, true, null)
@@ -150,7 +150,7 @@ class ArticleCrawlServiceTest {
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
         when(collector.collect(source)).thenReturn(List.of(approvedCard, rejectedCard));
-        when(decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
+        when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of());
         when(aiClient.decide(anyList())).thenReturn(List.of(
                 new ArticleMetadataDecision(0, "Inference scaling", ArticleCategory.AI, true, null),
@@ -205,7 +205,7 @@ class ArticleCrawlServiceTest {
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
         when(collector.collect(source)).thenReturn(List.of(approvedCard, rejectedCard));
-        when(decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
+        when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of(
                         decision(source, approvedHash, true, ArticleCategory.AI),
                         decision(source, rejectedHash, false, ArticleCategory.ELSE)
@@ -241,7 +241,7 @@ class ArticleCrawlServiceTest {
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
         when(collector.collect(source)).thenReturn(List.of(card));
-        when(decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
+        when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of());
         when(aiClient.decide(anyList())).thenThrow(new IllegalStateException("ai failed"));
 
@@ -269,9 +269,9 @@ class ArticleCrawlServiceTest {
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
         when(collector.collect(source)).thenReturn(List.of(card));
-        when(decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
+        when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of());
-        when(articleRepository.existsByCompanyIdAndNormalizedUrlHash(1L, hash)).thenReturn(true);
+        when(articleRepository.existsByCompanyIdAndArticleUrlHash(1L, hash)).thenReturn(true);
 
         ArticleCrawlResult result = articleCrawlService.run();
 
@@ -300,9 +300,9 @@ class ArticleCrawlServiceTest {
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
         when(collector.collect(source)).thenReturn(List.of(card));
-        when(decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(any(), anyList(), any()))
+        when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of(decision(source, hash, true, ArticleCategory.AI)));
-        when(articleRepository.existsByCompanyIdAndNormalizedUrlHash(1L, hash)).thenReturn(true);
+        when(articleRepository.existsByCompanyIdAndArticleUrlHash(1L, hash)).thenReturn(true);
 
         ArticleCrawlResult result = articleCrawlService.run();
 
@@ -340,14 +340,14 @@ class ArticleCrawlServiceTest {
 
     private ArticleAiDecision decision(
             BlogSource source,
-            String normalizedUrlHash,
+            String articleUrlHash,
             boolean saveTarget,
             ArticleCategory category
     ) {
         return ArticleAiDecision.create(
                 source.getCompany(),
-                normalizedUrlHash,
-                "https://example.com/" + normalizedUrlHash,
+                articleUrlHash,
+                "https://example.com/" + articleUrlHash,
                 "Original",
                 "Translated",
                 category,

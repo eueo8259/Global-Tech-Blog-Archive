@@ -26,8 +26,8 @@ import lombok.NoArgsConstructor;
 @Table(
         name = "articles",
         uniqueConstraints = @UniqueConstraint(
-                name = "uq_source_normalized_url_hash",
-                columnNames = {"company_id", "normalized_url_hash"}
+                name = "uq_company_article_url_hash",
+                columnNames = {"company_id", "article_url_hash"}
         )
 )
 public class Article {
@@ -43,14 +43,11 @@ public class Article {
     @Column(name = "title", nullable = false, length = 500)
     private String title;
 
-    @Column(name = "original_url", nullable = false, length = 2000)
-    private String originalUrl;
+    @Column(name = "article_url", nullable = false, length = 2000)
+    private String articleUrl;
 
-    @Column(name = "normalized_url", nullable = false, length = 2000)
-    private String normalizedUrl;
-
-    @Column(name = "normalized_url_hash", nullable = false, length = 64)
-    private String normalizedUrlHash;
+    @Column(name = "article_url_hash", nullable = false, length = 64)
+    private String articleUrlHash;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 30)
@@ -69,18 +66,16 @@ public class Article {
     public static Article create(
             Company company,
             String title,
-            String originalUrl,
-            String normalizedUrl,
-            String normalizedUrlHash,
+            String articleUrl,
+            String articleUrlHash,
             ArticleCategory category,
             LocalDateTime publishedAt
     ) {
         Article article = new Article();
         article.company = company;
         article.title = title;
-        article.originalUrl = originalUrl;
-        article.normalizedUrl = normalizedUrl;
-        article.normalizedUrlHash = normalizedUrlHash;
+        article.articleUrl = articleUrl;
+        article.articleUrlHash = articleUrlHash;
         article.category = category;
         article.publishedAt = publishedAt;
         return article;

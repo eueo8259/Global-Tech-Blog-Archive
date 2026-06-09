@@ -47,8 +47,8 @@ public class ArticleDiscoveryLog {
     @Column(name = "original_title", nullable = false, length = 500)
     private String originalTitle;
 
-    @Column(name = "original_url", nullable = false, length = 2000)
-    private String originalUrl;
+    @Column(name = "article_url", nullable = false, length = 2000)
+    private String articleUrl;
 
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
@@ -57,11 +57,8 @@ public class ArticleDiscoveryLog {
     @Column(name = "short_context", columnDefinition = "TEXT")
     private String shortContext;
 
-    @Column(name = "normalized_url", nullable = false, length = 2000)
-    private String normalizedUrl;
-
-    @Column(name = "normalized_url_hash", nullable = false, length = 64)
-    private String normalizedUrlHash;
+    @Column(name = "article_url_hash", nullable = false, length = 64)
+    private String articleUrlHash;
 
     @Column(name = "duplicate_article", nullable = false)
     private boolean duplicate;
@@ -87,11 +84,10 @@ public class ArticleDiscoveryLog {
         item.companyKey = candidate.companyKey();
         item.companyName = candidate.companyName();
         item.originalTitle = candidate.originalTitle();
-        item.originalUrl = candidate.originalUrl();
+        item.articleUrl = candidate.articleUrl();
         item.publishedAt = candidate.publishedAt();
         item.shortContext = candidate.shortContext();
-        item.normalizedUrl = candidate.normalizedUrl();
-        item.normalizedUrlHash = candidate.normalizedUrlHash();
+        item.articleUrlHash = candidate.articleUrlHash();
         item.duplicate = candidate.duplicate();
         item.decisionStatus = candidate.decisionStatus();
         item.validationWarnings = serializeWarnings(candidate.validationWarnings());

@@ -48,7 +48,6 @@ class ArticleCollectionRepositoryTest {
                 "https://example.com/blog/scaling-backend-systems",
                 LocalDateTime.of(2026, 6, 1, 10, 0),
                 "Backend scaling context",
-                "https://example.com/blog/scaling-backend-systems",
                 "hash",
                 false,
                 ArticleCandidateDecisionStatus.NEW,

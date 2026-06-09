@@ -73,14 +73,14 @@ public class SourceCrawlProcessor {
                 .map(UrlHash::sha256)
                 .distinct()
                 .toList();
-        return decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(
+        return decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(
                         source.getCompany().getId(),
                         hashes,
                         promptVersion
                 )
                 .stream()
                 .collect(Collectors.toMap(
-                        ArticleAiDecision::getNormalizedUrlHash,
+                        ArticleAiDecision::getArticleUrlHash,
                         Function.identity()
                 ));
     }

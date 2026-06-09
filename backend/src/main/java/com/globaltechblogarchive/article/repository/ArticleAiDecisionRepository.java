@@ -7,9 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ArticleAiDecisionRepository extends JpaRepository<ArticleAiDecision, Long> {
 
-    List<ArticleAiDecision> findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(
+    List<ArticleAiDecision> findByCompanyIdAndArticleUrlHashInAndPromptVersion(
             Long companyId,
-            Collection<String> normalizedUrlHashes,
+            Collection<String> articleUrlHashes,
             String promptVersion
     );
 }

@@ -37,11 +37,11 @@ public final class CandidateValidationWarnings {
     private CandidateValidationWarnings() {
     }
 
-    public static List<String> from(BlogSource source, ParsedArticle card, String normalizedUrl) {
+    public static List<String> from(BlogSource source, ParsedArticle card, String articleUrl) {
         List<String> warnings = new ArrayList<>();
         String title = TextCleaner.clean(card.originalTitle());
         String context = TextCleaner.clean(card.shortContext());
-        String path = path(normalizedUrl).toLowerCase(Locale.ROOT);
+        String path = path(articleUrl).toLowerCase(Locale.ROOT);
 
         if (title.length() < 12 || GENERIC_TITLES.contains(title.toLowerCase(Locale.ROOT))) {
             warnings.add("SUSPICIOUS_TITLE");
@@ -61,7 +61,7 @@ public final class CandidateValidationWarnings {
                 break;
             }
         }
-        if (!isExpectedHost(source, normalizedUrl)) {
+        if (!isExpectedHost(source, articleUrl)) {
             warnings.add("UNEXPECTED_HOST");
         }
         return warnings;
@@ -71,8 +71,8 @@ public final class CandidateValidationWarnings {
         return URI.create(url).getPath();
     }
 
-    private static boolean isExpectedHost(BlogSource source, String normalizedUrl) {
-        String candidateHost = URI.create(normalizedUrl).getHost();
+    private static boolean isExpectedHost(BlogSource source, String articleUrl) {
+        String candidateHost = URI.create(articleUrl).getHost();
         String sourceHost = URI.create(source.getSiteUrl()).getHost();
         if (candidateHost == null || sourceHost == null) {
             return false;

@@ -103,7 +103,6 @@ class ArticleServiceTest {
                 source.getCompany(),
                 "Article " + id,
                 "https://openai.com/news/article-" + id,
-                "https://openai.com/news/article-" + id,
                 "hash-" + id,
                 category,
                 LocalDateTime.of(2026, 6, 1, 10, 0)

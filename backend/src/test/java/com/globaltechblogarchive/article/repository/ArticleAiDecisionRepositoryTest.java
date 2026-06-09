@@ -53,8 +53,8 @@ class ArticleAiDecisionRepositoryTest {
         ArticleAiDecision found = decisionRepository.findById(decision.getId()).orElseThrow();
 
         assertThat(found.getCompany().getId()).isEqualTo(source.getCompany().getId());
-        assertThat(found.getNormalizedUrlHash()).isEqualTo("hash-approved");
-        assertThat(found.getOriginalUrl()).isEqualTo("https://openai.com/news/scaling");
+        assertThat(found.getArticleUrlHash()).isEqualTo("hash-approved");
+        assertThat(found.getArticleUrl()).isEqualTo("https://openai.com/news/scaling");
         assertThat(found.getOriginalTitle()).isEqualTo("Scaling systems");
         assertThat(found.getTranslatedTitle()).isEqualTo("Translated scaling systems");
         assertThat(found.getCategory()).isEqualTo(ArticleCategory.ARCHITECTURE);
@@ -66,7 +66,7 @@ class ArticleAiDecisionRepositoryTest {
     }
 
     @Test
-    void findByCompanyIdAndNormalizedUrlHashInAndPromptVersionReturnsMatchingDecisions() {
+    void findByCompanyIdAndArticleUrlHashInAndPromptVersionReturnsMatchingDecisions() {
         BlogSource source = persistSource("source-a");
         BlogSource otherSource = persistSource("source-b");
         ArticleAiDecision included = persistDecision(source, "hash-1", "v1", true, ArticleCategory.AI);
@@ -75,7 +75,7 @@ class ArticleAiDecisionRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        List<ArticleAiDecision> decisions = decisionRepository.findByCompanyIdAndNormalizedUrlHashInAndPromptVersion(
+        List<ArticleAiDecision> decisions = decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(
                 source.getCompany().getId(),
                 List.of("hash-1", "hash-2"),
                 "v1"
@@ -127,17 +127,17 @@ class ArticleAiDecisionRepositoryTest {
 
     private ArticleAiDecision persistDecision(
             BlogSource source,
-            String normalizedUrlHash,
+            String articleUrlHash,
             String promptVersion,
             boolean saveTarget,
             ArticleCategory category
     ) {
         ArticleAiDecision decision = ArticleAiDecision.create(
                 source.getCompany(),
-                normalizedUrlHash,
-                "https://example.com/blog/" + normalizedUrlHash,
-                "Original " + normalizedUrlHash,
-                "Translated " + normalizedUrlHash,
+                articleUrlHash,
+                "https://example.com/blog/" + articleUrlHash,
+                "Original " + articleUrlHash,
+                "Translated " + articleUrlHash,
                 category,
                 saveTarget,
                 "gpt-5-mini",

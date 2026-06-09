@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 public record ArticleResponse(
         Long id,
         String title,
-        String originalUrl,
+        String articleUrl,
         ArticleCategory category,
         LocalDateTime publishedAt,
         String companyKey,
@@ -18,7 +18,7 @@ public record ArticleResponse(
         return new ArticleResponse(
                 article.getId(),
                 article.getTitle(),
-                article.getOriginalUrl(),
+                article.getArticleUrl(),
                 article.getCategory(),
                 article.getPublishedAt(),
                 article.getCompany().getCompanyKey(),

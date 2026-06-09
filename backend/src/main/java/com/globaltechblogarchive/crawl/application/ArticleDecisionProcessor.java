@@ -91,8 +91,8 @@ public class ArticleDecisionProcessor {
             boolean saveTarget = isSaveTarget(metadataDecision.save(), metadataDecision.category());
             ArticleAiDecision decision = ArticleAiDecision.create(
                     source.getCompany(),
-                    candidate.normalizedUrlHash(),
-                    candidate.originalUrl(),
+                    candidate.articleUrlHash(),
+                    candidate.articleUrl(),
                     candidate.originalTitle(),
                     metadataDecision.translatedTitle(),
                     metadataDecision.category(),
@@ -101,7 +101,7 @@ public class ArticleDecisionProcessor {
                     promptVersion
             );
             decisionRepository.save(decision);
-            decisionsByHash.put(candidate.normalizedUrlHash(), decision);
+            decisionsByHash.put(candidate.articleUrlHash(), decision);
             if (saveTarget) {
                 candidates.set(candidateIndex, candidate.withDecisionStatus(ArticleCandidateDecisionStatus.AI_APPROVED));
             } else {

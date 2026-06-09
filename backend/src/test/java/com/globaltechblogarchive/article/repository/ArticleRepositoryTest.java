@@ -64,14 +64,14 @@ class ArticleRepositoryTest {
     }
 
     @Test
-    void existsByCompanyIdAndNormalizedUrlHashReturnsWhetherArticleWasStored() {
+    void existsByCompanyIdAndArticleUrlHashReturnsWhetherArticleWasStored() {
         BlogSource source = persistSource();
         persistArticle(source, "existing", ArticleCategory.AI, LocalDateTime.of(2026, 6, 1, 10, 0));
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(articleRepository.existsByCompanyIdAndNormalizedUrlHash(source.getCompany().getId(), "hash-existing")).isTrue();
-        assertThat(articleRepository.existsByCompanyIdAndNormalizedUrlHash(source.getCompany().getId(), "hash-missing")).isFalse();
+        assertThat(articleRepository.existsByCompanyIdAndArticleUrlHash(source.getCompany().getId(), "hash-existing")).isTrue();
+        assertThat(articleRepository.existsByCompanyIdAndArticleUrlHash(source.getCompany().getId(), "hash-missing")).isFalse();
     }
 
     private BlogSource persistSource() {
@@ -98,7 +98,6 @@ class ArticleRepositoryTest {
         Article article = Article.create(
                 source.getCompany(),
                 "Article " + slug,
-                "https://openai.com/news/" + slug,
                 "https://openai.com/news/" + slug,
                 "hash-" + slug,
                 category,

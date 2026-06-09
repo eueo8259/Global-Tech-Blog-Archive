@@ -41,7 +41,6 @@ class ArticleCrawlControllerTest {
                 "https://stripe.com/blog/scaling-apis",
                 LocalDateTime.of(2026, 6, 1, 0, 0),
                 "API context",
-                "https://stripe.com/blog/scaling-apis",
                 "hash",
                 false,
                 ArticleCandidateDecisionStatus.NEW,

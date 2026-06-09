@@ -75,10 +75,10 @@ AI -> Devops -> Architecture -> Backend -> Frontend -> Else
 1. Use RSS or Atom feeds as the default collection method.
 2. Use HTML list-page parsing only when one of these conditions is true:
    - the source does not provide an RSS or Atom feed
-   - the feed omits one or more MVP-required fields: title, original URL, published date, or company/source identity
+   - the feed omits one or more MVP-required fields: title, article URL, published date, or company/source identity
    - the feed contains only product/news entries while the source has a separate engineering article list page
 3. Store approved articles only after AI decision review.
-4. Store translated title, original URL, normalized URL, normalized URL hash, company, published date, row creation time, and category.
+4. Store translated title, cleaned article URL, article URL hash, company, published date, row creation time, and category.
 5. Do not store article summaries for the MVP.
 6. Do not fetch article detail pages only to discover canonical URLs in the MVP.
 

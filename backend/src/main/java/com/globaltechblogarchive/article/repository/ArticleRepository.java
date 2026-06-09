@@ -15,5 +15,5 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     @EntityGraph(attributePaths = "company")
     Page<Article> findByCategoryOrderByPublishedAtDescIdDesc(ArticleCategory category, Pageable pageable);
 
-    boolean existsByCompanyIdAndNormalizedUrlHash(Long companyId, String normalizedUrlHash);
+    boolean existsByCompanyIdAndArticleUrlHash(Long companyId, String articleUrlHash);
 }
