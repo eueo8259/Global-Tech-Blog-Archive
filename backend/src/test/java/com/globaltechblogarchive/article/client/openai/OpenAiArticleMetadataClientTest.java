@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataInput;
 import com.globaltechblogarchive.article.exception.ArticleMetadataAiClientException;
 import java.util.List;
+
+import com.globaltechblogarchive.global.config.OpenAiProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
 

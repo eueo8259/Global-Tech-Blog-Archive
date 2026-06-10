@@ -1,9 +1,7 @@
-package com.globaltechblogarchive.article.client.openai;
+package com.globaltechblogarchive.global.config;
 
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.client.RestClient;
 
 @Configuration

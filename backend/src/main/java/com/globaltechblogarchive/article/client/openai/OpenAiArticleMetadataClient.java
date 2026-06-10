@@ -2,8 +2,10 @@ package com.globaltechblogarchive.article.client.openai;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient;
-import com.globaltechblogarchive.article.exception.ArticleMetadataAiClientException;
+
 import java.util.List;
+
+import com.globaltechblogarchive.global.config.OpenAiProperties;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;

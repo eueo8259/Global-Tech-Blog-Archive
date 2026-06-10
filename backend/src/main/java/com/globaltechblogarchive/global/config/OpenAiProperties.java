@@ -1,4 +1,4 @@
-package com.globaltechblogarchive.article.client.openai;
+package com.globaltechblogarchive.global.config;
 
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
