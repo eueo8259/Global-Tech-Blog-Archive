@@ -8,6 +8,7 @@ build/
 .env
 .env.*
 !.env.example
+backend/src/main/resources/data-local.sql
 
 ### Frontend ###
 node_modules/

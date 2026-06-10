@@ -7,22 +7,22 @@ import java.time.LocalDateTime;
 public record ArticleResponse(
         Long id,
         String title,
-        String originalUrl,
+        String articleUrl,
         ArticleCategory category,
         LocalDateTime publishedAt,
-        String sourceCompanyKey,
-        String sourceCompanyName
+        String companyKey,
+        String companyName
 ) {
 
     public static ArticleResponse from(Article article) {
         return new ArticleResponse(
                 article.getId(),
                 article.getTitle(),
-                article.getOriginalUrl(),
+                article.getArticleUrl(),
                 article.getCategory(),
                 article.getPublishedAt(),
-                article.getSource().getCompanyKey(),
-                article.getSource().getCompanyName()
+                article.getCompany().getCompanyKey(),
+                article.getCompany().getCompanyName()
         );
     }
 }

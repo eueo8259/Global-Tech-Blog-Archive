@@ -4,10 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
-import com.globaltechblogarchive.crawl.domain.ArticleCollectionItem;
+import com.globaltechblogarchive.crawl.domain.ArticleDiscoveryLog;
 import com.globaltechblogarchive.crawl.domain.ArticleCollectionRun;
-import com.globaltechblogarchive.crawl.repository.ArticleCollectionItemRepository;
+import com.globaltechblogarchive.crawl.repository.ArticleDiscoveryLogRepository;
 import com.globaltechblogarchive.crawl.repository.ArticleCollectionRunRepository;
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.time.LocalDateTime;
@@ -19,7 +20,10 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
 
-@DataJpaTest
+@DataJpaTest(properties = {
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.sql.init.mode=never"
+})
 @ActiveProfiles("local")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ArticleCollectionRepositoryTest {
@@ -28,7 +32,7 @@ class ArticleCollectionRepositoryTest {
     private ArticleCollectionRunRepository runRepository;
 
     @Autowired
-    private ArticleCollectionItemRepository itemRepository;
+    private ArticleDiscoveryLogRepository itemRepository;
 
     @Autowired
     private TestEntityManager entityManager;
@@ -44,24 +48,26 @@ class ArticleCollectionRepositoryTest {
                 "https://example.com/blog/scaling-backend-systems",
                 LocalDateTime.of(2026, 6, 1, 10, 0),
                 "Backend scaling context",
-                "https://example.com/blog/scaling-backend-systems",
                 "hash",
                 false,
                 ArticleCandidateDecisionStatus.NEW,
                 List.of("PUBLISHED_AT_MISSING")
         );
 
-        itemRepository.save(ArticleCollectionItem.create(run, source, candidate));
+        itemRepository.save(ArticleDiscoveryLog.create(run, source, candidate));
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(itemRepository.countByRunId(run.getId())).isEqualTo(1);
+        assertThat(itemRepository.count()).isEqualTo(1);
     }
 
     private BlogSource persistSource() {
+        Company company = Company.create("test-source", "Test Source");
+        entityManager.persist(company);
         BlogSource source = BlogSource.create(
+                company,
                 "test-source",
-                "Test Source",
+                "Test Source Blog",
                 "https://example.com/blog",
                 null,
                 CollectionMethod.HTML_SCRAPING

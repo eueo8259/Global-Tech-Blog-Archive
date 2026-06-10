@@ -7,6 +7,8 @@ import java.util.List;
 public record SourceCrawlResult(
         String companyKey,
         String companyName,
+        String sourceKey,
+        String sourceName,
         boolean success,
         String errorMessage,
         int candidateCount,
@@ -16,8 +18,10 @@ public record SourceCrawlResult(
 
     public static SourceCrawlResult success(BlogSource source, List<ArticleCandidate> candidates) {
         return new SourceCrawlResult(
-                source.getCompanyKey(),
-                source.getCompanyName(),
+                source.getCompany().getCompanyKey(),
+                source.getCompany().getCompanyName(),
+                source.getSourceKey(),
+                source.getSourceName(),
                 true,
                 null,
                 candidates.size(),
@@ -28,8 +32,10 @@ public record SourceCrawlResult(
 
     public static SourceCrawlResult failure(BlogSource source, String errorMessage) {
         return new SourceCrawlResult(
-                source.getCompanyKey(),
-                source.getCompanyName(),
+                source.getCompany().getCompanyKey(),
+                source.getCompany().getCompanyName(),
+                source.getSourceKey(),
+                source.getSourceName(),
                 false,
                 errorMessage,
                 0,

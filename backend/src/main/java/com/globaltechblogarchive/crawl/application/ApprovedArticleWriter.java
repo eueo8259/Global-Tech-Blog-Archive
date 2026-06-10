@@ -25,18 +25,17 @@ public class ApprovedArticleWriter {
     ) {
         int storedArticleCount = 0;
         for (ArticleCandidate candidate : candidates) {
-            ArticleAiDecision decision = decisionsByHash.get(candidate.normalizedUrlHash());
+            ArticleAiDecision decision = decisionsByHash.get(candidate.articleUrlHash());
             if (candidate.duplicate()
                     || decision == null
                     || !isSaveTarget(decision.isSaveTarget(), decision.getCategory())) {
                 continue;
             }
             articleRepository.save(Article.create(
-                    source,
+                    source.getCompany(),
                     decision.getTranslatedTitle(),
-                    candidate.originalUrl(),
-                    candidate.normalizedUrl(),
-                    candidate.normalizedUrlHash(),
+                    candidate.articleUrl(),
+                    candidate.articleUrlHash(),
                     decision.getCategory(),
                     publishedAt(candidate)
             ));

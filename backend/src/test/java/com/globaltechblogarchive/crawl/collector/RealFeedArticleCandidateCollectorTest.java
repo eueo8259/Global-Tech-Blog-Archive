@@ -2,8 +2,9 @@ package com.globaltechblogarchive.crawl.collector.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
-import com.globaltechblogarchive.crawl.parser.ParsedArticleCard;
+import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.util.List;
@@ -22,14 +23,21 @@ class RealFeedArticleCandidateCollectorTest {
     @ParameterizedTest(name = "{0} feed returns parseable article cards")
     @MethodSource("feedSources")
     void collectFromRealFeedReturnsArticleCards(
-            String companyKey,
+            String sourceKey,
             CollectionMethod method,
             String siteUrl,
             String feedUrl
     ) {
-        BlogSource source = BlogSource.create(companyKey, companyKey, siteUrl, feedUrl, method);
+        BlogSource source = BlogSource.create(
+                Company.create(sourceKey, sourceKey),
+                sourceKey,
+                sourceKey,
+                siteUrl,
+                feedUrl,
+                method
+        );
 
-        List<ParsedArticleCard> cards = collector.collect(source);
+        List<ParsedArticle> cards = collector.collect(source);
 
         assertThat(cards).isNotEmpty();
         assertThat(cards).allSatisfy(card -> {

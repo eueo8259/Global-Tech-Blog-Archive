@@ -24,7 +24,8 @@ public final class UrlNormalizer {
             if (path == null || path.isBlank()) {
                 path = "/";
             }
-            return new URI(scheme, uri.getUserInfo(), host, port, path, uri.getRawQuery(), null).toString();
+            return new URI(scheme, uri.getUserInfo(), host, port, path, uri.getRawQuery(), null)
+                    .toString();
         } catch (URISyntaxException exception) {
             throw new IllegalArgumentException("Invalid URL: " + url, exception);
         }
@@ -44,4 +45,5 @@ public final class UrlNormalizer {
                 .replace("&#38;", "&")
                 .trim();
     }
+
 }

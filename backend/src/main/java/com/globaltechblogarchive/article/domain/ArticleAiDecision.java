@@ -1,6 +1,6 @@
 package com.globaltechblogarchive.article.domain;
 
-import com.globaltechblogarchive.source.domain.BlogSource;
+import com.globaltechblogarchive.company.domain.Company;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -26,8 +26,8 @@ import lombok.NoArgsConstructor;
 @Table(
         name = "article_ai_decisions",
         uniqueConstraints = @UniqueConstraint(
-                name = "uq_article_ai_decision_source_hash_prompt",
-                columnNames = {"source_id", "normalized_url_hash", "prompt_version"}
+                name = "uq_article_ai_decision_company_url_hash_prompt",
+                columnNames = {"company_id", "article_url_hash", "prompt_version"}
         )
 )
 public class ArticleAiDecision {
@@ -37,14 +37,14 @@ public class ArticleAiDecision {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "source_id", nullable = false)
-    private BlogSource source;
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 
-    @Column(name = "normalized_url_hash", nullable = false, length = 64)
-    private String normalizedUrlHash;
+    @Column(name = "article_url_hash", nullable = false, length = 64)
+    private String articleUrlHash;
 
-    @Column(name = "original_url", nullable = false, length = 2000)
-    private String originalUrl;
+    @Column(name = "article_url", nullable = false, length = 2000)
+    private String articleUrl;
 
     @Column(name = "original_title", nullable = false, length = 500)
     private String originalTitle;
@@ -72,9 +72,9 @@ public class ArticleAiDecision {
     private LocalDateTime updatedAt;
 
     public static ArticleAiDecision create(
-            BlogSource source,
-            String normalizedUrlHash,
-            String originalUrl,
+            Company company,
+            String articleUrlHash,
+            String articleUrl,
             String originalTitle,
             String translatedTitle,
             ArticleCategory category,
@@ -83,9 +83,9 @@ public class ArticleAiDecision {
             String promptVersion
     ) {
         ArticleAiDecision decision = new ArticleAiDecision();
-        decision.source = source;
-        decision.normalizedUrlHash = normalizedUrlHash;
-        decision.originalUrl = originalUrl;
+        decision.company = company;
+        decision.articleUrlHash = articleUrlHash;
+        decision.articleUrl = articleUrl;
         decision.originalTitle = originalTitle;
         decision.translatedTitle = translatedTitle;
         decision.category = category;

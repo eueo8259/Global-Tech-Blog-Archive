@@ -13,8 +13,7 @@ The MVP collects articles only from the following companies:
 | Company | Main Topics |
 | --- | --- |
 | OpenAI | AI, Agentic AI, Engineering, Safety, Security |
-| Anthropic | Agentic AI, Evals, Context Engineering, AI Safety, Developer Tools |
-| Claude | Claude Code, Agents, Enterprise AI, Developer Workflows |
+| Anthropic | Agentic AI, Evals, Context Engineering, AI Safety, Developer Tools, Claude Code |
 | Netflix | Distributed Systems, Streaming, Data Platform, Personalization, Reliability |
 | Figma | Infrastructure, Realtime Collaboration, Frontend Performance, Database/Storage, Developer Experience |
 | Meta | Infrastructure, AI/ML, Mobile, Data Infrastructure, Security, Open Source |
@@ -76,20 +75,20 @@ AI -> Devops -> Architecture -> Backend -> Frontend -> Else
 1. Use RSS or Atom feeds as the default collection method.
 2. Use HTML list-page parsing only when one of these conditions is true:
    - the source does not provide an RSS or Atom feed
-   - the feed omits one or more MVP-required fields: title, original URL, published date, or company/source identity
+   - the feed omits one or more MVP-required fields: title, article URL, published date, or company/source identity
    - the feed contains only product/news entries while the source has a separate engineering article list page
 3. Store approved articles only after AI decision review.
-4. Store translated title, original URL, normalized URL, normalized URL hash, company, published date, row creation time, and category.
+4. Store translated title, source-provided article URL, article URL hash, company, published date, row creation time, and category.
 5. Do not store article summaries for the MVP.
 6. Do not fetch article detail pages only to discover canonical URLs in the MVP.
 
 ## Current Source Methods
 
-| Company | Method | Feed URL |
-| --- | --- | --- |
-| OpenAI | RSS | `https://openai.com/news/rss.xml` |
-| Anthropic | SITEMAP | `https://www.anthropic.com/sitemap.xml` |
-| Claude | HTML_SCRAPING | N/A |
+| Company | Source | Method | Feed URL |
+| --- | --- | --- | --- |
+| OpenAI | OpenAI News | RSS | `https://openai.com/news/rss.xml` |
+| Anthropic | Anthropic Engineering | SITEMAP | `https://www.anthropic.com/sitemap.xml` |
+| Anthropic | Claude Blog | HTML_SCRAPING | N/A |
 | Netflix | RSS | `https://netflixtechblog.com/feed` |
 | Figma | ATOM | `https://www.figma.com/blog/feed/atom.xml` |
 | Meta | RSS | `https://engineering.fb.com/feed/` |

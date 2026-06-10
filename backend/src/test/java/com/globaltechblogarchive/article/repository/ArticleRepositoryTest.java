@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.globaltechblogarchive.article.domain.Article;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.time.LocalDateTime;
@@ -16,7 +17,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
-@DataJpaTest
+@DataJpaTest(properties = {
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.sql.init.mode=never"
+})
 @ActiveProfiles("local")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ArticleRepositoryTest {
@@ -39,7 +43,7 @@ class ArticleRepositoryTest {
 
         assertThat(page.getContent()).extracting(Article::getId)
                 .containsExactly(newer.getId(), older.getId());
-        assertThat(page.getContent().getFirst().getSource().getCompanyName()).isEqualTo("OpenAI");
+        assertThat(page.getContent().getFirst().getCompany().getCompanyName()).isEqualTo("OpenAI");
     }
 
     @Test
@@ -60,20 +64,23 @@ class ArticleRepositoryTest {
     }
 
     @Test
-    void existsBySourceIdAndNormalizedUrlHashReturnsWhetherArticleWasStored() {
+    void existsByCompanyIdAndArticleUrlHashReturnsWhetherArticleWasStored() {
         BlogSource source = persistSource();
         persistArticle(source, "existing", ArticleCategory.AI, LocalDateTime.of(2026, 6, 1, 10, 0));
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(articleRepository.existsBySourceIdAndNormalizedUrlHash(source.getId(), "hash-existing")).isTrue();
-        assertThat(articleRepository.existsBySourceIdAndNormalizedUrlHash(source.getId(), "hash-missing")).isFalse();
+        assertThat(articleRepository.existsByCompanyIdAndArticleUrlHash(source.getCompany().getId(), "hash-existing")).isTrue();
+        assertThat(articleRepository.existsByCompanyIdAndArticleUrlHash(source.getCompany().getId(), "hash-missing")).isFalse();
     }
 
     private BlogSource persistSource() {
+        Company company = Company.create("test-openai", "OpenAI");
+        entityManager.persist(company);
         BlogSource source = BlogSource.create(
+                company,
                 "test-openai",
-                "OpenAI",
+                "OpenAI News",
                 "https://openai.com/news/",
                 "https://openai.com/news/rss.xml",
                 CollectionMethod.RSS
@@ -89,9 +96,8 @@ class ArticleRepositoryTest {
             LocalDateTime publishedAt
     ) {
         Article article = Article.create(
-                source,
+                source.getCompany(),
                 "Article " + slug,
-                "https://openai.com/news/" + slug,
                 "https://openai.com/news/" + slug,
                 "hash-" + slug,
                 category,

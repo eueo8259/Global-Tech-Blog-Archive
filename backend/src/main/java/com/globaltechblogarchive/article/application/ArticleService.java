@@ -4,6 +4,7 @@ import com.globaltechblogarchive.article.api.dto.ArticlePageResponse;
 import com.globaltechblogarchive.article.domain.Article;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.article.repository.ArticleRepository;
+import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,13 +35,13 @@ public class ArticleService {
 
     private ArticleCategory parseArticleCategory(String category) {
         if (category == null) {
-            throw new InvalidInputException("Unsupported category: null");
+            throw new InvalidInputException(ErrorCode.INVALID_INPUT_VALUE, "Unsupported category: null");
         }
 
         try {
             return ArticleCategory.valueOf(category);
         } catch (IllegalArgumentException exception) {
-            throw new InvalidInputException("Unsupported category: " + category);
+            throw new InvalidInputException(ErrorCode.INVALID_INPUT_VALUE, "Unsupported category: " + category);
         }
     }
 }

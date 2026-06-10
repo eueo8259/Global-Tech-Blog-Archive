@@ -46,23 +46,23 @@ public class ConfiguredArticleListParser implements ArticleListParser {
 
     @Override
     public boolean supports(BlogSource source) {
-        return configs.containsKey(source.getCompanyKey());
+        return configs.containsKey(source.getSourceKey());
     }
 
     @Override
-    public List<ParsedArticleCard> parse(BlogSource source, String html) {
-        ParserConfig config = configs.get(source.getCompanyKey());
+    public List<ParsedArticle> parse(BlogSource source, String html) {
+        ParserConfig config = configs.get(source.getSourceKey());
         if (config == null) {
-            throw new IllegalArgumentException("No parser config for source: " + source.getCompanyKey());
+            throw new IllegalArgumentException("No parser config for source: " + source.getSourceKey());
         }
 
-        Map<String, ParsedArticleCard> cards = new LinkedHashMap<>();
+        Map<String, ParsedArticle> cards = new LinkedHashMap<>();
         for (String block : articleBlocks(html)) {
-            Optional<ParsedArticleCard> card = parseBlock(source, config, block);
+            Optional<ParsedArticle> card = parseBlock(source, config, block);
             card.ifPresent(value -> cards.putIfAbsent(UrlNormalizer.normalize(value.originalUrl()), value));
         }
         if (cards.isEmpty()) {
-            for (ParsedArticleCard card : parseLinks(source, config, html)) {
+            for (ParsedArticle card : parseLinks(source, config, html)) {
                 cards.putIfAbsent(UrlNormalizer.normalize(card.originalUrl()), card);
             }
         }
@@ -78,7 +78,7 @@ public class ConfiguredArticleListParser implements ArticleListParser {
         return blocks;
     }
 
-    private Optional<ParsedArticleCard> parseBlock(BlogSource source, ParserConfig config, String block) {
+    private Optional<ParsedArticle> parseBlock(BlogSource source, ParserConfig config, String block) {
         Matcher matcher = LINK.matcher(block);
         while (matcher.find()) {
             String attrs = matcher.group(1) + " " + matcher.group(3);
@@ -89,14 +89,14 @@ public class ConfiguredArticleListParser implements ArticleListParser {
             }
             String absoluteUrl = UrlNormalizer.absolute(source.getSiteUrl(), href);
             String context = buildContext(config, block, title);
-            return Optional.of(new ParsedArticleCard(title, absoluteUrl, parseDate(block), context));
+            return Optional.of(new ParsedArticle(title, absoluteUrl, parseDate(block), context));
         }
         return Optional.empty();
     }
 
-    private List<ParsedArticleCard> parseLinks(BlogSource source, ParserConfig config, String html) {
+    private List<ParsedArticle> parseLinks(BlogSource source, ParserConfig config, String html) {
         Matcher matcher = LINK.matcher(html);
-        List<ParsedArticleCard> cards = new ArrayList<>();
+        List<ParsedArticle> cards = new ArrayList<>();
         while (matcher.find()) {
             String attrs = matcher.group(1) + " " + matcher.group(3);
             String href = matcher.group(2).trim();
@@ -107,7 +107,7 @@ public class ConfiguredArticleListParser implements ArticleListParser {
             }
             String absoluteUrl = UrlNormalizer.absolute(source.getSiteUrl(), href);
             String context = buildContext(config, contextWindow, title);
-            cards.add(new ParsedArticleCard(title, absoluteUrl, parseDate(contextWindow), context));
+            cards.add(new ParsedArticle(title, absoluteUrl, parseDate(contextWindow), context));
         }
         return cards;
     }
@@ -215,8 +215,8 @@ public class ConfiguredArticleListParser implements ArticleListParser {
     private Map<String, ParserConfig> createConfigs() {
         Map<String, ParserConfig> result = new LinkedHashMap<>();
         result.put("openai", new ParserConfig(List.of("/news/"), List.of("engineering", "security", "research", "developers"), List.of("engineering", "security", "research", "developers")));
-        result.put("anthropic", new ParserConfig(List.of("/news/"), List.of("research", "product", "policy", "announcement"), List.of("research", "product", "policy", "announcement")));
-        result.put("claude", new ParserConfig(List.of("/blog/"), List.of(), List.of("claude code", "agents", "engineering", "developers")));
+        result.put("anthropic-engineering", new ParserConfig(List.of("/news/"), List.of("research", "product", "policy", "announcement"), List.of("research", "product", "policy", "announcement")));
+        result.put("claude-blog", new ParserConfig(List.of("/blog/"), List.of(), List.of("claude code", "agents", "engineering", "developers")));
         result.put("figma", new ParserConfig(List.of("/blog/"), List.of("inside figma engineering", "engineering"), List.of("engineering")));
         result.put("uber", new ParserConfig(List.of("/blog/"), List.of(), List.of("engineering")));
         result.put("airbnb", new ParserConfig(List.of("medium.com/airbnb-engineering", "airbnb.tech"), List.of(), List.of("engineering", "data", "mobile", "backend")));

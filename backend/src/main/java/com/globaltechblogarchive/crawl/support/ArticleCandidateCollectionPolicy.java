@@ -1,6 +1,6 @@
 package com.globaltechblogarchive.crawl.support;
 
-import com.globaltechblogarchive.crawl.parser.ParsedArticleCard;
+import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -13,12 +13,12 @@ public final class ArticleCandidateCollectionPolicy {
     private ArticleCandidateCollectionPolicy() {
     }
 
-    public static List<ParsedArticleCard> apply(List<ParsedArticleCard> cards) {
+    public static List<ParsedArticle> apply(List<ParsedArticle> cards) {
         LocalDateTime threshold = LocalDateTime.now().minusDays(RECENT_WINDOW_DAYS);
         return cards.stream()
                 .filter(card -> card.publishedAt() != null)
                 .filter(card -> !card.publishedAt().isBefore(threshold))
-                .sorted(Comparator.comparing(ParsedArticleCard::publishedAt).reversed())
+                .sorted(Comparator.comparing(ParsedArticle::publishedAt).reversed())
                 .limit(MAX_CANDIDATES)
                 .toList();
     }

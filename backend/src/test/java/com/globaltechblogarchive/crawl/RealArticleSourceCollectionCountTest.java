@@ -3,6 +3,7 @@ package com.globaltechblogarchive.crawl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.collector.impl.FeedArticleCandidateCollector;
@@ -39,7 +40,7 @@ class RealArticleSourceCollectionCountTest {
 
         List<SourceCount> counts = sources().stream()
                 .map(source -> collectCount(source, collectors))
-                .sorted(Comparator.comparing(SourceCount::companyKey))
+                .sorted(Comparator.comparing(SourceCount::sourceKey))
                 .toList();
 
         Path reportPath = Path.of("build", "reports", "real-source-counts.tsv");
@@ -49,7 +50,7 @@ class RealArticleSourceCollectionCountTest {
         assertThat(counts).isNotEmpty();
         assertThat(counts)
                 .allSatisfy(count -> assertThat(count.count())
-                        .as(count.companyKey() + " candidate count should never be negative")
+                        .as(count.sourceKey() + " candidate count should never be negative")
                         .isGreaterThanOrEqualTo(0));
     }
 
@@ -61,16 +62,20 @@ class RealArticleSourceCollectionCountTest {
         try {
             int count = collector.collect(source).size();
             return new SourceCount(
-                    source.getCompanyKey(),
-                    source.getCompanyName(),
+                    source.getCompany().getCompanyKey(),
+                    source.getCompany().getCompanyName(),
+                    source.getSourceKey(),
+                    source.getSourceName(),
                     source.getCollectionMethod(),
                     count,
                     ""
             );
         } catch (Exception exception) {
             return new SourceCount(
-                    source.getCompanyKey(),
-                    source.getCompanyName(),
+                    source.getCompany().getCompanyKey(),
+                    source.getCompany().getCompanyName(),
+                    source.getSourceKey(),
+                    source.getSourceName(),
                     source.getCollectionMethod(),
                     0,
                     exception.getClass().getSimpleName() + ": " + exception.getMessage()
@@ -79,10 +84,12 @@ class RealArticleSourceCollectionCountTest {
     }
 
     private String toTsv(List<SourceCount> counts) {
-        StringBuilder builder = new StringBuilder("companyKey\tcompanyName\tmethod\tcandidateCount\terror\n");
+        StringBuilder builder = new StringBuilder("companyKey\tcompanyName\tsourceKey\tsourceName\tmethod\tcandidateCount\terror\n");
         for (SourceCount count : counts) {
             builder.append(count.companyKey()).append('\t')
                     .append(count.companyName()).append('\t')
+                    .append(count.sourceKey()).append('\t')
+                    .append(count.sourceName()).append('\t')
                     .append(count.method()).append('\t')
                     .append(count.count()).append('\t')
                     .append(count.error().replace('\t', ' ').replace('\n', ' '))
@@ -94,8 +101,8 @@ class RealArticleSourceCollectionCountTest {
     private List<BlogSource> sources() {
         return List.of(
                 rss("openai", "OpenAI", "https://openai.com/news/", "https://openai.com/news/rss.xml"),
-                sitemap("anthropic", "Anthropic", "https://www.anthropic.com/engineering", "https://www.anthropic.com/sitemap.xml"),
-                html("claude", "Claude", "https://claude.com/blog"),
+                sitemap("anthropic", "Anthropic", "anthropic-engineering", "Anthropic Engineering", "https://www.anthropic.com/engineering", "https://www.anthropic.com/sitemap.xml"),
+                html("anthropic", "Anthropic", "claude-blog", "Claude Blog", "https://claude.com/blog"),
                 rss("netflix", "Netflix", "https://netflixtechblog.com/", "https://netflixtechblog.com/feed"),
                 atom("figma", "Figma", "https://www.figma.com/blog/engineering/", "https://www.figma.com/blog/feed/atom.xml"),
                 rss("meta", "Meta", "https://engineering.fb.com/", "https://engineering.fb.com/feed/"),
@@ -115,24 +122,34 @@ class RealArticleSourceCollectionCountTest {
     }
 
     private BlogSource html(String companyKey, String companyName, String siteUrl) {
-        return BlogSource.create(companyKey, companyName, siteUrl, null, CollectionMethod.HTML_SCRAPING);
+        return html(companyKey, companyName, companyKey, companyName, siteUrl);
     }
 
     private BlogSource rss(String companyKey, String companyName, String siteUrl, String feedUrl) {
-        return BlogSource.create(companyKey, companyName, siteUrl, feedUrl, CollectionMethod.RSS);
+        return BlogSource.create(Company.create(companyKey, companyName), companyKey, companyName, siteUrl, feedUrl, CollectionMethod.RSS);
     }
 
     private BlogSource atom(String companyKey, String companyName, String siteUrl, String feedUrl) {
-        return BlogSource.create(companyKey, companyName, siteUrl, feedUrl, CollectionMethod.ATOM);
+        return BlogSource.create(Company.create(companyKey, companyName), companyKey, companyName, siteUrl, feedUrl, CollectionMethod.ATOM);
     }
 
     private BlogSource sitemap(String companyKey, String companyName, String siteUrl, String feedUrl) {
-        return BlogSource.create(companyKey, companyName, siteUrl, feedUrl, CollectionMethod.SITEMAP);
+        return sitemap(companyKey, companyName, companyKey, companyName, siteUrl, feedUrl);
+    }
+
+    private BlogSource html(String companyKey, String companyName, String sourceKey, String sourceName, String siteUrl) {
+        return BlogSource.create(Company.create(companyKey, companyName), sourceKey, sourceName, siteUrl, null, CollectionMethod.HTML_SCRAPING);
+    }
+
+    private BlogSource sitemap(String companyKey, String companyName, String sourceKey, String sourceName, String siteUrl, String feedUrl) {
+        return BlogSource.create(Company.create(companyKey, companyName), sourceKey, sourceName, siteUrl, feedUrl, CollectionMethod.SITEMAP);
     }
 
     private record SourceCount(
             String companyKey,
             String companyName,
+            String sourceKey,
+            String sourceName,
             CollectionMethod method,
             int count,
             String error

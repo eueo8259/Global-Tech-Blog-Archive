@@ -2,6 +2,7 @@ package com.globaltechblogarchive.crawl.parser;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.util.stream.Stream;
@@ -15,8 +16,8 @@ class ConfiguredArticleListParserTest {
 
     @ParameterizedTest
     @MethodSource("htmlSources")
-    void parseExtractsCompanyArticleCards(String companyKey, String siteUrl, String articleUrl, String signal) {
-        BlogSource source = BlogSource.create(companyKey, companyKey, siteUrl, null, CollectionMethod.HTML_SCRAPING);
+    void parseExtractsCompanyArticleCards(String sourceKey, String siteUrl, String articleUrl, String signal) {
+        BlogSource source = source(sourceKey, siteUrl);
         String html = """
                 <main>
                   <nav><a href="/careers">Jobs</a><a href="/feed">RSS</a></nav>
@@ -41,12 +42,9 @@ class ConfiguredArticleListParserTest {
 
     @org.junit.jupiter.api.Test
     void parseFallsBackToArticleLinksWhenCardBlocksAreMissing() {
-        BlogSource source = BlogSource.create(
+        BlogSource source = source(
                 "discord",
-                "Discord",
-                "https://discord.com/category/engineering",
-                null,
-                CollectionMethod.HTML_SCRAPING
+                "https://discord.com/category/engineering"
         );
         String html = """
                 <main>
@@ -64,7 +62,7 @@ class ConfiguredArticleListParserTest {
         var cards = parser.parse(source, html);
 
         assertThat(cards).hasSize(2);
-        assertThat(cards).extracting(ParsedArticleCard::originalUrl)
+        assertThat(cards).extracting(ParsedArticle::originalUrl)
                 .containsExactly(
                         "https://discord.com/blog/how-discord-automates-scylladb-clusters-at-scale",
                         "https://discord.com/blog/how-discord-indexes-trillions-of-messages"
@@ -73,12 +71,9 @@ class ConfiguredArticleListParserTest {
 
     @org.junit.jupiter.api.Test
     void parseCleansHtmlEntitiesFromArticleUrls() {
-        BlogSource source = BlogSource.create(
+        BlogSource source = source(
                 "doordash",
-                "DoorDash",
-                "https://careersatdoordash.com/career-areas/engineering/",
-                null,
-                CollectionMethod.HTML_SCRAPING
+                "https://careersatdoordash.com/career-areas/engineering/"
         );
         String html = """
                 <main>
@@ -98,7 +93,7 @@ class ConfiguredArticleListParserTest {
     static Stream<Arguments> htmlSources() {
         return Stream.of(
                 Arguments.of("openai", "https://openai.com/news/", "/news/engineering-systems", "Engineering"),
-                Arguments.of("anthropic", "https://www.anthropic.com/news", "/news/research-systems", "Research"),
+                Arguments.of("anthropic-engineering", "https://www.anthropic.com/news", "/news/research-systems", "Research"),
                 Arguments.of("figma", "https://www.figma.com/blog/engineering/", "/blog/realtime-engineering", "Engineering"),
                 Arguments.of("uber", "https://www.uber.com/blog/engineering", "/blog/realtime-platform", "Engineering"),
                 Arguments.of("airbnb", "https://airbnb.tech/", "https://medium.com/airbnb-engineering/platform", "Engineering"),
@@ -110,6 +105,17 @@ class ConfiguredArticleListParserTest {
                 Arguments.of("shopify", "https://shopify.engineering/", "/database-at-scale", "Engineering"),
                 Arguments.of("datadog", "https://www.datadoghq.com/blog/engineering/", "/blog/observability-platform", "Engineering"),
                 Arguments.of("amazon-science", "https://www.amazon.science/blog", "/blog/ai-systems", "AI")
+        );
+    }
+
+    private BlogSource source(String sourceKey, String siteUrl) {
+        return BlogSource.create(
+                Company.create(sourceKey, sourceKey),
+                sourceKey,
+                sourceKey,
+                siteUrl,
+                null,
+                CollectionMethod.HTML_SCRAPING
         );
     }
 }

@@ -11,6 +11,7 @@ import com.globaltechblogarchive.article.api.dto.ArticlePageResponse;
 import com.globaltechblogarchive.article.domain.Article;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.article.repository.ArticleRepository;
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import com.globaltechblogarchive.source.domain.BlogSource;
@@ -45,8 +46,8 @@ class ArticleServiceTest {
         ArticlePageResponse response = articleService.getArticles("ALL", 0, 20);
 
         assertThat(response.articles()).hasSize(1);
-        assertThat(response.articles().getFirst().sourceCompanyKey()).isEqualTo("openai");
-        assertThat(response.articles().getFirst().sourceCompanyName()).isEqualTo("OpenAI");
+        assertThat(response.articles().getFirst().companyKey()).isEqualTo("openai");
+        assertThat(response.articles().getFirst().companyName()).isEqualTo("OpenAI");
         assertThat(response.totalElements()).isEqualTo(1);
         verify(articleRepository).findAllByOrderByPublishedAtDescIdDesc(pageRequest);
         verifyNoMoreInteractions(articleRepository);
@@ -89,17 +90,18 @@ class ArticleServiceTest {
     }
 
     private Article article(Long id, ArticleCategory category) {
+        Company company = Company.create("openai", "OpenAI");
         BlogSource source = BlogSource.create(
+                company,
                 "openai",
-                "OpenAI",
+                "OpenAI News",
                 "https://openai.com/news/",
                 "https://openai.com/news/rss.xml",
                 CollectionMethod.RSS
         );
         Article article = Article.create(
-                source,
+                source.getCompany(),
                 "Article " + id,
-                "https://openai.com/news/article-" + id,
                 "https://openai.com/news/article-" + id,
                 "hash-" + id,
                 category,

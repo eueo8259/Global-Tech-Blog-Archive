@@ -13,6 +13,7 @@ import com.globaltechblogarchive.crawl.application.ArticleCrawlService;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
+import com.globaltechblogarchive.company.domain.Company;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +41,6 @@ class ArticleCrawlControllerTest {
                 "https://stripe.com/blog/scaling-apis",
                 LocalDateTime.of(2026, 6, 1, 0, 0),
                 "API context",
-                "https://stripe.com/blog/scaling-apis",
                 "hash",
                 false,
                 ArticleCandidateDecisionStatus.NEW,
@@ -62,8 +62,9 @@ class ArticleCrawlControllerTest {
                 0,
                 List.of(SourceCrawlResult.success(
                         com.globaltechblogarchive.source.domain.BlogSource.create(
+                                Company.create("stripe", "Stripe"),
                                 "stripe",
-                                "Stripe",
+                                "Stripe Engineering",
                                 "https://stripe.com/blog/engineering",
                                 null,
                                 com.globaltechblogarchive.source.domain.CollectionMethod.HTML_SCRAPING

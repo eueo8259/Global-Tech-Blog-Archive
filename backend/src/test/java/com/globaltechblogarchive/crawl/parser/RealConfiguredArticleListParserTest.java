@@ -2,6 +2,7 @@ package com.globaltechblogarchive.crawl.parser;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
@@ -17,8 +18,9 @@ class RealConfiguredArticleListParserTest {
     @Test
     void parseClaudeBlogReturnsArticleCards() {
         BlogSource source = BlogSource.create(
-                "claude",
-                "Claude",
+                Company.create("anthropic", "Anthropic"),
+                "claude-blog",
+                "Claude Blog",
                 "https://claude.com/blog",
                 null,
                 CollectionMethod.HTML_SCRAPING

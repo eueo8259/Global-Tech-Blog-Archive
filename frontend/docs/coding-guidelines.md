@@ -39,11 +39,11 @@ Use function components.
 Prefer function declarations for named components unless the existing file already uses another consistent style.
 
 ```tsx
-function ArticleCard({ title, sourceCompanyName }: ArticleCardProps) {
+function ArticleCard({ title, companyName }: ArticleCardProps) {
   return (
     <article>
       <h2>{title}</h2>
-      <p>{sourceCompanyName}</p>
+      <p>{companyName}</p>
     </article>
   );
 }
@@ -80,10 +80,10 @@ Define explicit props interfaces for components that receive props.
 ```tsx
 interface ArticleCardProps {
   title: string;
-  sourceCompanyName: string;
+  companyName: string;
 }
 
-function ArticleCard({ title, sourceCompanyName }: ArticleCardProps) {
+function ArticleCard({ title, companyName }: ArticleCardProps) {
   return <h2>{title}</h2>;
 }
 ```
