@@ -1,7 +1,7 @@
 package com.globaltechblogarchive.crawl.application;
 
-import com.globaltechblogarchive.article.domain.ArticleAiDecision;
-import com.globaltechblogarchive.article.repository.ArticleAiDecisionRepository;
+import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
+import com.globaltechblogarchive.crawl.repository.ArticleAiDecisionRepository;
 import com.globaltechblogarchive.crawl.application.ArticleDecisionProcessor.ProcessedCandidates;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;

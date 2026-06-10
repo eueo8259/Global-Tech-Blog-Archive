@@ -6,11 +6,13 @@ import com.globaltechblogarchive.article.application.ArticleMetadataAiClient;
 import java.util.List;
 
 import com.globaltechblogarchive.global.config.OpenAiProperties;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 @Component
+@RequiredArgsConstructor
 public class OpenAiArticleMetadataClient implements ArticleMetadataAiClient {
 
     private static final String RESPONSES_PATH = "/v1/responses";
@@ -19,18 +21,6 @@ public class OpenAiArticleMetadataClient implements ArticleMetadataAiClient {
     private final OpenAiProperties properties;
     private final OpenAiArticleMetadataRequestFactory requestFactory;
     private final OpenAiArticleMetadataResponseParser responseParser;
-
-    public OpenAiArticleMetadataClient(
-            RestClient openAiRestClient,
-            OpenAiProperties properties,
-            OpenAiArticleMetadataRequestFactory requestFactory,
-            OpenAiArticleMetadataResponseParser responseParser
-    ) {
-        this.restClient = openAiRestClient;
-        this.properties = properties;
-        this.requestFactory = requestFactory;
-        this.responseParser = responseParser;
-    }
 
     @Override
     public String model() {

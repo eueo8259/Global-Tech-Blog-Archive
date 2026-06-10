@@ -1,5 +1,6 @@
-package com.globaltechblogarchive.article.domain;
+package com.globaltechblogarchive.crawl.domain;
 
+import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.company.domain.Company;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -8,16 +8,15 @@ import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.article.exception.ArticleMetadataAiClientException;
 import java.util.ArrayList;
 import java.util.List;
+
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 class OpenAiArticleMetadataResponseParser {
 
     private final ObjectMapper objectMapper;
-
-    OpenAiArticleMetadataResponseParser(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
 
     List<ArticleMetadataDecision> parse(String responseBody) {
         try {
