@@ -7,21 +7,22 @@ import org.junit.jupiter.api.Test;
 class UrlNormalizerTest {
 
     @Test
-    void normalizeRemovesTrackingQueryParameters() {
+    void normalizePreservesQueryParameters() {
         String normalized = UrlNormalizer.normalize(
                 "https://netflixtechblog.com/post?source=rss----2615bd06b42e---4&utm_source=feed&fbclid=abc"
         );
 
-        assertThat(normalized).isEqualTo("https://netflixtechblog.com/post");
+        assertThat(normalized)
+                .isEqualTo("https://netflixtechblog.com/post?source=rss----2615bd06b42e---4&utm_source=feed&fbclid=abc");
     }
 
     @Test
-    void normalizeKeepsMeaningfulQueryParameters() {
+    void normalizePreservesQueryAndRemovesFragment() {
         String normalized = UrlNormalizer.normalize(
-                "https://example.com/article?id=123&utm_medium=email&page=2"
+                "https://example.com/article?id=123&utm_medium=email&page=2#section"
         );
 
-        assertThat(normalized).isEqualTo("https://example.com/article?id=123&page=2");
+        assertThat(normalized).isEqualTo("https://example.com/article?id=123&utm_medium=email&page=2");
     }
 
     @Test

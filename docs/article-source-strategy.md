@@ -78,7 +78,7 @@ AI -> Devops -> Architecture -> Backend -> Frontend -> Else
    - the feed omits one or more MVP-required fields: title, article URL, published date, or company/source identity
    - the feed contains only product/news entries while the source has a separate engineering article list page
 3. Store approved articles only after AI decision review.
-4. Store translated title, cleaned article URL, article URL hash, company, published date, row creation time, and category.
+4. Store translated title, source-provided article URL, article URL hash, company, published date, row creation time, and category.
 5. Do not store article summaries for the MVP.
 6. Do not fetch article detail pages only to discover canonical URLs in the MVP.
 

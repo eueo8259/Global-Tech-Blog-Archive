@@ -2,9 +2,7 @@ package com.globaltechblogarchive.crawl.support;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
 import java.util.Locale;
-import java.util.stream.Collectors;
 
 public final class UrlNormalizer {
 
@@ -26,7 +24,7 @@ public final class UrlNormalizer {
             if (path == null || path.isBlank()) {
                 path = "/";
             }
-            return new URI(scheme, uri.getUserInfo(), host, port, path, trackingRemovedQuery(uri.getRawQuery()), null)
+            return new URI(scheme, uri.getUserInfo(), host, port, path, uri.getRawQuery(), null)
                     .toString();
         } catch (URISyntaxException exception) {
             throw new IllegalArgumentException("Invalid URL: " + url, exception);
@@ -48,27 +46,4 @@ public final class UrlNormalizer {
                 .trim();
     }
 
-    private static String trackingRemovedQuery(String rawQuery) {
-        if (rawQuery == null || rawQuery.isBlank()) {
-            return null;
-        }
-        String query = Arrays.stream(rawQuery.split("&"))
-                .filter(parameter -> !parameter.isBlank())
-                .filter(parameter -> !isTrackingParameter(parameter))
-                .collect(Collectors.joining("&"));
-        if (query.isBlank()) {
-            return null;
-        }
-        return query;
-    }
-
-    private static boolean isTrackingParameter(String parameter) {
-        String name = parameter.split("=", 2)[0].toLowerCase(Locale.ROOT);
-        return name.startsWith("utm_")
-                || name.equals("source")
-                || name.equals("fbclid")
-                || name.equals("gclid")
-                || name.equals("mc_cid")
-                || name.equals("mc_eid");
-    }
 }
