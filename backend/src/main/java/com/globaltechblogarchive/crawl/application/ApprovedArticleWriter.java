@@ -1,9 +1,9 @@
 package com.globaltechblogarchive.crawl.application;
 
+import com.globaltechblogarchive.article.application.ArticleService;
 import com.globaltechblogarchive.article.domain.Article;
-import com.globaltechblogarchive.article.domain.ArticleAiDecision;
+import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
-import com.globaltechblogarchive.article.repository.ArticleRepository;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import java.time.LocalDateTime;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ApprovedArticleWriter {
 
-    private final ArticleRepository articleRepository;
+    private final ArticleService articleService;
 
     public int writeApproved(
             BlogSource source,
@@ -31,7 +31,7 @@ public class ApprovedArticleWriter {
                     || !isSaveTarget(decision.isSaveTarget(), decision.getCategory())) {
                 continue;
             }
-            articleRepository.save(Article.create(
+            articleService.save(Article.create(
                     source.getCompany(),
                     decision.getTranslatedTitle(),
                     candidate.articleUrl(),
