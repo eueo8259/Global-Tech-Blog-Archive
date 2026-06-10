@@ -32,14 +32,11 @@ public class OpenAiArticleMetadataClient implements ArticleMetadataAiClient {
 
     @Override
     public String model() {
-        return properties.modelOrDefault();
+        return properties.model();
     }
 
     @Override
     public List<ArticleMetadataDecision> decide(List<ArticleMetadataInput> inputs) {
-        if (properties.apiKey() == null || properties.apiKey().isBlank()) {
-            throw new ArticleMetadataAiClientException("OPENAI_API_KEY is required");
-        }
         JsonNode request = requestFactory.create(inputs, model());
         String responseBody = restClient.post()
                 .uri(RESPONSES_PATH)

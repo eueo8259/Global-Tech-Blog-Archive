@@ -1,19 +1,16 @@
 package com.globaltechblogarchive.article.client.openai;
 
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "openai")
+@Validated
 public record OpenAiProperties(
-        String apiKey,
-        String model
+        @NotBlank String apiKey,
+        @DefaultValue("gpt-5-mini") String model,
+        @DefaultValue("https://api.openai.com") String baseUrl
 ) {
 
-    private static final String DEFAULT_MODEL = "gpt-5-mini";
-
-    public String modelOrDefault() {
-        if (model == null || model.isBlank()) {
-            return DEFAULT_MODEL;
-        }
-        return model;
-    }
 }
