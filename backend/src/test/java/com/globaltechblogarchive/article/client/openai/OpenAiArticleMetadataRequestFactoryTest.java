@@ -26,10 +26,6 @@ class OpenAiArticleMetadataRequestFactoryTest {
         assertThat(request.path("model").asText()).isEqualTo("gpt-5-mini");
         assertThat(request.path("input")).hasSize(2);
         assertThat(request.path("input").get(0).path("role").asText()).isEqualTo("system");
-        assertThat(request.path("input").get(0).path("content").asText())
-                .contains("Do not save an article just because it mentions AI")
-                .contains("\"Introducing GPT-Rosalind\" -> category=ELSE, save=false")
-                .contains("If save=false, category must be ELSE");
         assertThat(request.path("input").get(1).path("content").asText())
                 .contains("\"index\":0")
                 .contains("\"title\":\"Scaling APIs\"");

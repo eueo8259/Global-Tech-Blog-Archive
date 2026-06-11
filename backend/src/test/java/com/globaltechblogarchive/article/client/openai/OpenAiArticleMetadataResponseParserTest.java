@@ -22,6 +22,7 @@ class OpenAiArticleMetadataResponseParserTest {
                 {
                   "output": [
                     {
+                      "type": "message",
                       "content": [
                         {
                           "type": "output_text",
@@ -81,7 +82,17 @@ class OpenAiArticleMetadataResponseParserTest {
     private String outputText(String text) {
         return """
                 {
-                  "output_text": %s
+                  "output": [
+                    {
+                      "type": "message",
+                      "content": [
+                        {
+                          "type": "output_text",
+                          "text": %s
+                        }
+                      ]
+                    }
+                  ]
                 }
                 """.formatted(toJsonString(text.strip()));
     }
