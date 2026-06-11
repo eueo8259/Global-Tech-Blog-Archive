@@ -1,4 +1,4 @@
-package com.globaltechblogarchive.crawl.application;
+package com.globaltechblogarchive.crawl.application.dto;
 
 import com.globaltechblogarchive.crawl.application.ArticleDecisionProcessor.ProcessedCandidates;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
