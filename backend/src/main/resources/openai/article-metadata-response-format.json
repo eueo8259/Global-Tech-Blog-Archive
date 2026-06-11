@@ -1,0 +1,61 @@
+{
+  "type": "json_schema",
+  "name": "article_metadata_decisions",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "required": ["items"],
+    "additionalProperties": false,
+    "properties": {
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "index",
+            "translatedTitle",
+            "category",
+            "save",
+            "exclusionReason"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "index": {
+              "type": "integer"
+            },
+            "translatedTitle": {
+              "type": "string"
+            },
+            "category": {
+              "type": "string",
+              "enum": [
+                "FRONTEND",
+                "BACKEND",
+                "DEVOPS",
+                "ARCHITECTURE",
+                "AI",
+                "ELSE"
+              ]
+            },
+            "save": {
+              "type": "boolean"
+            },
+            "exclusionReason": {
+              "enum": [
+                null,
+                "PRODUCT_NEWS",
+                "COMPANY_NEWS",
+                "EVENT",
+                "HIRING",
+                "MARKETING",
+                "LOW_TECHNICAL_SIGNAL",
+                "NOT_ENGINEERING",
+                "OTHER"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

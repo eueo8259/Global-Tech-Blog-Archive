@@ -1,6 +1,7 @@
 package com.globaltechblogarchive.crawl.application;
 
 import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
+import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.domain.ArticleCollectionRun;
 import com.globaltechblogarchive.crawl.repository.ArticleCollectionRunRepository;
@@ -17,8 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ArticleCrawlService {
 
-    private static final String PROMPT_VERSION = "v1";
-
     private final BlogSourceRepository blogSourceRepository;
     private final ArticleCollectionRunRepository collectionRunRepository;
     private final SourceCrawlProcessor sourceCrawlProcessor;
@@ -31,13 +30,14 @@ public class ArticleCrawlService {
         CrawlRunSummary summary = CrawlRunSummary.empty();
 
         for (BlogSource source : sources) {
-            SourceCrawlOutcome outcome = sourceCrawlProcessor.process(run, source, PROMPT_VERSION);
-            sourceResults.add(outcome.result());
-            summary = summary.plus(outcome.summary());
+            SourceCrawlResult sourceResult = sourceCrawlProcessor.process(run, source);
+            sourceResults.add(sourceResult);
+            summary = summary.plus(sourceResult.summary());
         }
 
         int successCount = (int) sourceResults.stream().filter(SourceCrawlResult::success).count();
         int failureCount = sourceResults.size() - successCount;
+
         run.complete(
                 LocalDateTime.now(),
                 sources.size(),
@@ -47,6 +47,7 @@ public class ArticleCrawlService {
                 summary.duplicateCount(),
                 summary.storedCount()
         );
+
         return new ArticleCrawlResult(
                 run.getId(),
                 sources.size(),
@@ -64,5 +65,4 @@ public class ArticleCrawlService {
                 sourceResults
         );
     }
-
 }

@@ -1,7 +1,8 @@
 package com.globaltechblogarchive.crawl.application;
 
-import com.globaltechblogarchive.article.domain.ArticleAiDecision;
-import com.globaltechblogarchive.article.repository.ArticleAiDecisionRepository;
+import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
+import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
+import com.globaltechblogarchive.crawl.repository.ArticleAiDecisionRepository;
 import com.globaltechblogarchive.crawl.application.ArticleDecisionProcessor.ProcessedCandidates;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
@@ -25,44 +26,41 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SourceCrawlProcessor {
 
+    private static final String PROMPT_VERSION = "v1";
+
     private final ArticleAiDecisionRepository decisionRepository;
     private final ArticleDiscoveryLogRepository collectionItemRepository;
     private final ArticleCandidateCollectorRegistry collectorRegistry;
     private final ArticleCandidateFactory candidateFactory;
     private final ArticleDecisionProcessor decisionProcessor;
 
-    public SourceCrawlOutcome process(ArticleCollectionRun run, BlogSource source, String promptVersion) {
+    public SourceCrawlResult process(ArticleCollectionRun run, BlogSource source) {
         LocalDateTime collectedAt = LocalDateTime.now();
         try {
             ArticleCandidateCollector collector = collectorRegistry.find(source.getCollectionMethod());
             List<ParsedArticle> cards = collector.collect(source);
-            Map<String, ArticleAiDecision> decisionsByHash = findDecisionsByHash(source, cards, promptVersion);
+            Map<String, ArticleAiDecision> decisionsByHash = findDecisionsByHash(source, cards);
             List<ArticleCandidate> candidates = candidateFactory.create(source, cards, decisionsByHash);
             ProcessedCandidates processed = decisionProcessor.process(
                     source,
                     candidates,
                     decisionsByHash,
-                    promptVersion
+                    PROMPT_VERSION
             );
             storeCandidates(run, source, processed.candidates());
             source.markCollected(collectedAt);
-            return new SourceCrawlOutcome(
-                    SourceCrawlResult.success(source, processed.candidates()),
-                    CrawlRunSummary.from(processed)
-            );
+
+            CrawlRunSummary summary = CrawlRunSummary.from(processed);
+            return SourceCrawlResult.success(source, processed.candidates(), summary);
         } catch (RuntimeException exception) {
             source.markCollectionFailed(collectedAt, exception.getMessage());
-            return new SourceCrawlOutcome(
-                    SourceCrawlResult.failure(source, exception.getMessage()),
-                    CrawlRunSummary.empty()
-            );
+            return SourceCrawlResult.failure(source, exception.getMessage());
         }
     }
 
     private Map<String, ArticleAiDecision> findDecisionsByHash(
             BlogSource source,
-            List<ParsedArticle> cards,
-            String promptVersion
+            List<ParsedArticle> cards
     ) {
         if (cards.isEmpty()) {
             return Map.of();
@@ -73,10 +71,11 @@ public class SourceCrawlProcessor {
                 .map(UrlHash::sha256)
                 .distinct()
                 .toList();
+
         return decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(
                         source.getCompany().getId(),
                         hashes,
-                        promptVersion
+                        PROMPT_VERSION
                 )
                 .stream()
                 .collect(Collectors.toMap(

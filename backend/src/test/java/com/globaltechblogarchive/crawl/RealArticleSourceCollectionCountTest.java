@@ -10,8 +10,9 @@ import com.globaltechblogarchive.crawl.collector.impl.FeedArticleCandidateCollec
 import com.globaltechblogarchive.crawl.collector.impl.HtmlArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.collector.impl.SitemapArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.collector.impl.WordPressRestArticleCandidateCollector;
+import com.globaltechblogarchive.crawl.helper.ArticleListParserPropertiesFixture;
 import com.globaltechblogarchive.crawl.parser.ArticleListParserRegistry;
-import com.globaltechblogarchive.crawl.parser.ConfiguredArticleListParser;
+import com.globaltechblogarchive.crawl.parser.HtmlArticleListParser;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.io.IOException;
@@ -19,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +35,9 @@ class RealArticleSourceCollectionCountTest {
                 new SitemapArticleCandidateCollector(fetcher),
                 new HtmlArticleCandidateCollector(
                         fetcher,
-                        new ArticleListParserRegistry(List.of(new ConfiguredArticleListParser()))
+                        new ArticleListParserRegistry(List.of(
+                                new HtmlArticleListParser(ArticleListParserPropertiesFixture.full())
+                        ))
                 ),
                 new WordPressRestArticleCandidateCollector(fetcher, new ObjectMapper())
         );

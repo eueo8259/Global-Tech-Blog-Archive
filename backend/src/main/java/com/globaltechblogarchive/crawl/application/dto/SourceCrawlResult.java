@@ -13,10 +13,15 @@ public record SourceCrawlResult(
         String errorMessage,
         int candidateCount,
         List<ArticleCandidate> candidates,
-        List<String> qualityWarnings
+        List<String> qualityWarnings,
+        CrawlRunSummary summary
 ) {
 
-    public static SourceCrawlResult success(BlogSource source, List<ArticleCandidate> candidates) {
+    public static SourceCrawlResult success(
+            BlogSource source,
+            List<ArticleCandidate> candidates,
+            CrawlRunSummary summary
+    ) {
         return new SourceCrawlResult(
                 source.getCompany().getCompanyKey(),
                 source.getCompany().getCompanyName(),
@@ -26,11 +31,15 @@ public record SourceCrawlResult(
                 null,
                 candidates.size(),
                 candidates,
-                sourceWarnings(candidates)
+                sourceWarnings(candidates),
+                summary
         );
     }
 
-    public static SourceCrawlResult failure(BlogSource source, String errorMessage) {
+    public static SourceCrawlResult failure(
+            BlogSource source,
+            String errorMessage
+    ) {
         return new SourceCrawlResult(
                 source.getCompany().getCompanyKey(),
                 source.getCompany().getCompanyName(),
@@ -40,7 +49,8 @@ public record SourceCrawlResult(
                 errorMessage,
                 0,
                 List.of(),
-                List.of("SOURCE_FETCH_FAILED")
+                List.of("SOURCE_FETCH_FAILED"),
+                CrawlRunSummary.empty()
         );
     }
 

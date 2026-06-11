@@ -3,9 +3,10 @@ package com.globaltechblogarchive.article.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.globaltechblogarchive.article.domain.ArticleAiDecision;
+import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.company.domain.Company;
+import com.globaltechblogarchive.crawl.repository.ArticleAiDecisionRepository;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.util.List;

@@ -4,16 +4,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
+import com.globaltechblogarchive.crawl.helper.ArticleListParserPropertiesFixture;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @Tag("real")
-class RealConfiguredArticleListParserTest {
+class RealHtmlArticleListParserTest {
 
     private final SourceDocumentClient fetcher = new SourceDocumentClient();
-    private final ConfiguredArticleListParser parser = new ConfiguredArticleListParser();
+    private final HtmlArticleListParser parser = new HtmlArticleListParser(ArticleListParserPropertiesFixture.full());
+
 
     @Test
     void parseClaudeBlogReturnsArticleCards() {
