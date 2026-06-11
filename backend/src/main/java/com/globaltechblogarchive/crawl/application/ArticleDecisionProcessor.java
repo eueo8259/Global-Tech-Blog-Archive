@@ -3,12 +3,15 @@ package com.globaltechblogarchive.crawl.application;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataDecision;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataInput;
+import com.globaltechblogarchive.article.application.ArticleService;
+import com.globaltechblogarchive.article.domain.Article;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
+import com.globaltechblogarchive.crawl.repository.ArticleAiDecisionRepository;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
-import com.globaltechblogarchive.crawl.repository.ArticleAiDecisionRepository;
 import com.globaltechblogarchive.source.domain.BlogSource;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +26,7 @@ public class ArticleDecisionProcessor {
 
     private final ArticleAiDecisionRepository decisionRepository;
     private final ArticleMetadataAiClient aiClient;
-    private final ApprovedArticleWriter approvedArticleWriter;
+    private final ArticleService articleService;
 
     public ProcessedCandidates process(
             BlogSource source,
@@ -40,14 +43,40 @@ public class ArticleDecisionProcessor {
                 aiDecisions = aiClient.decide(toAiInputs(newCandidates));
             } catch (RuntimeException exception) {
                 markNewCandidatesFailed(candidates);
-                int storedArticleCount = approvedArticleWriter.writeApproved(source, candidates, decisionsByHash);
+                int storedArticleCount = writeApproved(source, candidates, decisionsByHash);
                 return new ProcessedCandidates(candidates, storedArticleCount);
             }
             applyAiDecisions(source, candidates, decisionsByHash, aiDecisions, promptVersion);
         }
 
-        int storedArticleCount = approvedArticleWriter.writeApproved(source, candidates, decisionsByHash);
+        int storedArticleCount = writeApproved(source, candidates, decisionsByHash);
         return new ProcessedCandidates(candidates, storedArticleCount);
+    }
+
+    private int writeApproved(
+            BlogSource source,
+            List<ArticleCandidate> candidates,
+            Map<String, ArticleAiDecision> decisionsByHash
+    ) {
+        int storedArticleCount = 0;
+        for (ArticleCandidate candidate : candidates) {
+            ArticleAiDecision decision = decisionsByHash.get(candidate.articleUrlHash());
+            if (candidate.duplicate()
+                    || decision == null
+                    || !isSaveTarget(decision.isSaveTarget(), decision.getCategory())) {
+                continue;
+            }
+            articleService.save(Article.create(
+                    source.getCompany(),
+                    decision.getTranslatedTitle(),
+                    candidate.articleUrl(),
+                    candidate.articleUrlHash(),
+                    decision.getCategory(),
+                    publishedAt(candidate)
+            ));
+            storedArticleCount++;
+        }
+        return storedArticleCount;
     }
 
     private List<ArticleCandidate> aiTargetCandidates(List<ArticleCandidate> candidates) {
@@ -121,6 +150,13 @@ public class ArticleDecisionProcessor {
 
     private boolean isSaveTarget(boolean save, ArticleCategory category) {
         return save && category != ArticleCategory.ELSE;
+    }
+
+    private LocalDateTime publishedAt(ArticleCandidate candidate) {
+        if (candidate.publishedAt() != null) {
+            return candidate.publishedAt();
+        }
+        return LocalDateTime.now();
     }
 
     public record ProcessedCandidates(

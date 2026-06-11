@@ -18,7 +18,6 @@ import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.crawl.repository.ArticleAiDecisionRepository;
 import com.globaltechblogarchive.article.repository.ArticleRepository;
-import com.globaltechblogarchive.crawl.application.ApprovedArticleWriter;
 import com.globaltechblogarchive.crawl.application.ArticleCandidateCollectorRegistry;
 import com.globaltechblogarchive.crawl.application.ArticleCandidateFactory;
 import com.globaltechblogarchive.crawl.application.ArticleCrawlService;
@@ -83,7 +82,6 @@ class ArticleCrawlServiceTest {
         lenient().when(decisionRepository.save(any(ArticleAiDecision.class))).thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(aiClient.model()).thenReturn("test-model");
         ArticleService articleService = new ArticleService(articleRepository);
-        ApprovedArticleWriter approvedArticleWriter = new ApprovedArticleWriter(articleService);
 
         articleCrawlService = new ArticleCrawlService(
                 blogSourceRepository,
@@ -93,7 +91,7 @@ class ArticleCrawlServiceTest {
                         collectionItemRepository,
                         collectorRegistry,
                         new ArticleCandidateFactory(articleRepository),
-                        new ArticleDecisionProcessor(decisionRepository, aiClient, approvedArticleWriter)
+                        new ArticleDecisionProcessor(decisionRepository, aiClient, articleService)
                 )
         );
     }
