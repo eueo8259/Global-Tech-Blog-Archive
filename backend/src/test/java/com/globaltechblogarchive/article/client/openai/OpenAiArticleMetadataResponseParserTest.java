@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataDecision;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.article.exception.ArticleMetadataAiClientException;
+import com.globaltechblogarchive.global.error.ErrorCode;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -64,8 +65,10 @@ class OpenAiArticleMetadataResponseParserTest {
                 """);
 
         assertThatThrownBy(() -> responseParser.parse(responseBody))
-                .isInstanceOf(ArticleMetadataAiClientException.class)
-                .hasMessageContaining("Invalid OpenAI category");
+                .isInstanceOfSatisfying(ArticleMetadataAiClientException.class, exception -> {
+                    assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR);
+                    assertThat(exception).hasMessageContaining("Invalid OpenAI category");
+                });
     }
 
     @Test
@@ -75,8 +78,10 @@ class OpenAiArticleMetadataResponseParserTest {
                 """);
 
         assertThatThrownBy(() -> responseParser.parse(responseBody))
-                .isInstanceOf(ArticleMetadataAiClientException.class)
-                .hasMessageContaining("save");
+                .isInstanceOfSatisfying(ArticleMetadataAiClientException.class, exception -> {
+                    assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR);
+                    assertThat(exception).hasMessageContaining("save");
+                });
     }
 
     private String outputText(String text) {

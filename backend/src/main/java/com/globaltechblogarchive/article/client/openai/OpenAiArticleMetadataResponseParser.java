@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataDecision;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.article.exception.ArticleMetadataAiClientException;
+import com.globaltechblogarchive.global.error.ErrorCode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,7 +25,11 @@ class OpenAiArticleMetadataResponseParser {
             JsonNode items = extractItems(root);
             return parseDecisions(items);
         } catch (JsonProcessingException exception) {
-            throw new ArticleMetadataAiClientException("Failed to parse OpenAI response", exception);
+            throw new ArticleMetadataAiClientException(
+                    ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR,
+                    "Failed to parse OpenAI response",
+                    exception
+            );
         }
     }
 
@@ -33,7 +38,7 @@ class OpenAiArticleMetadataResponseParser {
         JsonNode parsed = objectMapper.readTree(outputText);
         JsonNode items = parsed.get("items");
         if (items == null || !items.isArray()) {
-            throw new ArticleMetadataAiClientException("OpenAI response items must be an array");
+            throw aiClientException("OpenAI response items must be an array");
         }
         return items;
     }
@@ -41,7 +46,7 @@ class OpenAiArticleMetadataResponseParser {
     private String extractOutputText(JsonNode root) {
         JsonNode output = root.path("output");
         if (!output.isArray()) {
-            throw new ArticleMetadataAiClientException("OpenAI response output must be an array");
+            throw aiClientException("OpenAI response output must be an array");
         }
 
         for (JsonNode outputItem : output) {
@@ -62,7 +67,7 @@ class OpenAiArticleMetadataResponseParser {
                 }
             }
         }
-        throw new ArticleMetadataAiClientException("OpenAI response text was not found");
+        throw aiClientException("OpenAI response text was not found");
     }
 
     private List<ArticleMetadataDecision> parseDecisions(JsonNode items) {
@@ -86,7 +91,7 @@ class OpenAiArticleMetadataResponseParser {
     private JsonNode required(JsonNode item, String fieldName) {
         JsonNode value = item.get(fieldName);
         if (value == null || value.isNull()) {
-            throw new ArticleMetadataAiClientException("OpenAI response missing field: " + fieldName);
+            throw aiClientException("OpenAI response missing field: " + fieldName);
         }
         return value;
     }
@@ -94,7 +99,7 @@ class OpenAiArticleMetadataResponseParser {
     private int requiredInt(JsonNode item, String fieldName) {
         JsonNode value = required(item, fieldName);
         if (!value.isInt()) {
-            throw new ArticleMetadataAiClientException("OpenAI response field must be integer: " + fieldName);
+            throw aiClientException("OpenAI response field must be integer: " + fieldName);
         }
         return value.asInt();
     }
@@ -102,7 +107,7 @@ class OpenAiArticleMetadataResponseParser {
     private String requiredText(JsonNode item, String fieldName) {
         JsonNode value = required(item, fieldName);
         if (!value.isTextual()) {
-            throw new ArticleMetadataAiClientException("OpenAI response field must be text: " + fieldName);
+            throw aiClientException("OpenAI response field must be text: " + fieldName);
         }
         return value.asText();
     }
@@ -111,14 +116,18 @@ class OpenAiArticleMetadataResponseParser {
         try {
             return ArticleCategory.valueOf(value);
         } catch (IllegalArgumentException exception) {
-            throw new ArticleMetadataAiClientException("Invalid OpenAI category: " + value, exception);
+            throw new ArticleMetadataAiClientException(
+                    ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR,
+                    "Invalid OpenAI category: " + value,
+                    exception
+            );
         }
     }
 
     private boolean requiredBoolean(JsonNode item, String fieldName) {
         JsonNode value = required(item, fieldName);
         if (!value.isBoolean()) {
-            throw new ArticleMetadataAiClientException("OpenAI response field must be boolean: " + fieldName);
+            throw aiClientException("OpenAI response field must be boolean: " + fieldName);
         }
         return value.asBoolean();
     }
@@ -129,8 +138,12 @@ class OpenAiArticleMetadataResponseParser {
             return null;
         }
         if (!value.isTextual()) {
-            throw new ArticleMetadataAiClientException("OpenAI response field must be text or null: " + fieldName);
+            throw aiClientException("OpenAI response field must be text or null: " + fieldName);
         }
         return value.asText();
+    }
+
+    private ArticleMetadataAiClientException aiClientException(String message) {
+        return new ArticleMetadataAiClientException(ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR, message);
     }
 }
