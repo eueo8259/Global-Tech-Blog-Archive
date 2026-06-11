@@ -1,5 +1,7 @@
 package com.globaltechblogarchive.crawl.parser;
 
+import com.globaltechblogarchive.crawl.parser.config.ArticleListParserProperties;
+import com.globaltechblogarchive.crawl.parser.config.ArticleListParserProperties.ParserConfig;
 import com.globaltechblogarchive.crawl.support.ArticleDateParser;
 import com.globaltechblogarchive.crawl.support.TextCleaner;
 import com.globaltechblogarchive.crawl.support.UrlNormalizer;
@@ -13,45 +15,40 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ConfiguredArticleListParser implements ArticleListParser {
+@RequiredArgsConstructor
+public class HtmlArticleListParser implements ArticleListParser {
 
     private static final Pattern ARTICLE_BLOCK = Pattern.compile(
             "(?is)<(article|li|div)[^>]*(article|post|card|entry|blog)[^>]*>.*?</\\1>"
     );
-    private static final Pattern LINK = Pattern.compile("(?is)<a\\b([^>]*)href=[\"']([^\"']+)[\"']([^>]*)>(.*?)</a>");
+    private static final Pattern LINK = Pattern.compile(
+            "(?is)<a\\b([^>]*)href=[\"']([^\"']+)[\"']([^>]*)>(.*?)</a>"
+    );
     private static final Pattern HEADING = Pattern.compile("(?is)<h[1-4]\\b[^>]*>(.*?)</h[1-4]>");
     private static final Pattern ALT = Pattern.compile("(?is)\\balt=[\"']([^\"']+)[\"']");
     private static final Pattern ARIA_LABEL = Pattern.compile("(?is)\\baria-label=[\"']([^\"']+)[\"']");
     private static final Pattern TITLE_ATTRIBUTE = Pattern.compile("(?is)\\btitle=[\"']([^\"']+)[\"']");
-    private static final Pattern TIME = Pattern.compile("(?is)<time\\b[^>]*(?:datetime=[\"']([^\"']+)[\"'])?[^>]*>(.*?)</time>");
+    private static final Pattern TIME = Pattern.compile(
+            "(?is)<time\\b[^>]*(?:datetime=[\"']([^\"']+)[\"'])?[^>]*>(.*?)</time>"
+    );
     private static final Pattern DATE_TEXT = Pattern.compile(
             "(?i)(\\b\\w+\\s+\\d{1,2},\\s+\\d{4}\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b)"
     );
-    private static final List<String> BLOCKED_LINK_PARTS = List.of(
-            "mailto:", "javascript:", "/careers", "/jobs", "/contact", "/privacy", "/terms",
-            "linkedin.com", "twitter.com", "facebook.com", "instagram.com", "youtube.com",
-            "x.com", "dash.cloudflare.com", "devdegree.ca", "shopify.github.io",
-            "/rss", "/feed", "/subscribe", "/tag/", "/category/", "/author/", "/topics/",
-            "/search", "/start", "/page/"
-    );
-    private static final List<String> BLOCKED_TITLES = List.of(
-            "blog", "engineering", "ai", "database", "security", "placeholder", "get started free",
-            "start your business . build your brand", "open source at shopify", "dev degree",
-            "shopify engineering on x", "the cloudflare blog", "maker stories"
-    );
-    private final Map<String, ParserConfig> configs = createConfigs();
+
+    private final ArticleListParserProperties properties;
 
     @Override
     public boolean supports(BlogSource source) {
-        return configs.containsKey(source.getSourceKey());
+        return properties.configs().containsKey(source.getSourceKey());
     }
 
     @Override
     public List<ParsedArticle> parse(BlogSource source, String html) {
-        ParserConfig config = configs.get(source.getSourceKey());
+        ParserConfig config = properties.configs().get(source.getSourceKey());
         if (config == null) {
             throw new IllegalArgumentException("No parser config for source: " + source.getSourceKey());
         }
@@ -128,10 +125,10 @@ public class ConfiguredArticleListParser implements ArticleListParser {
         if (UrlNormalizer.normalize(source.getSiteUrl()).equals(UrlNormalizer.normalize(absoluteUrl))) {
             return false;
         }
-        if (title.length() < 12 || BLOCKED_TITLES.contains(lowerTitle) || lowerTitle.matches("\\d+")) {
+        if (title.length() < 12 || properties.blockedTitles().contains(lowerTitle) || lowerTitle.matches("\\d+")) {
             return false;
         }
-        for (String blocked : BLOCKED_LINK_PARTS) {
+        for (String blocked : properties.blockedLinkParts()) {
             if (lowerHref.contains(blocked)) {
                 return false;
             }
@@ -210,31 +207,5 @@ public class ConfiguredArticleListParser implements ArticleListParser {
             return first;
         }
         return second;
-    }
-
-    private Map<String, ParserConfig> createConfigs() {
-        Map<String, ParserConfig> result = new LinkedHashMap<>();
-        result.put("openai", new ParserConfig(List.of("/news/"), List.of("engineering", "security", "research", "developers"), List.of("engineering", "security", "research", "developers")));
-        result.put("anthropic-engineering", new ParserConfig(List.of("/news/"), List.of("research", "product", "policy", "announcement"), List.of("research", "product", "policy", "announcement")));
-        result.put("claude-blog", new ParserConfig(List.of("/blog/"), List.of(), List.of("claude code", "agents", "engineering", "developers")));
-        result.put("figma", new ParserConfig(List.of("/blog/"), List.of("inside figma engineering", "engineering"), List.of("engineering")));
-        result.put("uber", new ParserConfig(List.of("/blog/"), List.of(), List.of("engineering")));
-        result.put("airbnb", new ParserConfig(List.of("medium.com/airbnb-engineering", "airbnb.tech"), List.of(), List.of("engineering", "data", "mobile", "backend")));
-        result.put("stripe", new ParserConfig(List.of("/blog/"), List.of(), List.of("engineering")));
-        result.put("cloudflare", new ParserConfig(List.of("/"), List.of("engineering", "developers", "infrastructure", "security", "ai", "reliability", "database", "networking"), List.of("engineering", "developers", "infrastructure", "security", "ai", "reliability", "database", "networking")));
-        result.put("linkedin", new ParserConfig(List.of("/blog/"), List.of(), List.of("engineering")));
-        result.put("doordash", new ParserConfig(List.of("/engineering-blog/", "/blog/"), List.of(), List.of("backend", "mobile", "data", "culture")));
-        result.put("discord", new ParserConfig(List.of("/blog/", "/category/engineering"), List.of(), List.of("engineering", "developers")));
-        result.put("shopify", new ParserConfig(List.of("/"), List.of(), List.of("engineering")));
-        result.put("datadog", new ParserConfig(List.of("/blog/"), List.of(), List.of("engineering")));
-        result.put("amazon-science", new ParserConfig(List.of("/blog/"), List.of(), List.of("machine learning", "robotics", "systems", "ai")));
-        return result;
-    }
-
-    private record ParserConfig(
-            List<String> articlePathSignals,
-            List<String> requiredTextSignals,
-            List<String> contextSignals
-    ) {
     }
 }

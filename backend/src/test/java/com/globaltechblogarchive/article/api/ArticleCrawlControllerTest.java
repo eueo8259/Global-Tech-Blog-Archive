@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.globaltechblogarchive.crawl.api.ArticleCrawlController;
 import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
 import com.globaltechblogarchive.crawl.application.ArticleCrawlService;
+import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
@@ -69,7 +70,18 @@ class ArticleCrawlControllerTest {
                                 null,
                                 com.globaltechblogarchive.source.domain.CollectionMethod.HTML_SCRAPING
                         ),
-                        List.of(candidate)
+                        List.of(candidate),
+                        new CrawlRunSummary(
+                                1,
+                                0,
+                                1,
+                                1,
+                                0,
+                                0,
+                                0,
+                                0
+                        )
+
                 ))
         );
         when(articleCrawlService.run()).thenReturn(result);
