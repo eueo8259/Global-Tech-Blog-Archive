@@ -92,8 +92,12 @@ chore: update dependencies
 * Keep Pull Requests focused on a single purpose.
 * Do not mix features, refactoring, and formatting changes in the same Pull Request.
 * Include a summary of what changed and why.
+* 팀원이 내용을 직접 이해하고 검토할 수 있도록 Pull Request 제목과 본문은 한국어로 작성한다.
+* Conventional Commit 타입은 영어로 유지하고, 제목 설명은 한국어로 작성한다. 예: `feat: 기사 목록 페이지 구현`.
+* Pull Request 본문의 섹션 제목, 요약, 작업 배경, 변경 사항, 참고 사항, 검증 내용은 모두 한국어로 작성한다.
+* 자동화 도구, 커넥터, AI 에이전트도 동일한 한국어 Pull Request 작성 규칙을 따라야 한다.
 
-Pull Request titles must use the same Conventional Commit style as commit messages, for example `feat: collect article candidates by source` or `refactor: reorganize crawl architecture`. Do not add tool or agent prefixes such as `[codex]`, `[ai]`, or similar labels to PR titles unless explicitly requested.
+Pull Request 제목은 커밋 메시지와 동일한 Conventional Commit 형식을 사용한다. 예: `feat: 소스별 기사 후보 수집`, `refactor: 크롤링 구조 재구성`. 명시적으로 요청하지 않는 한 PR 제목에 `[codex]`, `[ai]` 같은 도구 또는 에이전트 접두사를 추가하지 않는다.
 
 Validate PR titles before creating or updating Pull Requests:
 
