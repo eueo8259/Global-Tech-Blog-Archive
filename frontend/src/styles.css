@@ -65,6 +65,43 @@ h1 {
   letter-spacing: -0.04em;
 }
 
+.category-filter {
+  display: flex;
+  overflow-x: auto;
+  gap: 10px;
+  margin-bottom: 28px;
+  padding-bottom: 4px;
+}
+
+.category-filter-button {
+  flex: 0 0 auto;
+  border: 1px solid #dfe2eb;
+  border-radius: 999px;
+  padding: 10px 15px;
+  background: #ffffff;
+  color: #5f687d;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.category-filter-button:hover {
+  border-color: #a9a1e8;
+  color: #5548bd;
+}
+
+.category-filter-button[aria-pressed="true"] {
+  border-color: #6558d3;
+  background: #6558d3;
+  color: #ffffff;
+}
+
+.category-filter-button:focus-visible {
+  outline: 3px solid #c6c1f4;
+  outline-offset: 2px;
+}
+
 .article-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
