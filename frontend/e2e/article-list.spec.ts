@@ -41,15 +41,21 @@ test('shows articles returned by the API', async ({ page }) => {
 });
 
 test('updates articles when a category is selected', async ({ page }) => {
-  const requestedCategories: string[] = [];
+  const requestedQueries: Array<{ category: string; page: string }> = [];
 
   await page.route('**/api/articles?**', async (route) => {
-    const category = new URL(route.request().url()).searchParams.get('category') ?? '';
-    requestedCategories.push(category);
+    const searchParams = new URL(route.request().url()).searchParams;
+    const category = searchParams.get('category') ?? '';
+    const requestedPage = searchParams.get('page') ?? '';
+    requestedQueries.push({ category, page: requestedPage });
 
     await route.fulfill({
       json: {
         ...articlePage,
+        hasNext: category === 'ALL' && requestedPage === '0',
+        page: Number(requestedPage),
+        totalElements: category === 'ALL' ? 21 : 1,
+        totalPages: category === 'ALL' ? 2 : 1,
         articles:
           category === 'BACKEND'
             ? articlePage.articles
@@ -68,6 +74,9 @@ test('updates articles when a category is selected', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('프론트엔드 초기 기사')).toBeVisible();
 
+  await page.getByRole('button', { name: '다음' }).click();
+  await expect(page.getByText('2 / 2 페이지')).toBeVisible();
+
   await page.getByRole('button', { name: 'BACKEND' }).click();
 
   await expect(page.getByRole('button', { name: 'BACKEND' })).toHaveAttribute(
@@ -75,7 +84,54 @@ test('updates articles when a category is selected', async ({ page }) => {
     'true',
   );
   await expect(page.getByText('대규모 시스템에서 API 지연 시간을 줄인 방법')).toBeVisible();
-  expect(requestedCategories).toContain('BACKEND');
+  expect(requestedQueries).toContainEqual({ category: 'BACKEND', page: '0' });
+});
+
+test('moves between article pages', async ({ page }) => {
+  const requestedPages: string[] = [];
+
+  await page.route('**/api/articles?**', async (route) => {
+    const requestedPage = new URL(route.request().url()).searchParams.get('page') ?? '0';
+    requestedPages.push(requestedPage);
+
+    await route.fulfill({
+      json: {
+        ...articlePage,
+        articles: [
+          {
+            ...articlePage.articles[0],
+            id: Number(requestedPage) + 1,
+            title: requestedPage === '0' ? '첫 페이지 기사' : '두 번째 페이지 기사',
+          },
+        ],
+        page: Number(requestedPage),
+        totalElements: 21,
+        totalPages: 2,
+        hasNext: requestedPage === '0',
+      },
+    });
+  });
+
+  await page.goto('/');
+
+  const previousButton = page.getByRole('button', { name: '이전' });
+  const nextButton = page.getByRole('button', { name: '다음' });
+  await expect(page.getByText('1 / 2 페이지')).toBeVisible();
+  await expect(previousButton).toBeDisabled();
+  await expect(nextButton).toBeEnabled();
+
+  await nextButton.click();
+
+  await expect(page.getByText('두 번째 페이지 기사')).toBeVisible();
+  await expect(page.getByText('2 / 2 페이지')).toBeVisible();
+  await expect(previousButton).toBeEnabled();
+  await expect(nextButton).toBeDisabled();
+
+  await previousButton.click();
+
+  await expect(page.getByText('첫 페이지 기사')).toBeVisible();
+  expect(requestedPages).toContain('1');
+  expect(requestedPages.at(-1)).toBe('0');
 });
 
 test('shows loading state while the API response is pending', async ({ page }) => {
