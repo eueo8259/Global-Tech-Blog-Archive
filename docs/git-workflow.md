@@ -109,8 +109,6 @@ When creating a Pull Request through any automation, connector, CLI, or AI agent
 
 When creating a PR through an automation, connector, CLI, or AI agent, do not assume the GitHub Pull Request template was applied automatically. Inspect or construct the PR body explicitly and verify that the repository template structure is present before considering PR creation complete.
 
-Because issue work completes when the PR is merged into `develop`, check the linked Issue after the merge. If the Issue remains open and the PR completed its scope, close it manually with the completed reason.
-
 ### Automation Tool Selection
 
 Automated agents must use the repository's connected GitHub App or connector as
