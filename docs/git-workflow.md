@@ -111,6 +111,32 @@ When creating a PR through an automation, connector, CLI, or AI agent, do not as
 
 Because issue work completes when the PR is merged into `develop`, check the linked Issue after the merge. If the Issue remains open and the PR completed its scope, close it manually with the completed reason.
 
+### Automation Tool Selection
+
+Automated agents must use the repository's connected GitHub App or connector as
+the default interface for GitHub-hosted operations, including:
+
+* creating, reading, and updating Issues
+* creating and inspecting Pull Requests
+* reading or updating Pull Request metadata, comments, and review state
+
+Use local `git` for local repository operations:
+
+* branch creation and switching
+* staging and committing changes
+* pushing branches to the configured remote
+
+Use the `gh` CLI only as a fallback when the connected GitHub App or connector
+does not support the required operation. When the App or connector can complete
+the requested GitHub operation, agents must not require `gh auth status`, ask
+the user to run `gh auth login`, or block the workflow because a local `gh`
+token is missing or expired.
+
+An unavailable local `gh` session does not prevent local `git` commit/push or
+GitHub App/connector Issue and Pull Request operations. If a true fallback to
+`gh` is required, explain which unsupported operation requires it before asking
+for authentication.
+
 ### Automation Checklist
 
 Before any automated branch, commit, push, or PR action:
