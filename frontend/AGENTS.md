@@ -14,7 +14,6 @@ Rule scope:
 ## Always Follow
 
 - Read the relevant frontend docs before implementation.
-- Treat empty frontend docs as placeholders and follow the root docs until the frontend docs are filled in.
 - Update this file when new frontend docs add or change working rules.
 - Apply the root MVP/simplicity principles to frontend code.
 - Prefer simple React and TypeScript patterns already used in this project.
@@ -103,6 +102,14 @@ Prefer implementing frontend features in this order:
 
 - Follow `frontend/docs/coding-guidelines.md` and `frontend/docs/architecture.md`.
 
+## Code Quality And Formatting
+
+- Follow `frontend/docs/coding-guidelines.md` for ESLint and formatting rules.
+- Run `npm run lint` after changing TypeScript, TSX, JavaScript, or ESLint configuration.
+- Do not suppress ESLint errors or warnings merely to make the command pass. Fix the cause or explain why a rule change is needed.
+- Do not perform repository-wide formatting as part of an unrelated feature or fix.
+- Prettier is not currently installed. Ask before adding it, changing formatting policy, or introducing editor-on-save assumptions.
+
 ## State Management Rules
 
 - Follow `frontend/docs/coding-guidelines.md` and `frontend/docs/architecture.md`.
@@ -110,6 +117,8 @@ Prefer implementing frontend features in this order:
 ## Verification
 
 Follow `frontend/docs/testing-guidelines.md`.
+
+Before completing frontend code changes, run `npm run verify` from `frontend/` unless a narrower documentation-only check is sufficient.
 
 When the change affects runtime behavior:
 

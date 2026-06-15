@@ -176,10 +176,12 @@ Run from `frontend/`.
 Required before completion:
 
 ```bash
-npm run build
-npm run lint
-npm run test:e2e
+npm run verify
 ```
+
+The `verify` script runs build, lint, and Playwright checks in sequence. During implementation, run the narrower command that proves the current change, then run `npm run verify` before completion.
+
+Code quality and formatting policy belongs in `frontend/docs/coding-guidelines.md`. This document only defines when verification commands and browser checks are required.
 
 Playwright scripts:
 
@@ -226,6 +228,8 @@ Do not consider frontend work complete if:
 - relevant Playwright tests are missing or failing
 - the UI only handles the success state
 - runtime behavior changed but the affected flow was not manually verified
+
+There is currently no Prettier or `format:check` command. Do not report formatting verification as part of `npm run verify`.
 
 If Playwright is not available in a fresh environment, run `npm install` and `npm run test:e2e:install` before treating `npm run test:e2e` as an available verification command.
 
