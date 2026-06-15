@@ -2,6 +2,7 @@ package com.globaltechblogarchive.article.repository;
 
 import com.globaltechblogarchive.article.domain.Article;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -16,4 +17,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     Page<Article> findByCategoryOrderByPublishedAtDescIdDesc(ArticleCategory category, Pageable pageable);
 
     boolean existsByCompanyIdAndArticleUrlHash(Long companyId, String articleUrlHash);
+
+    List<Article> findAllByOrderByIdAsc();
 }

@@ -20,10 +20,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
 
-@DataJpaTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.sql.init.mode=never"
-})
+@DataJpaTest
 @ActiveProfiles("local")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ArticleCollectionRepositoryTest {

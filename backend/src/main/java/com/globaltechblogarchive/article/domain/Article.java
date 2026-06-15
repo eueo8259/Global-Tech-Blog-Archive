@@ -81,11 +81,31 @@ public class Article {
         return article;
     }
 
+    public static Article restore(
+            Company company,
+            String title,
+            String articleUrl,
+            String articleUrlHash,
+            ArticleCategory category,
+            LocalDateTime publishedAt,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
+        Article article = create(company, title, articleUrl, articleUrlHash, category, publishedAt);
+        article.createdAt = createdAt;
+        article.updatedAt = updatedAt;
+        return article;
+    }
+
     @PrePersist
     void prePersist() {
         LocalDateTime now = LocalDateTime.now();
-        createdAt = now;
-        updatedAt = now;
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        if (updatedAt == null) {
+            updatedAt = now;
+        }
     }
 
     @PreUpdate

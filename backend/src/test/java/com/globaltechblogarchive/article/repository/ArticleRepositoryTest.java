@@ -17,10 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
-@DataJpaTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.sql.init.mode=never"
-})
+@DataJpaTest
 @ActiveProfiles("local")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ArticleRepositoryTest {
