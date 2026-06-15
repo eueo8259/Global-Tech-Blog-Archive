@@ -28,17 +28,33 @@ public class ArticleService {
 
 
     @Transactional(readOnly = true)
-    public ArticlePageResponse getArticles(String category, int page, int size) {
+    public ArticlePageResponse getArticles(String category, String companyKey, int page, int size) {
         PageRequest pageRequest = PageRequest.of(page, size);
         Page<Article> articles;
 
-        if ("ALL".equals(category)) {
+        if ("ALL".equals(category) && companyKey == null) {
             articles = articleRepository.findAllByOrderByPublishedAtDescIdDesc(pageRequest);
             return ArticlePageResponse.from(articles);
         }
 
+        if ("ALL".equals(category)) {
+            articles = articleRepository.findByCompanyKeyOrderByPublishedAtDescIdDesc(companyKey, pageRequest);
+            return ArticlePageResponse.from(articles);
+        }
+
         ArticleCategory articleCategory = parseArticleCategory(category);
-        articles = articleRepository.findByCategoryOrderByPublishedAtDescIdDesc(articleCategory, pageRequest);
+
+        if (companyKey == null) {
+            articles = articleRepository.findByCategoryOrderByPublishedAtDescIdDesc(articleCategory, pageRequest);
+            return ArticlePageResponse.from(articles);
+        }
+
+        articles = articleRepository.findByCategoryAndCompanyKeyOrderByPublishedAtDescIdDesc(
+                articleCategory,
+                companyKey,
+                pageRequest
+        );
+
         return ArticlePageResponse.from(articles);
     }
 

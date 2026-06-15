@@ -19,4 +19,14 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     boolean existsByCompanyIdAndArticleUrlHash(Long companyId, String articleUrlHash);
 
     List<Article> findAllByOrderByIdAsc();
+
+    @EntityGraph(attributePaths = "company")
+    Page<Article> findByCompanyKeyOrderByPublishedAtDescIdDesc(String companyKey, Pageable pageable);
+
+    @EntityGraph(attributePaths = "company")
+    Page<Article> findByCategoryAndCompanyKeyOrderByPublishedAtDescIdDesc(
+            ArticleCategory articleCategory,
+            String companyKey,
+            Pageable pageable
+    );
 }

@@ -43,7 +43,7 @@ class ArticleServiceTest {
         when(articleRepository.findAllByOrderByPublishedAtDescIdDesc(pageRequest))
                 .thenReturn(new PageImpl<>(List.of(article), pageRequest, 1));
 
-        ArticlePageResponse response = articleService.getArticles("ALL", 0, 20);
+        ArticlePageResponse response = articleService.getArticles("ALL", null, 0, 20);
 
         assertThat(response.articles()).hasSize(1);
         assertThat(response.articles().getFirst().companyKey()).isEqualTo("openai");
@@ -60,7 +60,7 @@ class ArticleServiceTest {
         when(articleRepository.findByCategoryOrderByPublishedAtDescIdDesc(ArticleCategory.BACKEND, pageRequest))
                 .thenReturn(new PageImpl<>(List.of(article), pageRequest, 1));
 
-        ArticlePageResponse response = articleService.getArticles("BACKEND", 0, 20);
+        ArticlePageResponse response = articleService.getArticles("BACKEND", null, 0, 20);
 
         assertThat(response.articles()).hasSize(1);
         assertThat(response.articles().getFirst().category()).isEqualTo(ArticleCategory.BACKEND);
@@ -69,8 +69,46 @@ class ArticleServiceTest {
     }
 
     @Test
+    void getArticlesFiltersByCompanyKey() {
+        Article article = article(1L, ArticleCategory.AI);
+        PageRequest pageRequest = PageRequest.of(0, 20);
+        when(articleRepository.findByCompanyKeyOrderByPublishedAtDescIdDesc("openai", pageRequest))
+                .thenReturn(new PageImpl<>(List.of(article), pageRequest, 1));
+
+        ArticlePageResponse response = articleService.getArticles("ALL", "openai", 0, 20);
+
+        assertThat(response.articles()).hasSize(1);
+        assertThat(response.articles().getFirst().companyKey()).isEqualTo("openai");
+        verify(articleRepository).findByCompanyKeyOrderByPublishedAtDescIdDesc("openai", pageRequest);
+        verifyNoMoreInteractions(articleRepository);
+    }
+
+    @Test
+    void getArticlesFiltersByCategoryAndCompanyKey() {
+        Article article = article(2L, ArticleCategory.BACKEND);
+        PageRequest pageRequest = PageRequest.of(0, 20);
+        when(articleRepository.findByCategoryAndCompanyKeyOrderByPublishedAtDescIdDesc(
+                ArticleCategory.BACKEND,
+                "openai",
+                pageRequest
+        )).thenReturn(new PageImpl<>(List.of(article), pageRequest, 1));
+
+        ArticlePageResponse response = articleService.getArticles("BACKEND", "openai", 0, 20);
+
+        assertThat(response.articles()).hasSize(1);
+        assertThat(response.articles().getFirst().category()).isEqualTo(ArticleCategory.BACKEND);
+        assertThat(response.articles().getFirst().companyKey()).isEqualTo("openai");
+        verify(articleRepository).findByCategoryAndCompanyKeyOrderByPublishedAtDescIdDesc(
+                ArticleCategory.BACKEND,
+                "openai",
+                pageRequest
+        );
+        verifyNoMoreInteractions(articleRepository);
+    }
+
+    @Test
     void getArticlesRejectsInvalidCategory() {
-        Throwable throwable = catchThrowable(() -> articleService.getArticles("Backend", 0, 20));
+        Throwable throwable = catchThrowable(() -> articleService.getArticles("Backend", null, 0, 20));
 
         assertThat(throwable).isInstanceOf(InvalidInputException.class);
         InvalidInputException exception = (InvalidInputException) throwable;
@@ -82,7 +120,7 @@ class ArticleServiceTest {
 
     @Test
     void getArticlesRejectsNullCategory() {
-        assertThatThrownBy(() -> articleService.getArticles(null, 0, 20))
+        assertThatThrownBy(() -> articleService.getArticles(null, null, 0, 20))
                 .isInstanceOf(InvalidInputException.class)
                 .hasMessage("Unsupported category: null");
 
