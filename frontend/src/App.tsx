@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import { ArticleList } from './features/article/ArticleList';
+import { CategoryFilter } from './features/article/CategoryFilter';
+import type { ArticleCategoryFilter } from './features/article/types';
 import { useArticles } from './features/article/useArticles';
 
 function App() {
-  const { articles, error, isLoading } = useArticles();
+  const [selectedCategory, setSelectedCategory] = useState<ArticleCategoryFilter>('ALL');
+  const { articles, error, isLoading } = useArticles(selectedCategory);
 
   return (
     <div className="app-shell">
@@ -19,6 +23,10 @@ function App() {
             <h1 id="article-heading">최신 아티클</h1>
           </div>
 
+          <CategoryFilter
+            selectedCategory={selectedCategory}
+            onSelect={setSelectedCategory}
+          />
           <ArticleList articles={articles} error={error} isLoading={isLoading} />
         </section>
       </main>

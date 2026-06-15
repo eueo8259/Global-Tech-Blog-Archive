@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getArticles } from './articleApi';
-import type { Article } from './types';
+import type { Article, ArticleCategoryFilter } from './types';
 
-export function useArticles() {
+export function useArticles(category: ArticleCategoryFilter) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -11,9 +11,12 @@ export function useArticles() {
     const controller = new AbortController();
 
     async function loadArticles() {
+      setError(null);
+      setIsLoading(true);
+
       try {
         const articlePage = await getArticles({
-          category: 'ALL',
+          category,
           page: 0,
           signal: controller.signal,
           size: 20,
@@ -36,7 +39,7 @@ export function useArticles() {
     void loadArticles();
 
     return () => controller.abort();
-  }, []);
+  }, [category]);
 
   return { articles, error, isLoading };
 }
