@@ -1,10 +1,4 @@
-export type ArticleCategory =
-  | 'FRONTEND'
-  | 'BACKEND'
-  | 'DEVOPS'
-  | 'ARCHITECTURE'
-  | 'AI'
-  | 'ELSE';
+export type ArticleCategory = 'FRONTEND' | 'BACKEND' | 'DEVOPS' | 'ARCHITECTURE' | 'AI' | 'ELSE';
 
 export type ArticleCategoryFilter = 'ALL' | Exclude<ArticleCategory, 'ELSE'>;
 

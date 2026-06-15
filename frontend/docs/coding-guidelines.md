@@ -111,12 +111,12 @@ Do not add Husky or lint-staged initially. If contributors repeatedly forget for
 
 Use each command for its own purpose:
 
-| Command | Responsibility |
-| --- | --- |
-| `npm run build` | Type-check TypeScript and produce the Vite production build |
-| `npm run lint` | Run ESLint static analysis |
-| `npm run test:e2e` | Verify user-visible browser behavior with Playwright |
-| `npm run verify` | Run build, lint, and Playwright checks together |
+| Command            | Responsibility                                              |
+| ------------------ | ----------------------------------------------------------- |
+| `npm run build`    | Type-check TypeScript and produce the Vite production build |
+| `npm run lint`     | Run ESLint static analysis                                  |
+| `npm run test:e2e` | Verify user-visible browser behavior with Playwright        |
+| `npm run verify`   | Run build, lint, and Playwright checks together             |
 
 Run `npm run format` to rewrite files and `npm run format:check` to verify formatting without changing files. A successful build does not prove lint or browser behavior, and successful lint does not prove type correctness or UI behavior.
 

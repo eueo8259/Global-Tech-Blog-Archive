@@ -2,8 +2,14 @@
   color: #172033;
   background: #f6f7fb;
   font-family:
-    Inter, Pretendard, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+    Inter,
+    Pretendard,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -91,7 +97,7 @@ h1 {
   color: #5548bd;
 }
 
-.category-filter-button[aria-pressed="true"] {
+.category-filter-button[aria-pressed='true'] {
   border-color: #6558d3;
   background: #6558d3;
   color: #ffffff;
