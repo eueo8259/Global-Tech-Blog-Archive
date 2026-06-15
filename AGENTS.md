@@ -16,7 +16,7 @@ Read this file first, then read the nearest lower-scope `AGENTS.md` before
 changing files in a subdirectory.
 
 - `backend/AGENTS.md`: backend-specific rules
-- `frontend/AGENTS.md`: frontend-specific rules, if added later
+- `frontend/AGENTS.md`: frontend-specific rules
 - `docs/git-workflow.md`: branch, issue, commit, and PR rules
 - `backend/docs/`: backend implementation, API, persistence, and testing rules
 
@@ -66,3 +66,4 @@ Follow `docs/git-workflow.md`.
 - Architecture: `docs/architecture.md`
 - Notion workflow: `docs/documentation-workflow.md`
 - Backend implementation guidance: `backend/docs/`
+- Frontend implementation guidance: `frontend/docs/`
