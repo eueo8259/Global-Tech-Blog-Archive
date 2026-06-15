@@ -19,6 +19,7 @@ public class ArticleController {
     public ArticlePageResponse getArticles(
             @RequestParam(defaultValue = "ALL") String category,
             @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) String companyKey,
             @RequestParam(defaultValue = "20") int size
     ) {
         if (page < 0) {
@@ -28,6 +29,6 @@ public class ArticleController {
             throw new InvalidInputException(ErrorCode.INVALID_INPUT_VALUE, "size must be greater than 0");
         }
 
-        return articleService.getArticles(category, page, size);
+        return articleService.getArticles(category, companyKey, page, size);
     }
 }

@@ -46,7 +46,7 @@ class ArticleControllerTest {
                 "OpenAI"
         );
         ArticlePageResponse response = new ArticlePageResponse(List.of(article), 0, 20, 1, 1, false);
-        when(articleService.getArticles("ALL", 0, 20)).thenReturn(response);
+        when(articleService.getArticles("ALL", null, 0, 20)).thenReturn(response);
 
         mockMvc.perform(get("/api/articles"))
                 .andExpect(status().isOk())
@@ -56,13 +56,13 @@ class ArticleControllerTest {
                 .andExpect(jsonPath("$.articles[0].title").value("Translated title"))
                 .andExpect(jsonPath("$.articles[0].summary").doesNotExist());
 
-        verify(articleService).getArticles("ALL", 0, 20);
+        verify(articleService).getArticles("ALL", null, 0, 20);
     }
 
     @Test
     void getArticlesAcceptsCategoryFilter() throws Exception {
         ArticlePageResponse response = new ArticlePageResponse(List.of(), 1, 10, 0, 0, false);
-        when(articleService.getArticles("BACKEND", 1, 10)).thenReturn(response);
+        when(articleService.getArticles("BACKEND", null, 1, 10)).thenReturn(response);
 
         mockMvc.perform(get("/api/articles")
                         .param("category", "BACKEND")
@@ -72,12 +72,41 @@ class ArticleControllerTest {
                 .andExpect(jsonPath("$.page").value(1))
                 .andExpect(jsonPath("$.size").value(10));
 
-        verify(articleService).getArticles("BACKEND", 1, 10);
+        verify(articleService).getArticles("BACKEND", null, 1, 10);
+    }
+
+    @Test
+    void getArticlesAcceptsCompanyKeyFilter() throws Exception {
+        ArticlePageResponse response = new ArticlePageResponse(List.of(), 0, 20, 0, 0, false);
+        when(articleService.getArticles("ALL", "openai", 0, 20)).thenReturn(response);
+
+        mockMvc.perform(get("/api/articles")
+                        .param("companyKey", "openai"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20));
+
+        verify(articleService).getArticles("ALL", "openai", 0, 20);
+    }
+
+    @Test
+    void getArticlesAcceptsCategoryAndCompanyKeyFilter() throws Exception {
+        ArticlePageResponse response = new ArticlePageResponse(List.of(), 0, 20, 0, 0, false);
+        when(articleService.getArticles("AI", "openai", 0, 20)).thenReturn(response);
+
+        mockMvc.perform(get("/api/articles")
+                        .param("category", "AI")
+                        .param("companyKey", "openai"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20));
+
+        verify(articleService).getArticles("AI", "openai", 0, 20);
     }
 
     @Test
     void getArticlesRejectsInvalidCategory() throws Exception {
-        when(articleService.getArticles("Backend", 0, 20))
+        when(articleService.getArticles("Backend", null, 0, 20))
                 .thenThrow(new InvalidInputException(ErrorCode.INVALID_INPUT_VALUE, "Unsupported category: Backend"));
 
         mockMvc.perform(get("/api/articles")
@@ -86,7 +115,7 @@ class ArticleControllerTest {
                 .andExpect(jsonPath("$.code").value("C001"))
                 .andExpect(jsonPath("$.message").value("Unsupported category: Backend"));
 
-        verify(articleService).getArticles("Backend", 0, 20);
+        verify(articleService).getArticles("Backend", null, 0, 20);
     }
 
     @Test
