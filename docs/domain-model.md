@@ -194,6 +194,11 @@ The aggregate does not include:
 - Source collection failure updates `last_error_at` and `last_error_msg`.
 - Collection run logs store discovered candidates and their decision status.
 
+Database schema and company/source reference data are managed by immutable
+Flyway migrations. Locally collected articles and AI decisions may be promoted
+once through the bootstrap archive process documented in
+`backend/docs/bootstrap-deployment.md`; collection run logs are not promoted.
+
 Candidate decision statuses used in crawl logs:
 
 ```text

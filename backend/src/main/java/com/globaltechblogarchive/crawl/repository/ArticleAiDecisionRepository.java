@@ -12,4 +12,6 @@ public interface ArticleAiDecisionRepository extends JpaRepository<ArticleAiDeci
             Collection<String> articleUrlHashes,
             String promptVersion
     );
+
+    List<ArticleAiDecision> findAllByOrderByIdAsc();
 }

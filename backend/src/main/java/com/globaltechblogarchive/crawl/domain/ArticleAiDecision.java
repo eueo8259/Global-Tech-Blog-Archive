@@ -96,11 +96,44 @@ public class ArticleAiDecision {
         return decision;
     }
 
+    public static ArticleAiDecision restore(
+            Company company,
+            String articleUrlHash,
+            String articleUrl,
+            String originalTitle,
+            String translatedTitle,
+            ArticleCategory category,
+            boolean saveTarget,
+            String model,
+            String promptVersion,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
+        ArticleAiDecision decision = create(
+                company,
+                articleUrlHash,
+                articleUrl,
+                originalTitle,
+                translatedTitle,
+                category,
+                saveTarget,
+                model,
+                promptVersion
+        );
+        decision.createdAt = createdAt;
+        decision.updatedAt = updatedAt;
+        return decision;
+    }
+
     @PrePersist
     void prePersist() {
         LocalDateTime now = LocalDateTime.now();
-        createdAt = now;
-        updatedAt = now;
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        if (updatedAt == null) {
+            updatedAt = now;
+        }
     }
 
     @PreUpdate

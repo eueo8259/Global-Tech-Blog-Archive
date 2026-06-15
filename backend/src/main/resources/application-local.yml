@@ -5,14 +5,6 @@ spring:
     url: ${DB_URL:jdbc:mysql://localhost:3307/global_tech_blog_archive}
     username: ${DB_USERNAME:archive_user}
     password: ${DB_PASSWORD:archive_password}
-  jpa:
-    defer-datasource-initialization: true
-    hibernate:
-      ddl-auto: update
-  sql:
-    init:
-      mode: always
-      data-locations: optional:classpath:data-local.sql
 
 openai:
   api-key: ${OPENAI_API_KEY:}
