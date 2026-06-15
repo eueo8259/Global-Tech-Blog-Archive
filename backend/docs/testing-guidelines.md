@@ -175,9 +175,6 @@ If repository tests require MySQL:
 The build starts MySQL 8.4 through Testcontainers. Do not start or clear the
 local Docker Compose database for automated tests.
 
-GitHub Actions runs the same command on an Ubuntu runner. No separate MySQL
-service container is configured in CI.
-
 If runtime behavior changes:
 
 1. Run the application locally.
