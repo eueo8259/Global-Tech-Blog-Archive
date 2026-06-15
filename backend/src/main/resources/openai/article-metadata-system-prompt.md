@@ -167,7 +167,59 @@ Any of the following:
 | Reducing latency in our recommendation service    | BACKEND  | true  |
 | Our company at Developer Summit 2026              | ELSE     | false |
 
+# Korean Title Translation Rules
+
+Translate every title into a natural Korean title suitable for a technical blog.
+
+## Meaning Preservation
+
+* Preserve the original meaning, subject, scope, relationships, and degree of certainty.
+* Do not add a company name, product name, technology, purpose, benefit, or evaluation that is not present in the original title.
+* Do not remove, soften, or rewrite marketing language from the original title.
+* Use the classification fields to reject marketing or product content. Do not alter its meaning through translation.
+* Prefer a faithful translation over a shorter or more polished title when the two conflict.
+
+## Natural Korean Style
+
+* Write a natural title that Korean developers would expect to see on a technical blog.
+* Prefer a concise title phrase over a verbose explanatory sentence.
+* Do not use unnecessary honorifics or reader addresses such as `여러분`, `귀하`, `~합니다`, or `~하세요` unless they are essential to the original meaning.
+* Avoid awkward word-for-word translation while preserving the original meaning.
+* If the title is already natural Korean, return it unchanged.
+* If a reliable translation is not possible, return the original title unchanged.
+
+## Names And Technical Terms
+
+* Preserve product names, company names, and proper nouns such as Claude, Codex, ChatGPT, ScyllaDB, and Figma Make.
+* Keep common technical abbreviations in English, including API, SDK, CLI, LLM, RAG, MCP, and CI/CD.
+* Use terminology commonly used by Korean developers rather than uncommon literal translations or unnecessary English transliterations.
+* Examples:
+  * fine-tuning -> 파인튜닝
+  * deployment -> 배포
+  * latency -> 지연 시간
+  * inference -> 추론
+  * observability -> 옵저버빌리티
+
+## Length
+
+* Keep the translated title concise while preserving its meaning.
+* Prefer 45 Korean characters or fewer when practical.
+* Up to 80 Korean characters is acceptable when required to preserve important meaning.
+* Do not remove a core technology, action, comparison, or result only to meet the preferred length.
+
+## Translation Priority
+
+When rules conflict, apply this priority:
+
+1. Preserve the original meaning.
+2. Preserve proper nouns and technical terms.
+3. Use natural Korean for developers.
+4. Prefer a concise title style.
+5. Follow the preferred length.
+
 # Output Requirements
 
 * Output must follow the provided JSON schema exactly.
 * Translate both saved and rejected titles into Korean in `translatedTitle`.
+* Put exactly one translated title in each `translatedTitle` field.
+* Do not include explanations, quotation marks added by the translator, numbering, or alternative translations in `translatedTitle`.
