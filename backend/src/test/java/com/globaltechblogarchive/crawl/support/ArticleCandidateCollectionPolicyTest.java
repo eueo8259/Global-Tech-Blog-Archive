@@ -3,6 +3,7 @@ package com.globaltechblogarchive.crawl.support;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
+import com.globaltechblogarchive.crawl.domain.CrawlMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +21,7 @@ class ArticleCandidateCollectionPolicyTest {
         cards.add(card("old", now.minusDays(3)));
         cards.add(new ParsedArticle("missing date", "https://example.com/missing-date", null, "missing date"));
 
-        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards);
+        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlMode.RECENT);
 
         assertThat(filtered).hasSize(20);
         assertThat(filtered).extracting(ParsedArticle::originalTitle)
@@ -46,6 +47,37 @@ class ArticleCandidateCollectionPolicyTest {
                         "recent-18",
                         "recent-19"
                 );
+    }
+
+    @Test
+    void initialModeSortsDatedCandidatesFirstAndUsesMissingDatesAsFallback() {
+        LocalDateTime now = LocalDateTime.now();
+        List<ParsedArticle> cards = List.of(
+                card("missing-first", null),
+                card("older", now.minusDays(30)),
+                card("newest", now.minusDays(5)),
+                card("missing-second", null)
+        );
+
+        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlMode.INITIAL);
+
+        assertThat(filtered).extracting(ParsedArticle::originalTitle)
+                .containsExactly("newest", "older", "missing-first", "missing-second");
+    }
+
+    @Test
+    void initialModeLimitsCandidatesToTwentyBeforeMissingDateFallback() {
+        LocalDateTime now = LocalDateTime.now();
+        List<ParsedArticle> cards = new ArrayList<>();
+        cards.add(card("missing", null));
+        for (int index = 0; index < 20; index++) {
+            cards.add(card("dated-" + index, now.minusHours(index)));
+        }
+
+        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlMode.INITIAL);
+
+        assertThat(filtered).hasSize(20);
+        assertThat(filtered).extracting(ParsedArticle::originalTitle).doesNotContain("missing");
     }
 
     private ParsedArticle card(String title, LocalDateTime publishedAt) {

@@ -3,6 +3,7 @@ package com.globaltechblogarchive.crawl.collector.impl;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
+import com.globaltechblogarchive.crawl.domain.CrawlMode;
 import com.globaltechblogarchive.crawl.support.ArticleDateParser;
 import com.globaltechblogarchive.crawl.support.ArticleCandidateCollectionPolicy;
 import com.globaltechblogarchive.crawl.support.HtmlMetadataExtractor;
@@ -11,7 +12,6 @@ import com.globaltechblogarchive.crawl.support.XmlDocumentSupport;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +23,6 @@ import org.w3c.dom.NodeList;
 @RequiredArgsConstructor
 public class SitemapArticleCandidateCollector implements ArticleCandidateCollector {
 
-    private static final int MAX_DETAIL_FETCH_COUNT = 20;
-
     private final SourceDocumentClient fetcher;
 
     @Override
@@ -33,20 +31,18 @@ public class SitemapArticleCandidateCollector implements ArticleCandidateCollect
     }
 
     @Override
-    public List<ParsedArticle> collect(BlogSource source) {
+    public List<ParsedArticle> collect(BlogSource source, CrawlMode mode) {
         String sitemapUrl = source.getFeedUrl();
         if (sitemapUrl == null || sitemapUrl.isBlank()) {
             sitemapUrl = source.getSiteUrl().replaceAll("/+$", "") + "/sitemap.xml";
         }
-        List<ParsedArticle> cards = parse(source, fetcher.fetch(sitemapUrl)).stream()
+        List<SitemapEntry> entries = parse(source, fetcher.fetch(sitemapUrl)).stream()
                 .filter(entry -> isArticleUrl(source, entry.location()))
-                .filter(entry -> isRecent(entry.lastModified()))
-                .sorted(Comparator.comparing(SitemapEntry::lastModified, Comparator.nullsLast(Comparator.reverseOrder())))
-                .limit(MAX_DETAIL_FETCH_COUNT)
+                .toList();
+        return ArticleCandidateCollectionPolicy.select(entries, mode, SitemapEntry::lastModified).stream()
                 .map(entry -> toCard(source, entry))
                 .filter(card -> !card.originalTitle().isBlank())
                 .toList();
-        return ArticleCandidateCollectionPolicy.apply(cards);
     }
 
     List<SitemapEntry> parse(BlogSource source, String xml) {
@@ -99,14 +95,6 @@ public class SitemapArticleCandidateCollector implements ArticleCandidateCollect
             return lower.matches("https://shopify\\.engineering/[^/?#]+/?");
         }
         return lower.startsWith(source.getSiteUrl().toLowerCase(Locale.ROOT));
-    }
-
-    private boolean isRecent(LocalDateTime publishedAt) {
-        if (publishedAt == null) {
-            return false;
-        }
-        LocalDateTime threshold = LocalDateTime.now().minusDays(ArticleCandidateCollectionPolicy.RECENT_WINDOW_DAYS);
-        return !publishedAt.isBefore(threshold);
     }
 
     private String text(Element element, String tagName) {

@@ -23,11 +23,14 @@ import com.globaltechblogarchive.crawl.application.ArticleCandidateFactory;
 import com.globaltechblogarchive.crawl.application.ArticleCrawlService;
 import com.globaltechblogarchive.crawl.application.ArticleDecisionProcessor;
 import com.globaltechblogarchive.crawl.application.SourceCrawlProcessor;
+import com.globaltechblogarchive.crawl.application.CrawlTransactionService;
 import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
+import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
 import com.globaltechblogarchive.crawl.domain.ArticleCollectionRun;
+import com.globaltechblogarchive.crawl.domain.CrawlMode;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.crawl.repository.ArticleDiscoveryLogRepository;
 import com.globaltechblogarchive.crawl.repository.ArticleCollectionRunRepository;
@@ -39,6 +42,9 @@ import com.globaltechblogarchive.source.domain.CollectionMethod;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -74,25 +80,36 @@ class ArticleCrawlServiceTest {
     @Mock
     private ArticleCandidateCollector collector;
 
+    @Mock
+    private CrawlTransactionService transactionService;
+
     private ArticleCrawlService articleCrawlService;
+    private final Map<Long, BlogSource> sourcesById = new HashMap<>();
 
     @BeforeEach
     void setUp() {
         lenient().when(articleRepository.save(any(Article.class))).thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(decisionRepository.save(any(ArticleAiDecision.class))).thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(aiClient.model()).thenReturn("test-model");
+        lenient().when(transactionService.startRun()).thenReturn(1L);
+        lenient().when(collectionRunRepository.findById(any())).thenAnswer(invocation ->
+                Optional.of(run(invocation.getArgument(0))));
+        lenient().when(blogSourceRepository.findWithCompanyById(any())).thenAnswer(invocation ->
+                Optional.ofNullable(sourcesById.get(invocation.getArgument(0))));
         ArticleService articleService = new ArticleService(articleRepository);
 
         articleCrawlService = new ArticleCrawlService(
                 blogSourceRepository,
-                collectionRunRepository,
                 new SourceCrawlProcessor(
                         decisionRepository,
                         collectionItemRepository,
                         collectorRegistry,
                         new ArticleCandidateFactory(articleRepository),
-                        new ArticleDecisionProcessor(decisionRepository, aiClient, articleService)
-                )
+                        new ArticleDecisionProcessor(decisionRepository, aiClient, articleService),
+                        blogSourceRepository,
+                        collectionRunRepository
+                ),
+                transactionService
         );
     }
 
@@ -100,11 +117,11 @@ class ArticleCrawlServiceTest {
     void runContinuesWhenOneSourceFails() {
         BlogSource failing = source(1L, "failing");
         BlogSource succeeding = source(2L, "succeeding");
-        when(collectionRunRepository.save(any(ArticleCollectionRun.class))).thenAnswer(invocation -> run(1L));
+        when(transactionService.startRun()).thenReturn(1L);
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(failing, succeeding));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(failing)).thenThrow(new IllegalStateException("network failed"));
-        when(collector.collect(succeeding)).thenReturn(List.of(new ParsedArticle(
+        when(collector.collect(failing, CrawlMode.RECENT)).thenThrow(new IllegalStateException("network failed"));
+        when(collector.collect(succeeding, CrawlMode.RECENT)).thenReturn(List.of(new ParsedArticle(
                 "Scaling systems",
                 "https://example.com/scaling?utm_source=test#section",
                 LocalDateTime.of(2026, 6, 1, 10, 0),
@@ -127,9 +144,25 @@ class ArticleCrawlServiceTest {
         assertThat(result.runId()).isEqualTo(1L);
         assertThat(result.sources().getFirst().success()).isFalse();
         assertThat(result.sources().get(1).candidates()).hasSize(1);
-        assertThat(failing.getLastErrorMsg()).isEqualTo("network failed");
+        verify(transactionService).markSourceFailed(1L, "network failed");
         assertThat(succeeding.getLastCollectedAt()).isNotNull();
         verify(collectionItemRepository).saveAll(anyIterable());
+    }
+
+    @Test
+    void runInitialUsesInitialCollectionMode() {
+        BlogSource source = source(1L, "openai");
+        when(transactionService.startRun()).thenReturn(7L);
+        when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
+        when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
+        when(collector.collect(source, CrawlMode.INITIAL)).thenReturn(List.of());
+
+        ArticleCrawlResult result = articleCrawlService.runInitial();
+
+        assertThat(result.runId()).isEqualTo(7L);
+        assertThat(result.sourceCount()).isEqualTo(1);
+        verify(collector).collect(source, CrawlMode.INITIAL);
+        verify(transactionService).completeRun(7L, 1, 1, 0, CrawlRunSummary.empty());
     }
 
     @Test
@@ -147,10 +180,10 @@ class ArticleCrawlServiceTest {
                 LocalDateTime.of(2026, 6, 1, 10, 0),
                 ""
         );
-        when(collectionRunRepository.save(any(ArticleCollectionRun.class))).thenAnswer(invocation -> run(2L));
+        when(transactionService.startRun()).thenReturn(2L);
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source)).thenReturn(List.of(approvedCard, rejectedCard));
+        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of(approvedCard, rejectedCard));
         when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of());
         when(aiClient.decide(anyList())).thenReturn(List.of(
@@ -202,10 +235,10 @@ class ArticleCrawlServiceTest {
         );
         String approvedHash = UrlHash.sha256(UrlNormalizer.normalize(approvedCard.originalUrl()));
         String rejectedHash = UrlHash.sha256(UrlNormalizer.normalize(rejectedCard.originalUrl()));
-        when(collectionRunRepository.save(any(ArticleCollectionRun.class))).thenAnswer(invocation -> run(3L));
+        when(transactionService.startRun()).thenReturn(3L);
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source)).thenReturn(List.of(approvedCard, rejectedCard));
+        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of(approvedCard, rejectedCard));
         when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of(
                         decision(source, approvedHash, true, ArticleCategory.AI),
@@ -238,10 +271,10 @@ class ArticleCrawlServiceTest {
                 null,
                 ""
         );
-        when(collectionRunRepository.save(any(ArticleCollectionRun.class))).thenAnswer(invocation -> run(4L));
+        when(transactionService.startRun()).thenReturn(4L);
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source)).thenReturn(List.of(card));
+        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of(card));
         when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of());
         when(aiClient.decide(anyList())).thenThrow(new IllegalStateException("ai failed"));
@@ -266,10 +299,10 @@ class ArticleCrawlServiceTest {
                 ""
         );
         String hash = UrlHash.sha256(UrlNormalizer.normalize(card.originalUrl()));
-        when(collectionRunRepository.save(any(ArticleCollectionRun.class))).thenAnswer(invocation -> run(5L));
+        when(transactionService.startRun()).thenReturn(5L);
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source)).thenReturn(List.of(card));
+        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of(card));
         when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of());
         when(articleRepository.existsByCompanyIdAndArticleUrlHash(1L, hash)).thenReturn(true);
@@ -297,10 +330,10 @@ class ArticleCrawlServiceTest {
                 ""
         );
         String hash = UrlHash.sha256(UrlNormalizer.normalize(card.originalUrl()));
-        when(collectionRunRepository.save(any(ArticleCollectionRun.class))).thenAnswer(invocation -> run(6L));
+        when(transactionService.startRun()).thenReturn(6L);
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source)).thenReturn(List.of(card));
+        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of(card));
         when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of(decision(source, hash, true, ArticleCategory.AI)));
         when(articleRepository.existsByCompanyIdAndArticleUrlHash(1L, hash)).thenReturn(true);
@@ -336,6 +369,7 @@ class ArticleCrawlServiceTest {
                 CollectionMethod.RSS
         );
         ReflectionTestUtils.setField(source, "id", id);
+        sourcesById.put(id, source);
         return source;
     }
 

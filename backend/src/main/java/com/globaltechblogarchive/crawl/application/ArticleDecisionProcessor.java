@@ -24,6 +24,8 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ArticleDecisionProcessor {
 
+    private static final int AI_BATCH_SIZE = 10;
+
     private final ArticleAiDecisionRepository decisionRepository;
     private final ArticleMetadataAiClient aiClient;
     private final ArticleService articleService;
@@ -37,16 +39,19 @@ public class ArticleDecisionProcessor {
         List<ArticleCandidate> candidates = new ArrayList<>(sourceCandidates);
         List<ArticleCandidate> newCandidates = aiTargetCandidates(candidates);
 
-        if (!newCandidates.isEmpty()) {
+        for (int start = 0; start < newCandidates.size(); start += AI_BATCH_SIZE) {
+            List<ArticleCandidate> batch = newCandidates.subList(
+                    start,
+                    Math.min(start + AI_BATCH_SIZE, newCandidates.size())
+            );
             List<ArticleMetadataDecision> aiDecisions;
             try {
-                aiDecisions = aiClient.decide(toAiInputs(newCandidates));
+                aiDecisions = aiClient.decide(toAiInputs(batch));
             } catch (RuntimeException exception) {
-                markNewCandidatesFailed(candidates);
-                int storedArticleCount = writeApproved(source, candidates, decisionsByHash);
-                return new ProcessedCandidates(candidates, storedArticleCount);
+                markBatchFailed(candidates, batch);
+                continue;
             }
-            applyAiDecisions(source, candidates, decisionsByHash, aiDecisions, promptVersion);
+            applyAiDecisions(source, candidates, batch, decisionsByHash, aiDecisions, promptVersion);
         }
 
         int storedArticleCount = writeApproved(source, candidates, decisionsByHash);
@@ -97,19 +102,19 @@ public class ArticleDecisionProcessor {
     private void applyAiDecisions(
             BlogSource source,
             List<ArticleCandidate> candidates,
+            List<ArticleCandidate> batch,
             Map<String, ArticleAiDecision> decisionsByHash,
             List<ArticleMetadataDecision> aiDecisions,
             String promptVersion
     ) {
-        List<ArticleCandidate> newCandidates = aiTargetCandidates(candidates);
         Map<Integer, ArticleMetadataDecision> decisionsByIndex = aiDecisions.stream()
                 .collect(Collectors.toMap(
                         ArticleMetadataDecision::index,
                         Function.identity()
                 ));
 
-        for (int index = 0; index < newCandidates.size(); index++) {
-            ArticleCandidate candidate = newCandidates.get(index);
+        for (int index = 0; index < batch.size(); index++) {
+            ArticleCandidate candidate = batch.get(index);
             ArticleMetadataDecision metadataDecision = decisionsByIndex.get(index);
             int candidateIndex = candidates.indexOf(candidate);
             if (metadataDecision == null) {
@@ -139,12 +144,10 @@ public class ArticleDecisionProcessor {
         }
     }
 
-    private void markNewCandidatesFailed(List<ArticleCandidate> candidates) {
-        for (int index = 0; index < candidates.size(); index++) {
-            ArticleCandidate candidate = candidates.get(index);
-            if (candidate.decisionStatus() == ArticleCandidateDecisionStatus.NEW && !candidate.duplicate()) {
-                candidates.set(index, candidate.withDecisionStatus(ArticleCandidateDecisionStatus.AI_FAILED));
-            }
+    private void markBatchFailed(List<ArticleCandidate> candidates, List<ArticleCandidate> batch) {
+        for (ArticleCandidate candidate : batch) {
+            int candidateIndex = candidates.indexOf(candidate);
+            candidates.set(candidateIndex, candidate.withDecisionStatus(ArticleCandidateDecisionStatus.AI_FAILED));
         }
     }
 

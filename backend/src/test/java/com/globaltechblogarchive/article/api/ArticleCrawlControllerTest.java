@@ -105,4 +105,48 @@ class ArticleCrawlControllerTest {
 
         verify(articleCrawlService).run();
     }
+
+    @Test
+    void runInitialReturnsSummaryWithoutCandidateDetails() throws Exception {
+        ArticleCrawlResult result = new ArticleCrawlResult(
+                2L,
+                1,
+                1,
+                0,
+                2,
+                0,
+                2,
+                2,
+                1,
+                0,
+                0,
+                1,
+                0,
+                List.of(SourceCrawlResult.success(
+                        com.globaltechblogarchive.source.domain.BlogSource.create(
+                                Company.create("openai", "OpenAI"),
+                                "openai",
+                                "OpenAI News",
+                                "https://openai.com/news/",
+                                "https://openai.com/news/rss.xml",
+                                com.globaltechblogarchive.source.domain.CollectionMethod.RSS
+                        ),
+                        List.of(),
+                        new CrawlRunSummary(2, 0, 2, 1, 0, 0, 1, 0)
+                ))
+        );
+        when(articleCrawlService.runInitial()).thenReturn(result);
+
+        mockMvc.perform(post("/api/admin/article-crawls/initial-run"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.runId").value(2))
+                .andExpect(jsonPath("$.storedCount").value(2))
+                .andExpect(jsonPath("$.aiApprovedCount").value(1))
+                .andExpect(jsonPath("$.previouslyApprovedCount").value(1))
+                .andExpect(jsonPath("$.sources[0].sourceKey").value("openai"))
+                .andExpect(jsonPath("$.sources[0].storedCount").value(2))
+                .andExpect(jsonPath("$.sources[0].candidates").doesNotExist());
+
+        verify(articleCrawlService).runInitial();
+    }
 }

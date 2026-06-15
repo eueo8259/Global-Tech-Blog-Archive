@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
+import com.globaltechblogarchive.crawl.domain.CrawlMode;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
@@ -37,7 +38,7 @@ class RealSitemapArticleCandidateCollectorTest {
                 CollectionMethod.SITEMAP
         );
 
-        List<ParsedArticle> cards = collector.collect(source);
+        List<ParsedArticle> cards = collector.collect(source, CrawlMode.RECENT);
 
         assertThat(cards).isNotEmpty();
         assertThat(cards).allSatisfy(card -> {
