@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react';
 import { getArticles } from './articleApi';
-import type { Article, ArticleCategoryFilter } from './types';
+import type { ArticleCategoryFilter, ArticlePage } from './types';
 
-export function useArticles(category: ArticleCategoryFilter) {
-  const [articles, setArticles] = useState<Article[]>([]);
+const emptyArticlePage: ArticlePage = {
+  articles: [],
+  page: 0,
+  size: 20,
+  totalElements: 0,
+  totalPages: 0,
+  hasNext: false,
+};
+
+export function useArticles(category: ArticleCategoryFilter, page: number) {
+  const [articlePage, setArticlePage] = useState<ArticlePage>(emptyArticlePage);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -17,13 +26,13 @@ export function useArticles(category: ArticleCategoryFilter) {
       try {
         const articlePage = await getArticles({
           category,
-          page: 0,
+          page,
           signal: controller.signal,
           size: 20,
         });
 
         if (!controller.signal.aborted) {
-          setArticles(articlePage.articles);
+          setArticlePage(articlePage);
         }
       } catch {
         if (!controller.signal.aborted) {
@@ -39,7 +48,7 @@ export function useArticles(category: ArticleCategoryFilter) {
     void loadArticles();
 
     return () => controller.abort();
-  }, [category]);
+  }, [category, page]);
 
-  return { articles, error, isLoading };
+  return { articlePage, error, isLoading };
 }

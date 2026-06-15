@@ -1,12 +1,19 @@
 import { useState } from 'react';
 import { ArticleList } from './features/article/ArticleList';
+import { ArticlePagination } from './features/article/ArticlePagination';
 import { CategoryFilter } from './features/article/CategoryFilter';
 import type { ArticleCategoryFilter } from './features/article/types';
 import { useArticles } from './features/article/useArticles';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<ArticleCategoryFilter>('ALL');
-  const { articles, error, isLoading } = useArticles(selectedCategory);
+  const [selectedPage, setSelectedPage] = useState(0);
+  const { articlePage, error, isLoading } = useArticles(selectedCategory, selectedPage);
+
+  function handleCategorySelect(category: ArticleCategoryFilter) {
+    setSelectedCategory(category);
+    setSelectedPage(0);
+  }
 
   return (
     <div className="app-shell">
@@ -23,8 +30,16 @@ function App() {
             <h1 id="article-heading">최신 아티클</h1>
           </div>
 
-          <CategoryFilter selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
-          <ArticleList articles={articles} error={error} isLoading={isLoading} />
+          <CategoryFilter selectedCategory={selectedCategory} onSelect={handleCategorySelect} />
+          <ArticleList articles={articlePage.articles} error={error} isLoading={isLoading} />
+          {!isLoading && !error && articlePage.articles.length > 0 && (
+            <ArticlePagination
+              currentPage={articlePage.page}
+              hasNext={articlePage.hasNext}
+              onPageChange={setSelectedPage}
+              totalPages={articlePage.totalPages}
+            />
+          )}
         </section>
       </main>
     </div>
