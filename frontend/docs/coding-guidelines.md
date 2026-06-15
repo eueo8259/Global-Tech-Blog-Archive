@@ -52,20 +52,7 @@ Prettier does not replace ESLint:
 - ESLint checks code quality and problematic patterns.
 - Prettier standardizes code appearance.
 
-Prettier is not currently installed or configured in this project. There is no `format` script, so do not claim that formatting was verified with Prettier and do not assume editor save actions will format code.
-
-Adding Prettier requires prior discussion because it adds dependencies and establishes a project-wide formatting policy. A future adoption should define, in one focused change:
-
-- the Prettier version and configuration
-- ignored generated files
-- a `format` command that writes changes
-- a `format:check` command suitable for verification or CI
-- how ESLint and Prettier avoid conflicting formatting rules
-- whether existing files are reformatted separately from feature work
-
-Until then, preserve the style of nearby files and keep formatting changes limited to lines touched by the task.
-
-For this project, the agreed adoption target is:
+This project uses Prettier with the following configuration:
 
 ```json
 {
@@ -80,7 +67,7 @@ For this project, the agreed adoption target is:
 
 Use `printWidth: 100` because React and TypeScript expressions commonly contain longer props and type names. This keeps code readable without the frequent wrapping produced by 80 columns.
 
-When Prettier is introduced, exclude generated, dependency-owned, sensitive, and compressed files through `.prettierignore`, including:
+Generated, dependency-owned, sensitive, and compressed files are excluded through `.prettierignore`, including:
 
 ```text
 node_modules/
@@ -97,13 +84,13 @@ playwright-report/
 test-results/
 ```
 
-Use `eslint-config-prettier` as the final ESLint configuration so ESLint does not enforce formatting rules that conflict with Prettier. Do not add `eslint-plugin-prettier`; run formatting and linting as separate commands so failures retain a clear owner.
+The final ESLint configuration is `eslint-config-prettier`, so ESLint does not enforce formatting rules that conflict with Prettier. Do not add `eslint-plugin-prettier`; run formatting and linting as separate commands so failures retain a clear owner.
 
 ### Editor Setup
 
 Document editor convenience here rather than committing `.vscode/`, which is ignored by this repository.
 
-For VS Code, recommend the official Prettier extension and these user or workspace settings after Prettier is installed:
+For VS Code, use the official Prettier extension and optionally add these user settings:
 
 ```json
 {
@@ -116,7 +103,7 @@ Editor automation is optional convenience. Repository commands remain the source
 
 ### Adoption And Future Automation
 
-Introduce Prettier in a dedicated issue and PR without feature or API changes. Separate configuration changes from mechanical source formatting into distinct commits, state that the formatting commit contains no logic changes, and inspect `git diff -w` before completion.
+Keep future formatting-policy changes separate from feature or API changes. Use `npm run format` for mechanical formatting instead of manually adjusting style.
 
 Do not add Husky or lint-staged initially. If contributors repeatedly forget formatting checks, consider them in a separate issue for checking or formatting staged frontend files before commit.
 
@@ -124,14 +111,14 @@ Do not add Husky or lint-staged initially. If contributors repeatedly forget for
 
 Use each command for its own purpose:
 
-| Command | Responsibility |
-| --- | --- |
-| `npm run build` | Type-check TypeScript and produce the Vite production build |
-| `npm run lint` | Run ESLint static analysis |
-| `npm run test:e2e` | Verify user-visible browser behavior with Playwright |
-| `npm run verify` | Run build, lint, and Playwright checks together |
+| Command            | Responsibility                                              |
+| ------------------ | ----------------------------------------------------------- |
+| `npm run build`    | Type-check TypeScript and produce the Vite production build |
+| `npm run lint`     | Run ESLint static analysis                                  |
+| `npm run test:e2e` | Verify user-visible browser behavior with Playwright        |
+| `npm run verify`   | Run build, lint, and Playwright checks together             |
 
-There is currently no formatting command. A successful build does not prove lint or browser behavior, and successful lint does not prove type correctness or UI behavior.
+Run `npm run format` to rewrite files and `npm run format:check` to verify formatting without changing files. A successful build does not prove lint or browser behavior, and successful lint does not prove type correctness or UI behavior.
 
 ## General Principles
 

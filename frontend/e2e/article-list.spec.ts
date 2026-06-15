@@ -30,10 +30,7 @@ test('shows articles returned by the API', async ({ page }) => {
 
   await expect(page.getByRole('link', { name: 'TechPort 홈' })).toBeVisible();
   await expect(page.getByRole('heading', { name: '최신 아티클' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'ALL' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  await expect(page.getByRole('button', { name: 'ALL' })).toHaveAttribute('aria-pressed', 'true');
   const articleLink = page.getByRole('link', { name: /대규모 시스템/ });
   await expect(articleLink).toHaveAttribute('target', '_blank');
   await expect(page.getByText('Netflix')).toBeVisible();

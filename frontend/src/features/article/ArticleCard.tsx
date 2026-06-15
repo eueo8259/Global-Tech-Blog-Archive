@@ -7,12 +7,7 @@ interface ArticleCardProps {
 export function ArticleCard({ article }: ArticleCardProps) {
   return (
     <article className="article-card">
-      <a
-        className="article-card-link"
-        href={article.articleUrl}
-        target="_blank"
-        rel="noreferrer"
-      >
+      <a className="article-card-link" href={article.articleUrl} target="_blank" rel="noreferrer">
         <div className="article-card-meta">
           <span className="company-name">{article.companyName}</span>
           <span className="category-badge">{article.category}</span>

@@ -23,10 +23,7 @@ function App() {
             <h1 id="article-heading">최신 아티클</h1>
           </div>
 
-          <CategoryFilter
-            selectedCategory={selectedCategory}
-            onSelect={setSelectedCategory}
-          />
+          <CategoryFilter selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
           <ArticleList articles={articles} error={error} isLoading={isLoading} />
         </section>
       </main>

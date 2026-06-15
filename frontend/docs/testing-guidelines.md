@@ -229,7 +229,7 @@ Do not consider frontend work complete if:
 - the UI only handles the success state
 - runtime behavior changed but the affected flow was not manually verified
 
-There is currently no Prettier or `format:check` command. Do not report formatting verification as part of `npm run verify`.
+`npm run verify` includes `format:check` before lint, build, and Playwright tests.
 
 If Playwright is not available in a fresh environment, run `npm install` and `npm run test:e2e:install` before treating `npm run test:e2e` as an available verification command.
 

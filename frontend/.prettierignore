@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+.env
+.env.*
+*.log
+*.min.js
+package-lock.json
+playwright-report/
+test-results/
