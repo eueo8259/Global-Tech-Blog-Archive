@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
     "build": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -12,7 +14,7 @@
     "test:e2e:install": "playwright install chromium",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "verify": "npm run build && npm run lint && npm run test:e2e"
+    "verify": "npm run format:check && npm run lint && npm run build && npm run test:e2e"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
@@ -26,9 +28,11 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.17.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
+    "prettier": "^3.8.4",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.2"
   }

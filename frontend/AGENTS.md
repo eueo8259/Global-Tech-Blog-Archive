@@ -108,7 +108,8 @@ Prefer implementing frontend features in this order:
 - Run `npm run lint` after changing TypeScript, TSX, JavaScript, or ESLint configuration.
 - Do not suppress ESLint errors or warnings merely to make the command pass. Fix the cause or explain why a rule change is needed.
 - Do not perform repository-wide formatting as part of an unrelated feature or fix.
-- Prettier is not currently installed. Ask before adding it, changing formatting policy, or introducing editor-on-save assumptions.
+- Use `npm run format` instead of manually adjusting formatting style.
+- Ask before changing the shared Prettier policy or introducing committed editor-specific settings.
 
 ## State Management Rules
 
