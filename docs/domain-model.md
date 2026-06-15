@@ -171,6 +171,9 @@ The aggregate does not include:
 
 - The collector runs automatically on a schedule by default.
 - The collector reads only `blog_sources` rows where `enabled = 1`.
+- Recent collection keeps up to 20 candidates per source from the last two days and excludes candidates without a publication time.
+- Initial collection keeps up to 20 candidates per source without a date window; dated candidates are ordered newest first and undated candidates fill remaining positions afterward.
+- Each source collection is committed independently so one source failure does not roll back successful results from other sources in the same run.
 - RSS and Atom collection use `feed_url`.
 - HTML scraping uses `site_url`.
 - Article category assignment is handled by AI decision before persistence.

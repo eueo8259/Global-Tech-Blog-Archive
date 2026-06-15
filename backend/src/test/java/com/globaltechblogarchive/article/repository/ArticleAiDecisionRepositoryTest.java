@@ -9,21 +9,18 @@ import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.repository.ArticleAiDecisionRepository;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
+import com.globaltechblogarchive.support.MySqlIntegrationTest;
 import java.util.List;
 import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
-@ActiveProfiles("local")
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class ArticleAiDecisionRepositoryTest {
+class ArticleAiDecisionRepositoryTest extends MySqlIntegrationTest {
 
     @Autowired
     private ArticleAiDecisionRepository decisionRepository;

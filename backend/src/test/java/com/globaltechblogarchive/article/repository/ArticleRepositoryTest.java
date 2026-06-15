@@ -7,20 +7,17 @@ import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
+import com.globaltechblogarchive.support.MySqlIntegrationTest;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
-@ActiveProfiles("local")
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class ArticleRepositoryTest {
+class ArticleRepositoryTest extends MySqlIntegrationTest {
 
     @Autowired
     private ArticleRepository articleRepository;

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
+import com.globaltechblogarchive.crawl.domain.CrawlMode;
 import com.globaltechblogarchive.crawl.support.ArticleDateParser;
 import com.globaltechblogarchive.crawl.support.ArticleCandidateCollectionPolicy;
 import com.globaltechblogarchive.crawl.support.TextCleaner;
@@ -31,11 +32,11 @@ public class WordPressRestArticleCandidateCollector implements ArticleCandidateC
     }
 
     @Override
-    public List<ParsedArticle> collect(BlogSource source) {
+    public List<ParsedArticle> collect(BlogSource source, CrawlMode mode) {
         if (source.getFeedUrl() == null || source.getFeedUrl().isBlank()) {
             throw new IllegalArgumentException("WordPress REST URL is required for " + source.getSourceKey());
         }
-        return ArticleCandidateCollectionPolicy.apply(parse(fetcher.fetch(source.getFeedUrl())));
+        return ArticleCandidateCollectionPolicy.apply(parse(fetcher.fetch(source.getFeedUrl())), mode);
     }
 
     List<ParsedArticle> parse(String json) {
