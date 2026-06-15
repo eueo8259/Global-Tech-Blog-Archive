@@ -11,19 +11,16 @@ import com.globaltechblogarchive.crawl.repository.ArticleCollectionRunRepository
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
+import com.globaltechblogarchive.support.MySqlIntegrationTest;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
-import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
-@ActiveProfiles("local")
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class ArticleCollectionRepositoryTest {
+class ArticleCollectionRepositoryTest extends MySqlIntegrationTest {
 
     @Autowired
     private ArticleCollectionRunRepository runRepository;

@@ -62,6 +62,10 @@ Do not load the Spring context unless required.
 
 Use integration tests with the real persistence layer.
 
+Repository tests extend `MySqlIntegrationTest` and run against a shared
+Testcontainers MySQL 8.4 container for the test JVM. They must not use the
+local development database or the `local` Spring profile.
+
 Test:
 
 * custom queries
@@ -71,6 +75,11 @@ Test:
 * entity mappings
 
 Prefer testing against the same database engine used by the application. Do not mock JPA repositories.
+
+Docker must be available when repository tests run. Flyway creates the schema
+and reference data inside the temporary container, and `@DataJpaTest` rolls
+back each test method. Testcontainers removes the container after the test JVM
+exits.
 
 ---
 
@@ -160,8 +169,14 @@ Run from `backend/` before reporting completion:
 If repository tests require MySQL:
 
 ```bash
-docker compose up -d mysql
+./gradlew test build
 ```
+
+The build starts MySQL 8.4 through Testcontainers. Do not start or clear the
+local Docker Compose database for automated tests.
+
+GitHub Actions runs the same command on an Ubuntu runner. No separate MySQL
+service container is configured in CI.
 
 If runtime behavior changes:
 
