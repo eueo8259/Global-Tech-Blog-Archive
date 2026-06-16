@@ -9,6 +9,7 @@ import com.globaltechblogarchive.crawl.domain.CrawlMode;
 import com.globaltechblogarchive.crawl.helper.ArticleListParserPropertiesFixture;
 import com.globaltechblogarchive.crawl.parser.ArticleListParserRegistry;
 import com.globaltechblogarchive.crawl.parser.HtmlArticleListParser;
+import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.time.LocalDateTime;
@@ -93,6 +94,65 @@ class HtmlArticleCandidateCollectorTest {
         assertThat(client.detailRequests()).doesNotContain("https://discord.com/blog/article-20");
     }
 
+    @Test
+    void uberInitialCollectsFirstTwoListPages() {
+        BlogSource source = uberSource();
+        String pageOne = """
+                <main>
+                  <a href="/kr/en/blog/advertising/">
+                    Advertising Learn more about advertising on Uber.
+                  </a>
+                  <a href="/kr/en/blog/scaling-real-time-traffic/">
+                    Scaling Real-Time Traffic Forecasting with a Graph-Aware Transformer
+                  </a>
+                  <time>June 16, 2026</time>
+                </main>
+                """;
+        String pageTwo = """
+                <main>
+                  <a href="/kr/en/blog/junit-migration/">
+                    How Uber Executed A JUnit Migration at Massive Scale
+                  </a>
+                  <a href="/kr/en/blog/scaling-real-time-traffic/">
+                    Scaling Real-Time Traffic Forecasting with a Graph-Aware Transformer
+                  </a>
+                </main>
+                """;
+        RecordingClient client = new RecordingClient(Map.of(
+                source.getSiteUrl(), pageOne,
+                "https://www.uber.com/blog/engineering/page/2", pageTwo
+        ));
+
+        var articles = collector(client).collect(source, CrawlMode.INITIAL);
+
+        assertThat(articles).extracting(ParsedArticle::originalTitle)
+                .containsExactly(
+                        "Scaling Real-Time Traffic Forecasting with a Graph-Aware Transformer",
+                        "How Uber Executed A JUnit Migration at Massive Scale"
+                );
+        assertThat(client.listRequests()).containsExactly(
+                source.getSiteUrl(),
+                "https://www.uber.com/blog/engineering/page/2"
+        );
+    }
+
+    @Test
+    void uberRecentCollectsOnlyFirstListPage() {
+        BlogSource source = uberSource();
+        String pageOne = """
+                <main>
+                  <a href="/kr/en/blog/scaling-real-time-traffic/">
+                    Scaling Real-Time Traffic Forecasting with a Graph-Aware Transformer
+                  </a>
+                </main>
+                """;
+        RecordingClient client = new RecordingClient(Map.of(source.getSiteUrl(), pageOne));
+
+        collector(client).collect(source, CrawlMode.RECENT);
+
+        assertThat(client.listRequests()).containsExactly(source.getSiteUrl());
+    }
+
     private HtmlArticleCandidateCollector collector(SourceDocumentClient client) {
         return new HtmlArticleCandidateCollector(
                 client,
@@ -113,8 +173,20 @@ class HtmlArticleCandidateCollectorTest {
         );
     }
 
+    private BlogSource uberSource() {
+        return BlogSource.create(
+                Company.create("uber", "Uber"),
+                "uber",
+                "Uber Engineering Blog",
+                "https://www.uber.com/blog/engineering",
+                null,
+                CollectionMethod.HTML_SCRAPING
+        );
+    }
+
     private static class RecordingClient extends SourceDocumentClient {
         private final Map<String, String> documents;
+        private final List<String> listRequests = new ArrayList<>();
         private final List<String> detailRequests = new ArrayList<>();
 
         RecordingClient(Map<String, String> documents) {
@@ -123,10 +195,16 @@ class HtmlArticleCandidateCollectorTest {
 
         @Override
         public String fetch(String url) {
-            if (!url.contains("/category/")) {
+            if (url.contains("/category/") || url.contains("/engineering")) {
+                listRequests.add(url);
+            } else {
                 detailRequests.add(url);
             }
             return documents.get(url);
+        }
+
+        List<String> listRequests() {
+            return listRequests;
         }
 
         List<String> detailRequests() {

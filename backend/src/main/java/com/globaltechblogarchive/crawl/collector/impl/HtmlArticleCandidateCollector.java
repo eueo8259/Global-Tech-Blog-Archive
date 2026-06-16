@@ -13,7 +13,9 @@ import com.globaltechblogarchive.crawl.support.TextCleaner;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -32,11 +34,29 @@ public class HtmlArticleCandidateCollector implements ArticleCandidateCollector 
     @Override
     public List<ParsedArticle> collect(BlogSource source, CrawlMode mode) {
         ArticleListParser parser = parserRegistry.find(source);
-        List<ParsedArticle> parsedArticles = parser.parse(source, fetcher.fetch(source.getSiteUrl()));
+        List<ParsedArticle> parsedArticles = collectListPages(source, parser, mode);
         if ("discord".equals(source.getSourceKey())) {
             return collectDiscordDetails(parsedArticles, mode);
         }
         return ArticleCandidateCollectionPolicy.apply(parsedArticles, mode);
+    }
+
+    private List<ParsedArticle> collectListPages(BlogSource source, ArticleListParser parser, CrawlMode mode) {
+        if ("uber".equals(source.getSourceKey()) && mode == CrawlMode.INITIAL) {
+            Map<String, ParsedArticle> articles = new LinkedHashMap<>();
+            for (String url : List.of(source.getSiteUrl(), pageUrl(source.getSiteUrl(), 2))) {
+                for (ParsedArticle article : parser.parse(source, fetcher.fetch(url))) {
+                    articles.putIfAbsent(article.originalUrl(), article);
+                }
+            }
+            return List.copyOf(articles.values());
+        }
+        return parser.parse(source, fetcher.fetch(source.getSiteUrl()));
+    }
+
+    private String pageUrl(String siteUrl, int page) {
+        String baseUrl = siteUrl.endsWith("/") ? siteUrl.substring(0, siteUrl.length() - 1) : siteUrl;
+        return baseUrl + "/page/" + page;
     }
 
     private List<ParsedArticle> collectDiscordDetails(List<ParsedArticle> parsedArticles, CrawlMode mode) {
