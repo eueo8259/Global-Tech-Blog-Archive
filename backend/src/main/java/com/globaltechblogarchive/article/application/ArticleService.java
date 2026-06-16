@@ -38,7 +38,7 @@ public class ArticleService {
         }
 
         if ("ALL".equals(category)) {
-            articles = articleRepository.findByCompanyKeyOrderByPublishedAtDescIdDesc(companyKey, pageRequest);
+            articles = articleRepository.findByCompany_CompanyKeyOrderByPublishedAtDescIdDesc(companyKey, pageRequest);
             return ArticlePageResponse.from(articles);
         }
 
@@ -49,7 +49,7 @@ public class ArticleService {
             return ArticlePageResponse.from(articles);
         }
 
-        articles = articleRepository.findByCategoryAndCompanyKeyOrderByPublishedAtDescIdDesc(
+        articles = articleRepository.findByCategoryAndCompany_CompanyKeyOrderByPublishedAtDescIdDesc(
                 articleCategory,
                 companyKey,
                 pageRequest

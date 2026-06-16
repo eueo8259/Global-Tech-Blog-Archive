@@ -21,10 +21,10 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     List<Article> findAllByOrderByIdAsc();
 
     @EntityGraph(attributePaths = "company")
-    Page<Article> findByCompanyKeyOrderByPublishedAtDescIdDesc(String companyKey, Pageable pageable);
+    Page<Article> findByCompany_CompanyKeyOrderByPublishedAtDescIdDesc(String companyKey, Pageable pageable);
 
     @EntityGraph(attributePaths = "company")
-    Page<Article> findByCategoryAndCompanyKeyOrderByPublishedAtDescIdDesc(
+    Page<Article> findByCategoryAndCompany_CompanyKeyOrderByPublishedAtDescIdDesc(
             ArticleCategory articleCategory,
             String companyKey,
             Pageable pageable

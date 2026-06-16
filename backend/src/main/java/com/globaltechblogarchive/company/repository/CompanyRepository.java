@@ -2,7 +2,6 @@ package com.globaltechblogarchive.company.repository;
 
 import com.globaltechblogarchive.company.domain.Company;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;

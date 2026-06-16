@@ -72,14 +72,14 @@ class ArticleServiceTest {
     void getArticlesFiltersByCompanyKey() {
         Article article = article(1L, ArticleCategory.AI);
         PageRequest pageRequest = PageRequest.of(0, 20);
-        when(articleRepository.findByCompanyKeyOrderByPublishedAtDescIdDesc("openai", pageRequest))
+        when(articleRepository.findByCompany_CompanyKeyOrderByPublishedAtDescIdDesc("openai", pageRequest))
                 .thenReturn(new PageImpl<>(List.of(article), pageRequest, 1));
 
         ArticlePageResponse response = articleService.getArticles("ALL", "openai", 0, 20);
 
         assertThat(response.articles()).hasSize(1);
         assertThat(response.articles().getFirst().companyKey()).isEqualTo("openai");
-        verify(articleRepository).findByCompanyKeyOrderByPublishedAtDescIdDesc("openai", pageRequest);
+        verify(articleRepository).findByCompany_CompanyKeyOrderByPublishedAtDescIdDesc("openai", pageRequest);
         verifyNoMoreInteractions(articleRepository);
     }
 
@@ -87,7 +87,7 @@ class ArticleServiceTest {
     void getArticlesFiltersByCategoryAndCompanyKey() {
         Article article = article(2L, ArticleCategory.BACKEND);
         PageRequest pageRequest = PageRequest.of(0, 20);
-        when(articleRepository.findByCategoryAndCompanyKeyOrderByPublishedAtDescIdDesc(
+        when(articleRepository.findByCategoryAndCompany_CompanyKeyOrderByPublishedAtDescIdDesc(
                 ArticleCategory.BACKEND,
                 "openai",
                 pageRequest
@@ -98,7 +98,7 @@ class ArticleServiceTest {
         assertThat(response.articles()).hasSize(1);
         assertThat(response.articles().getFirst().category()).isEqualTo(ArticleCategory.BACKEND);
         assertThat(response.articles().getFirst().companyKey()).isEqualTo("openai");
-        verify(articleRepository).findByCategoryAndCompanyKeyOrderByPublishedAtDescIdDesc(
+        verify(articleRepository).findByCategoryAndCompany_CompanyKeyOrderByPublishedAtDescIdDesc(
                 ArticleCategory.BACKEND,
                 "openai",
                 pageRequest

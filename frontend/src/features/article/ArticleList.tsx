@@ -22,7 +22,7 @@ export function ArticleList({ articles, error, isLoading }: ArticleListProps) {
   }
 
   if (articles.length === 0) {
-    return <p className="status-message">해당 카테고리의 기사가 없습니다.</p>;
+    return <p className="status-message">선택한 필터에 해당하는 기사가 없습니다.</p>;
   }
 
   return (

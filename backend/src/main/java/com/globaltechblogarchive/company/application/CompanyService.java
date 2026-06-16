@@ -19,8 +19,8 @@ public class CompanyService {
         return companyRepository.findAllByOrderByCompanyNameAsc()
                 .stream()
                 .map(company -> new CompanyResponse(
-                        company.getCompanyKey(),
-                        company.getCompanyName()
+                        company.getCompanyName(),
+                        company.getCompanyKey()
                 ))
                 .toList();
     }
