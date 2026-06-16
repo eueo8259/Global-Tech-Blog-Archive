@@ -114,7 +114,7 @@ class RealArticleSourceCollectionCountTest {
                 html("uber", "Uber", "https://www.uber.com/blog/engineering"),
                 rss("airbnb", "Airbnb", "https://medium.com/airbnb-engineering", "https://medium.com/feed/airbnb-engineering"),
                 rss("pinterest", "Pinterest", "https://medium.com/pinterest-engineering", "https://medium.com/feed/pinterest-engineering"),
-                rss("stripe", "Stripe", "https://stripe.com/blog/engineering", "https://stripe.com/blog/feed.rss"),
+                html("stripe", "Stripe", "https://stripe.com/blog/engineering"),
                 rss("cloudflare", "Cloudflare", "https://blog.cloudflare.com/", "https://blog.cloudflare.com/tag/engineering/rss/"),
                 rss("github", "GitHub", "https://github.blog/engineering/", "https://github.blog/engineering/feed/"),
                 html("linkedin", "LinkedIn", "https://engineering.linkedin.com/content/engineering/en-us/blog"),

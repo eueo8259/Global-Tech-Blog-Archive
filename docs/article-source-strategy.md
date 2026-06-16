@@ -95,7 +95,7 @@ AI -> Devops -> Architecture -> Backend -> Frontend -> Else
 | Uber | HTML_SCRAPING | N/A |
 | Airbnb | RSS | `https://medium.com/feed/airbnb-engineering` |
 | Pinterest | RSS | `https://medium.com/feed/pinterest-engineering` |
-| Stripe | RSS | `https://stripe.com/blog/feed.rss` |
+| Stripe | HTML_SCRAPING | N/A |
 | Cloudflare | RSS | `https://blog.cloudflare.com/tag/engineering/rss/` |
 | GitHub | RSS | `https://github.blog/engineering/feed/` |
 | LinkedIn | HTML_SCRAPING | N/A |

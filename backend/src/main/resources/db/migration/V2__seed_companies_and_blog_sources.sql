@@ -39,7 +39,7 @@ SELECT id, 'airbnb', 'Airbnb Engineering', 'https://medium.com/airbnb-engineerin
 UNION ALL
 SELECT id, 'pinterest', 'Pinterest Engineering', 'https://medium.com/pinterest-engineering', 'https://medium.com/feed/pinterest-engineering', 'RSS', 1, NOW(6), NOW(6) FROM companies WHERE company_key = 'pinterest'
 UNION ALL
-SELECT id, 'stripe', 'Stripe Engineering Blog', 'https://stripe.com/blog/engineering', 'https://stripe.com/blog/feed.rss', 'RSS', 1, NOW(6), NOW(6) FROM companies WHERE company_key = 'stripe'
+SELECT id, 'stripe', 'Stripe Engineering Blog', 'https://stripe.com/blog/engineering', NULL, 'HTML_SCRAPING', 1, NOW(6), NOW(6) FROM companies WHERE company_key = 'stripe'
 UNION ALL
 SELECT id, 'cloudflare', 'Cloudflare Blog', 'https://blog.cloudflare.com/', 'https://blog.cloudflare.com/tag/engineering/rss/', 'RSS', 1, NOW(6), NOW(6) FROM companies WHERE company_key = 'cloudflare'
 UNION ALL
