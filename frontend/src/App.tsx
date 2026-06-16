@@ -4,33 +4,66 @@ import { ArticlePagination } from './features/article/ArticlePagination';
 import { CategoryFilter } from './features/article/CategoryFilter';
 import type { ArticleCategoryFilter } from './features/article/types';
 import { useArticles } from './features/article/useArticles';
+import { CompanyFilter } from './features/company/CompanyFilter';
+import type { CompanyFilterValue } from './features/company/types';
+import { useCompanies } from './features/company/useCompanies';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<ArticleCategoryFilter>('ALL');
+  const [selectedCompanyKey, setSelectedCompanyKey] = useState<CompanyFilterValue>(null);
   const [selectedPage, setSelectedPage] = useState(0);
-  const { articlePage, error, isLoading } = useArticles(selectedCategory, selectedPage);
+  const { articlePage, error, isLoading } = useArticles(
+    selectedCategory,
+    selectedCompanyKey,
+    selectedPage,
+  );
+  const companies = useCompanies();
 
   function handleCategorySelect(category: ArticleCategoryFilter) {
     setSelectedCategory(category);
     setSelectedPage(0);
   }
 
+  function handleCompanySelect(companyKey: CompanyFilterValue) {
+    setSelectedCompanyKey(companyKey);
+    setSelectedPage(0);
+  }
+
   return (
     <div className="app-shell">
       <header className="site-header">
-        <a className="site-logo" href="/" aria-label="TechPort 홈">
-          TechPort
-        </a>
+        <div className="header-content">
+          <a className="site-logo" href="/" aria-label="TechPort 홈">
+            TechPort
+          </a>
+          <p className="site-description">
+            세계적인 기술 기업의 엔지니어링 블로그를 한곳에서 만나보세요.
+          </p>
+
+          <div className="filter-bar">
+            <CategoryFilter selectedCategory={selectedCategory} onSelect={handleCategorySelect} />
+            <CompanyFilter
+              companies={companies.companies}
+              error={companies.error}
+              isLoading={companies.isLoading}
+              onRetry={companies.retry}
+              onSelect={handleCompanySelect}
+              selectedCompanyKey={selectedCompanyKey}
+            />
+          </div>
+        </div>
       </header>
 
       <main className="page-content">
         <section className="article-section" aria-labelledby="article-heading">
-          <div className="section-heading">
-            <p className="eyebrow">GLOBAL ENGINEERING BLOGS</p>
-            <h1 id="article-heading">최신 아티클</h1>
-          </div>
-
-          <CategoryFilter selectedCategory={selectedCategory} onSelect={handleCategorySelect} />
+          <h1 className="visually-hidden" id="article-heading">
+            최신 아티클
+          </h1>
+          {!isLoading && !error && (
+            <p className="article-count" aria-live="polite">
+              {articlePage.totalElements}개 아티클
+            </p>
+          )}
           <ArticleList articles={articlePage.articles} error={error} isLoading={isLoading} />
           {!isLoading && !error && articlePage.articles.length > 0 && (
             <ArticlePagination

@@ -2,6 +2,7 @@ import type { ArticleCategoryFilter, ArticlePage } from './types';
 
 interface GetArticlesParams {
   category: ArticleCategoryFilter;
+  companyKey: string | null;
   page: number;
   signal?: AbortSignal;
   size: number;
@@ -9,6 +10,7 @@ interface GetArticlesParams {
 
 export async function getArticles({
   category,
+  companyKey,
   page,
   signal,
   size,
@@ -18,6 +20,9 @@ export async function getArticles({
     page: page.toString(),
     size: size.toString(),
   });
+  if (companyKey) {
+    searchParams.set('companyKey', companyKey);
+  }
   const response = await fetch(`/api/articles?${searchParams.toString()}`, { signal });
 
   if (!response.ok) {
