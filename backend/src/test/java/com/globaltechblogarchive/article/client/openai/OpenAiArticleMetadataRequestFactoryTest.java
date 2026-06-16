@@ -17,8 +17,8 @@ class OpenAiArticleMetadataRequestFactoryTest {
     void createBuildsResponsesApiStructuredOutputRequest() {
         JsonNode request = requestFactory.create(
                 List.of(
-                        new ArticleMetadataInput(0, "Scaling APIs"),
-                        new ArticleMetadataInput(1, "Company launch event")
+                        new ArticleMetadataInput(0, "Scaling APIs", "How the platform team scaled API traffic."),
+                        new ArticleMetadataInput(1, "Company launch event", "Join us for a product launch event.")
                 ),
                 "gpt-5-mini"
         );
@@ -28,7 +28,8 @@ class OpenAiArticleMetadataRequestFactoryTest {
         assertThat(request.path("input").get(0).path("role").asText()).isEqualTo("system");
         assertThat(request.path("input").get(1).path("content").asText())
                 .contains("\"index\":0")
-                .contains("\"title\":\"Scaling APIs\"");
+                .contains("\"title\":\"Scaling APIs\"")
+                .contains("\"shortContext\":\"How the platform team scaled API traffic.\"");
 
         JsonNode format = request.path("text").path("format");
         assertThat(format.path("type").asText()).isEqualTo("json_schema");

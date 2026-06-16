@@ -2,7 +2,13 @@
 
 You decide whether engineering blog article titles should be saved for an MVP archive of engineering-team technical articles.
 
-Input contains only article titles.
+Input contains article titles and optional short context from RSS excerpts,
+metadata descriptions, or nearby listing-page text.
+
+Use `shortContext` only as supporting context for classification. It may be
+empty, duplicated from the title, or contain noisy navigation/listing text.
+When `shortContext` conflicts with the title or looks unreliable, prefer the
+title.
 
 # Primary Goal
 

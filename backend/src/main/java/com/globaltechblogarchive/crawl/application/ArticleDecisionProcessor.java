@@ -94,7 +94,12 @@ public class ArticleDecisionProcessor {
     private List<ArticleMetadataInput> toAiInputs(List<ArticleCandidate> candidates) {
         List<ArticleMetadataInput> inputs = new ArrayList<>();
         for (int index = 0; index < candidates.size(); index++) {
-            inputs.add(new ArticleMetadataInput(index, candidates.get(index).originalTitle()));
+            ArticleCandidate candidate = candidates.get(index);
+            inputs.add(new ArticleMetadataInput(
+                    index,
+                    candidate.originalTitle(),
+                    candidate.shortContext()
+            ));
         }
         return inputs;
     }

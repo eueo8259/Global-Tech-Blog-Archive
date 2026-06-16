@@ -11,7 +11,8 @@ public interface ArticleMetadataAiClient {
 
     record ArticleMetadataInput(
             int index,
-            String title
+            String title,
+            String shortContext
     ) {
     }
 
