@@ -74,10 +74,6 @@ crawl:
         article-path-signals: [ "/" ]
         required-text-signals: [ "engineering", "developers", "infrastructure", "security", "ai", "reliability", "database", "networking" ]
         context-signals: [ "engineering", "developers", "infrastructure", "security", "ai", "reliability", "database", "networking" ]
-      linkedin:
-        article-path-signals: [ "/blog/" ]
-        required-text-signals: [ ]
-        context-signals: [ "engineering" ]
       doordash:
         article-path-signals: [ "/engineering-blog/", "/blog/" ]
         required-text-signals: [ ]

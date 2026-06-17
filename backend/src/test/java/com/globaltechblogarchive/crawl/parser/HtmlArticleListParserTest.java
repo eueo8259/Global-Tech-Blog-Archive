@@ -132,7 +132,6 @@ class HtmlArticleListParserTest {
                 Arguments.of("airbnb", "https://airbnb.tech/", "https://medium.com/airbnb-engineering/platform", "Engineering"),
                 Arguments.of("stripe", "https://stripe.com/blog/engineering", "/blog/database-systems", "Engineering"),
                 Arguments.of("cloudflare", "https://blog.cloudflare.com/", "/networking-at-edge", "Networking"),
-                Arguments.of("linkedin", "https://engineering.linkedin.com/content/engineering/en-us/blog", "/blog/data-systems", "Engineering"),
                 Arguments.of("doordash", "https://careersatdoordash.com/career-areas/engineering/", "/engineering-blog/backend-platform", "Backend"),
                 Arguments.of("discord", "https://discord.com/category/engineering", "/blog/realtime-engineering", "Developers"),
                 Arguments.of("shopify", "https://shopify.engineering/", "/database-at-scale", "Engineering"),

@@ -117,7 +117,6 @@ class RealArticleSourceCollectionCountTest {
                 html("stripe", "Stripe", "https://stripe.com/blog/engineering"),
                 rss("cloudflare", "Cloudflare", "https://blog.cloudflare.com/", "https://blog.cloudflare.com/tag/engineering/rss/"),
                 rss("github", "GitHub", "https://github.blog/engineering/", "https://github.blog/engineering/feed/"),
-                html("linkedin", "LinkedIn", "https://engineering.linkedin.com/content/engineering/en-us/blog"),
                 html("discord", "Discord", "https://discord.com/category/engineering"),
                 sitemap("shopify", "Shopify", "https://shopify.engineering/", "https://shopify.engineering/sitemap.xml"),
                 rss("datadog", "Datadog", "https://www.datadoghq.com/blog/engineering/", "https://www.datadoghq.com/blog/engineering/index.xml"),
