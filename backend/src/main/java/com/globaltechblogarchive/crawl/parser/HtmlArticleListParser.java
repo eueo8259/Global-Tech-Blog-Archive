@@ -6,6 +6,7 @@ import com.globaltechblogarchive.crawl.support.ArticleDateParser;
 import com.globaltechblogarchive.crawl.support.TextCleaner;
 import com.globaltechblogarchive.crawl.support.UrlNormalizer;
 import com.globaltechblogarchive.source.domain.BlogSource;
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -138,6 +139,9 @@ public class HtmlArticleListParser implements ArticleListParser {
         if (UrlNormalizer.normalize(source.getSiteUrl()).equals(UrlNormalizer.normalize(absoluteUrl))) {
             return false;
         }
+        if (!isExpectedHost(source, absoluteUrl)) {
+            return false;
+        }
         if (title.length() < 12 || properties.blockedTitles().contains(lowerTitle) || lowerTitle.matches("\\d+")) {
             return false;
         }
@@ -155,6 +159,19 @@ public class HtmlArticleListParser implements ArticleListParser {
                 || config.requiredTextSignals().stream().anyMatch(signal ->
                 lowerTitle.contains(signal) || block.toLowerCase(Locale.ROOT).contains(signal));
         return pathMatches && textMatches;
+    }
+
+    private boolean isExpectedHost(BlogSource source, String articleUrl) {
+        String candidateHost = URI.create(articleUrl).getHost();
+        String sourceHost = URI.create(source.getSiteUrl()).getHost();
+        if (candidateHost == null || sourceHost == null) {
+            return false;
+        }
+        if (candidateHost.equalsIgnoreCase(sourceHost)) {
+            return true;
+        }
+        return "airbnb".equals(source.getSourceKey())
+                && "medium.com".equalsIgnoreCase(candidateHost);
     }
 
     private boolean isUberCategoryLink(BlogSource source, String lowerHref) {
