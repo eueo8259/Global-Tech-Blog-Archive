@@ -9,7 +9,7 @@ public final class HtmlMetadataExtractor {
     private static final Pattern DATE_PUBLISHED = Pattern.compile("(?is)datePublished[\"']?\\s*[:=]\\s*[\"']([^\"']+)[\"']");
     private static final Pattern SCRIPT_STYLE_SVG = Pattern.compile("(?is)<(script|style|svg)\\b[^>]*>.*?</\\1>");
     private static final Pattern PARAGRAPH = Pattern.compile("(?is)<p\\b[^>]*>(.*?)</p>");
-    private static final String DATE_TEXT = "(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{1,2},\\s+\\d{4}";
+    private static final String DATE_TEXT = "((January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{1,2},\\s+\\d{4}|\\d{4}\\.\\d{1,2}\\.\\d{1,2})";
 
     private HtmlMetadataExtractor() {
     }

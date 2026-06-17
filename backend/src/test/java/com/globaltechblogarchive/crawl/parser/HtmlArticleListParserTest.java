@@ -147,6 +147,32 @@ class HtmlArticleListParserTest {
                 .isEqualTo("https://stripe.com/blog/how-we-built-real-time-analytics");
     }
 
+    @org.junit.jupiter.api.Test
+    void parseExtractsStripeDevDotSeparatedListDate() {
+        BlogSource source = source(
+                "stripe",
+                "https://stripe.dev/blog"
+        );
+        String html = """
+                <main>
+                  <section class="blog-list">
+                    <a href="/blog/modern-java-at-stripe-language-upgrades-as-a-service">
+                      2026.5.27 Modern Java at Stripe: Language upgrades as a service
+                    </a>
+                    <p>Summary: How Stripe upgrades Java across a large JVM codebase.</p>
+                    <p>Topic: Engineering</p>
+                  </section>
+                </main>
+                """;
+
+        var cards = parser.parse(source, html);
+
+        assertThat(cards).hasSize(1);
+        assertThat(cards.getFirst().originalUrl())
+                .isEqualTo("https://stripe.dev/blog/modern-java-at-stripe-language-upgrades-as-a-service");
+        assertThat(cards.getFirst().publishedAt()).isEqualTo(java.time.LocalDateTime.of(2026, 5, 27, 0, 0));
+    }
+
     static Stream<Arguments> htmlSources() {
         return Stream.of(
                 Arguments.of("openai", "https://openai.com/news/", "/news/engineering-systems", "Engineering"),

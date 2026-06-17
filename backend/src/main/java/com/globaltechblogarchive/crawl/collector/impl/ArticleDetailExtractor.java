@@ -26,6 +26,7 @@ public class ArticleDetailExtractor {
         LocalDateTime publishedAt = firstNonNull(
                 ArticleDateParser.parseSitemapDate(HtmlMetadataExtractor.metaContent(html, "article:published_time")),
                 ArticleDateParser.parseListPageDate(HtmlMetadataExtractor.jsonLdText(html, "datePublished")),
+                ArticleDateParser.parseListPageDate(HtmlMetadataExtractor.firstDateAfterHeading(html, 1)),
                 article.publishedAt()
         );
         String shortContext = firstNonBlank(

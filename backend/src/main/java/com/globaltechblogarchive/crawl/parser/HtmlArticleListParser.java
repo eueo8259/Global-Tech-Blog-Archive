@@ -50,7 +50,7 @@ public class HtmlArticleListParser implements ArticleListParser {
             "(?is)<time\\b[^>]*(?:datetime=[\"']([^\"']+)[\"'])?[^>]*>(.*?)</time>"
     );
     private static final Pattern DATE_TEXT = Pattern.compile(
-            "(?i)(\\b\\w+\\s+\\d{1,2},\\s+\\d{4}\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b)"
+            "(?i)(\\b\\w+\\s+\\d{1,2},\\s+\\d{4}\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b|\\b\\d{4}\\.\\d{1,2}\\.\\d{1,2}\\b)"
     );
 
     private final ArticleListParserProperties properties;
