@@ -58,7 +58,7 @@ class HtmlArticleCandidateCollectorTest {
         ));
         HtmlArticleCandidateCollector collector = collector(client);
 
-        var articles = collector.collect(source, CrawlMode.INITIAL);
+        var articles = collector.collect(source, CrawlMode.BACKFILL);
 
         assertThat(articles).hasSize(1);
         assertThat(articles.getFirst().originalTitle())
@@ -68,7 +68,7 @@ class HtmlArticleCandidateCollectorTest {
     }
 
     @Test
-    void discordFetchesAtMostTwentyDetailPages() {
+    void discordBackfillFetchesUpToFiftyDetailPages() {
         BlogSource source = discordSource();
         StringBuilder list = new StringBuilder("<main>");
         Map<String, String> documents = new HashMap<>();
@@ -80,23 +80,20 @@ class HtmlArticleCandidateCollectorTest {
                     .append(index).append(" with a sufficiently long title</a>");
             documents.put(url, "<h1>Article " + index + " with a sufficiently long title</h1>"
                     + "<div>June 10, 2026</div>");
-            if (index < 20) {
-                expectedDetails.add(url);
-            }
+            expectedDetails.add(url);
         }
         list.append("</main>");
         documents.put(source.getSiteUrl(), list.toString());
         RecordingClient client = new RecordingClient(documents);
 
-        var articles = collector(client).collect(source, CrawlMode.INITIAL);
+        var articles = collector(client).collect(source, CrawlMode.BACKFILL);
 
-        assertThat(articles).hasSize(20);
+        assertThat(articles).hasSize(30);
         assertThat(client.detailRequests()).containsExactlyElementsOf(expectedDetails);
-        assertThat(client.detailRequests()).doesNotContain("https://discord.com/blog/article-20");
     }
 
     @Test
-    void uberInitialCollectsFirstTwoListPages() {
+    void uberBackfillCollectsFirstTwoListPages() {
         BlogSource source = uberSource();
         String pageOne = """
                 <main>
@@ -128,7 +125,7 @@ class HtmlArticleCandidateCollectorTest {
                 detail("How Uber Executed A JUnit Migration at Massive Scale")
         ));
 
-        var articles = collector(client).collect(source, CrawlMode.INITIAL);
+        var articles = collector(client).collect(source, CrawlMode.BACKFILL);
 
         assertThat(articles).extracting(ParsedArticle::originalTitle)
                 .containsExactly(
@@ -192,7 +189,7 @@ class HtmlArticleCandidateCollectorTest {
                 """
         ));
 
-        var articles = collector(client).collect(source, CrawlMode.INITIAL);
+        var articles = collector(client).collect(source, CrawlMode.BACKFILL);
 
         assertThat(articles).hasSize(1);
         assertThat(articles.getFirst().originalTitle())

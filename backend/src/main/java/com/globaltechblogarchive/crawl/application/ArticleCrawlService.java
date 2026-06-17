@@ -21,20 +21,12 @@ public class ArticleCrawlService {
     private final SourceCrawlProcessor sourceCrawlProcessor;
     private final CrawlTransactionService transactionService;
 
-    public ArticleCrawlResult run() {
+    public ArticleCrawlResult runScheduled() {
         return run(CrawlMode.RECENT);
     }
 
-    public ArticleCrawlResult runInitial() {
-        return run(CrawlMode.INITIAL);
-    }
-
-    public ArticleCrawlResult runSource(String sourceKey) {
-        return runSource(sourceKey, CrawlMode.RECENT);
-    }
-
-    public ArticleCrawlResult runSourceInitial(String sourceKey) {
-        return runSource(sourceKey, CrawlMode.INITIAL);
+    public ArticleCrawlResult runSourceBackfill(String sourceKey) {
+        return runSource(sourceKey, CrawlMode.BACKFILL);
     }
 
     private ArticleCrawlResult run(CrawlMode mode) {

@@ -3,7 +3,7 @@ package com.globaltechblogarchive.crawl.api.dto;
 import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 
-public record InitialSourceCrawlResponse(
+public record SourceCrawlSummaryResponse(
         String companyKey,
         String sourceKey,
         boolean success,
@@ -18,9 +18,9 @@ public record InitialSourceCrawlResponse(
         String errorMessage
 ) {
 
-    public static InitialSourceCrawlResponse from(SourceCrawlResult result) {
+    public static SourceCrawlSummaryResponse from(SourceCrawlResult result) {
         CrawlRunSummary summary = result.summary();
-        return new InitialSourceCrawlResponse(
+        return new SourceCrawlSummaryResponse(
                 result.companyKey(),
                 result.sourceKey(),
                 result.success(),

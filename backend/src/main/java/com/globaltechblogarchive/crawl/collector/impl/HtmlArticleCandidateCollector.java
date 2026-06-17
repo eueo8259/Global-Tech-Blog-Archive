@@ -32,7 +32,7 @@ public class HtmlArticleCandidateCollector implements ArticleCandidateCollector 
     public List<ParsedArticle> collect(BlogSource source, CrawlMode mode) {
         ArticleListParser parser = parserRegistry.find(source);
         List<ParsedArticle> parsedArticles = collectListPages(source, parser, mode);
-        List<ParsedArticle> detailTargets = ArticleCandidateCollectionPolicy.apply(parsedArticles, CrawlMode.INITIAL);
+        List<ParsedArticle> detailTargets = ArticleCandidateCollectionPolicy.apply(parsedArticles, mode);
         List<ParsedArticle> detailedArticles = detailTargets.stream()
                 .map(detailExtractor::extract)
                 .toList();
@@ -40,7 +40,7 @@ public class HtmlArticleCandidateCollector implements ArticleCandidateCollector 
     }
 
     private List<ParsedArticle> collectListPages(BlogSource source, ArticleListParser parser, CrawlMode mode) {
-        if ("uber".equals(source.getSourceKey()) && mode == CrawlMode.INITIAL) {
+        if ("uber".equals(source.getSourceKey()) && mode == CrawlMode.BACKFILL) {
             Map<String, ParsedArticle> articles = new LinkedHashMap<>();
             for (String url : List.of(source.getSiteUrl(), pageUrl(source.getSiteUrl(), 2))) {
                 for (ParsedArticle article : parser.parse(source, fetcher.fetch(url))) {

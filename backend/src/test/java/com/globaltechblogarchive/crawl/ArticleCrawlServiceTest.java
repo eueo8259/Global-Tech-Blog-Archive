@@ -136,7 +136,7 @@ class ArticleCrawlServiceTest {
                 new ArticleMetadataDecision(0, "Translated scaling systems", ArticleCategory.ARCHITECTURE, true, null)
         ));
 
-        ArticleCrawlResult result = articleCrawlService.run();
+        ArticleCrawlResult result = articleCrawlService.runScheduled();
 
         assertThat(result.sourceCount()).isEqualTo(2);
         assertThat(result.successCount()).isEqualTo(1);
@@ -153,59 +153,59 @@ class ArticleCrawlServiceTest {
     }
 
     @Test
-    void runInitialUsesInitialCollectionMode() {
+    void runScheduledUsesRecentCollectionMode() {
         BlogSource source = source(1L, "openai");
         when(transactionService.startRun()).thenReturn(7L);
         when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source, CrawlMode.INITIAL)).thenReturn(List.of());
+        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of());
 
-        ArticleCrawlResult result = articleCrawlService.runInitial();
+        ArticleCrawlResult result = articleCrawlService.runScheduled();
 
         assertThat(result.runId()).isEqualTo(7L);
         assertThat(result.sourceCount()).isEqualTo(1);
-        verify(collector).collect(source, CrawlMode.INITIAL);
+        verify(collector).collect(source, CrawlMode.RECENT);
         verify(transactionService).completeRun(7L, 1, 1, 0, CrawlRunSummary.empty());
     }
 
     @Test
-    void runSourceUsesOnlyRequestedSource() {
+    void runSourceBackfillUsesOnlyRequestedSource() {
         BlogSource source = source(1L, "uber");
         when(transactionService.startRun()).thenReturn(8L);
         when(blogSourceRepository.findBySourceKeyAndEnabledTrue("uber")).thenReturn(Optional.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of());
+        when(collector.collect(source, CrawlMode.BACKFILL)).thenReturn(List.of());
 
-        ArticleCrawlResult result = articleCrawlService.runSource("uber");
+        ArticleCrawlResult result = articleCrawlService.runSourceBackfill("uber");
 
         assertThat(result.runId()).isEqualTo(8L);
         assertThat(result.sourceCount()).isEqualTo(1);
         assertThat(result.sources().getFirst().sourceKey()).isEqualTo("uber");
         verify(blogSourceRepository, never()).findByEnabledTrue();
-        verify(collector).collect(source, CrawlMode.RECENT);
+        verify(collector).collect(source, CrawlMode.BACKFILL);
         verify(transactionService).completeRun(8L, 1, 1, 0, CrawlRunSummary.empty());
     }
 
     @Test
-    void runSourceInitialUsesInitialModeForRequestedSource() {
+    void runSourceBackfillUsesBackfillModeForRequestedSource() {
         BlogSource source = source(1L, "uber");
         when(transactionService.startRun()).thenReturn(9L);
         when(blogSourceRepository.findBySourceKeyAndEnabledTrue("uber")).thenReturn(Optional.of(source));
         when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source, CrawlMode.INITIAL)).thenReturn(List.of());
+        when(collector.collect(source, CrawlMode.BACKFILL)).thenReturn(List.of());
 
-        ArticleCrawlResult result = articleCrawlService.runSourceInitial("uber");
+        ArticleCrawlResult result = articleCrawlService.runSourceBackfill("uber");
 
         assertThat(result.runId()).isEqualTo(9L);
         assertThat(result.sourceCount()).isEqualTo(1);
-        verify(collector).collect(source, CrawlMode.INITIAL);
+        verify(collector).collect(source, CrawlMode.BACKFILL);
     }
 
     @Test
     void runSourceThrowsInvalidInputWhenEnabledSourceDoesNotExist() {
         when(blogSourceRepository.findBySourceKeyAndEnabledTrue("missing")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> articleCrawlService.runSource("missing"))
+        assertThatThrownBy(() -> articleCrawlService.runSourceBackfill("missing"))
                 .isInstanceOfSatisfying(InvalidInputException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE))
                 .hasMessage("Enabled source not found: missing");
@@ -239,7 +239,7 @@ class ArticleCrawlServiceTest {
                 new ArticleMetadataDecision(1, "GPT-Rosalind introduction", ArticleCategory.ELSE, false, "PRODUCT_NEWS")
         ));
 
-        ArticleCrawlResult result = articleCrawlService.run();
+        ArticleCrawlResult result = articleCrawlService.runScheduled();
 
         List<ArticleCandidate> candidates = result.sources().getFirst().candidates();
         assertThat(candidates).extracting(ArticleCandidate::decisionStatus)
@@ -293,7 +293,7 @@ class ArticleCrawlServiceTest {
                         decision(source, rejectedHash, false, ArticleCategory.ELSE)
                 ));
 
-        ArticleCrawlResult result = articleCrawlService.run();
+        ArticleCrawlResult result = articleCrawlService.runScheduled();
 
         assertThat(result.sources().getFirst().candidates()).extracting(ArticleCandidate::decisionStatus)
                 .containsExactly(
@@ -327,7 +327,7 @@ class ArticleCrawlServiceTest {
                 .thenReturn(List.of());
         when(aiClient.decide(anyList())).thenThrow(new IllegalStateException("ai failed"));
 
-        ArticleCrawlResult result = articleCrawlService.run();
+        ArticleCrawlResult result = articleCrawlService.runScheduled();
 
         assertThat(result.sources().getFirst().candidates()).extracting(ArticleCandidate::decisionStatus)
                 .containsExactly(ArticleCandidateDecisionStatus.AI_FAILED);
@@ -355,7 +355,7 @@ class ArticleCrawlServiceTest {
                 .thenReturn(List.of());
         when(articleRepository.existsByCompanyIdAndArticleUrlHash(1L, hash)).thenReturn(true);
 
-        ArticleCrawlResult result = articleCrawlService.run();
+        ArticleCrawlResult result = articleCrawlService.runScheduled();
 
         ArticleCandidate candidate = result.sources().getFirst().candidates().getFirst();
         assertThat(candidate.duplicate()).isTrue();
@@ -386,7 +386,7 @@ class ArticleCrawlServiceTest {
                 .thenReturn(List.of(decision(source, hash, true, ArticleCategory.AI)));
         when(articleRepository.existsByCompanyIdAndArticleUrlHash(1L, hash)).thenReturn(true);
 
-        ArticleCrawlResult result = articleCrawlService.run();
+        ArticleCrawlResult result = articleCrawlService.runScheduled();
 
         ArticleCandidate candidate = result.sources().getFirst().candidates().getFirst();
         assertThat(candidate.duplicate()).isTrue();
