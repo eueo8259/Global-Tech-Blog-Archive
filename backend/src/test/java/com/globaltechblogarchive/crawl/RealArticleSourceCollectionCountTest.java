@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
+import com.globaltechblogarchive.crawl.collector.impl.ArticleDetailExtractor;
 import com.globaltechblogarchive.crawl.collector.impl.FeedArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.collector.impl.HtmlArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.collector.impl.SitemapArticleCandidateCollector;
@@ -38,7 +39,8 @@ class RealArticleSourceCollectionCountTest {
                         fetcher,
                         new ArticleListParserRegistry(List.of(
                                 new HtmlArticleListParser(ArticleListParserPropertiesFixture.full())
-                        ))
+                        )),
+                        new ArticleDetailExtractor(fetcher)
                 ),
                 new WordPressRestArticleCandidateCollector(fetcher, new ObjectMapper())
         );
