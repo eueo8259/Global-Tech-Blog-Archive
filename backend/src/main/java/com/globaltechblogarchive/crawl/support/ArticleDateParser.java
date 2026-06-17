@@ -19,6 +19,7 @@ public final class ArticleDateParser {
 
     private static final List<DateTimeFormatter> LIST_PAGE_DATE_FORMATTERS = List.of(
             DateTimeFormatter.ISO_LOCAL_DATE,
+            DateTimeFormatter.ofPattern("yyyy.M.d", Locale.ENGLISH),
             DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH),
             DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH)
     );

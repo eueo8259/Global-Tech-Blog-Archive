@@ -39,6 +39,34 @@ class ArticleDetailExtractorTest {
         assertThat(article.shortContext()).isEqualTo("First visible paragraph for classification.");
     }
 
+    @Test
+    void extractUsesVisibleMetadataDateAfterHeading() {
+        String articleUrl = "https://stripe.dev/blog/modern-java-at-stripe-language-upgrades-as-a-service";
+        SourceDocumentClient client = new StubClient("""
+                <html>
+                  <body>
+                    <h1>Modern Java at Stripe: Language upgrades as a service</h1>
+                    <section>
+                      <h2>Metadata</h2>
+                      <div>Date:2026.5.27</div>
+                      <div>Reading time:6 min read</div>
+                    </section>
+                    <p>How Stripe upgrades Java across a large JVM codebase.</p>
+                  </body>
+                </html>
+                """);
+        ArticleDetailExtractor extractor = new ArticleDetailExtractor(client);
+
+        ParsedArticle article = extractor.extract(new ParsedArticle(
+                "Listing title",
+                articleUrl,
+                null,
+                "Listing context"
+        ));
+
+        assertThat(article.publishedAt()).isEqualTo(LocalDateTime.of(2026, 5, 27, 0, 0));
+    }
+
     private static class StubClient extends SourceDocumentClient {
         private final String html;
 
