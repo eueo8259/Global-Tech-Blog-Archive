@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
+import com.globaltechblogarchive.crawl.collector.impl.ArticleDetailExtractor;
 import com.globaltechblogarchive.crawl.collector.impl.HtmlArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.domain.CrawlMode;
 import com.globaltechblogarchive.crawl.helper.ArticleListParserPropertiesFixture;
@@ -22,7 +23,7 @@ import org.junit.jupiter.api.Test;
 class HtmlArticleCandidateCollectorTest {
 
     @Test
-    void discordUsesDetailTitleAndVisiblePublicationDate() {
+    void discordUsesDetailTitleAndJsonLdPublicationDate() {
         BlogSource source = discordSource();
         String articleUrl = "https://discord.com/blog/updated-requirements-to-how-apps-access-data-in-servers";
         String list = """
@@ -62,7 +63,7 @@ class HtmlArticleCandidateCollectorTest {
         assertThat(articles).hasSize(1);
         assertThat(articles.getFirst().originalTitle())
                 .isEqualTo("Updated Requirements to How Apps Access Data in Servers");
-        assertThat(articles.getFirst().publishedAt()).isEqualTo(LocalDateTime.of(2026, 6, 10, 0, 0));
+        assertThat(articles.getFirst().publishedAt()).isEqualTo(LocalDateTime.of(2026, 6, 11, 0, 0));
         assertThat(articles.getFirst().shortContext()).isEqualTo("Discord is updating requirements.");
     }
 
@@ -117,7 +118,11 @@ class HtmlArticleCandidateCollectorTest {
                 """;
         RecordingClient client = new RecordingClient(Map.of(
                 source.getSiteUrl(), pageOne,
-                "https://www.uber.com/blog/engineering/page/2", pageTwo
+                "https://www.uber.com/blog/engineering/page/2", pageTwo,
+                "https://www.uber.com/kr/en/blog/scaling-real-time-traffic/",
+                detail("Scaling Real-Time Traffic Forecasting with a Graph-Aware Transformer"),
+                "https://www.uber.com/kr/en/blog/junit-migration/",
+                detail("How Uber Executed A JUnit Migration at Massive Scale")
         ));
 
         var articles = collector(client).collect(source, CrawlMode.BACKFILL);
@@ -143,7 +148,11 @@ class HtmlArticleCandidateCollectorTest {
                   </a>
                 </main>
                 """;
-        RecordingClient client = new RecordingClient(Map.of(source.getSiteUrl(), pageOne));
+        RecordingClient client = new RecordingClient(Map.of(
+                source.getSiteUrl(), pageOne,
+                "https://www.uber.com/kr/en/blog/scaling-real-time-traffic/",
+                detail("Scaling Real-Time Traffic Forecasting with a Graph-Aware Transformer")
+        ));
 
         collector(client).collect(source, CrawlMode.RECENT);
 
@@ -165,7 +174,20 @@ class HtmlArticleCandidateCollectorTest {
                   </article>
                 </main>
                 """;
-        RecordingClient client = new RecordingClient(Map.of(source.getSiteUrl(), list));
+        RecordingClient client = new RecordingClient(Map.of(
+                source.getSiteUrl(), list,
+                "https://stripe.com/blog/how-we-built-it-real-time-analytics-for-stripe-billing",
+                """
+                <html>
+                  <head>
+                    <meta name="description" content="Detail context from Stripe's article page." />
+                  </head>
+                  <body>
+                    <h1>How we built it: Real-time analytics for Stripe Billing</h1>
+                  </body>
+                </html>
+                """
+        ));
 
         var articles = collector(client).collect(source, CrawlMode.BACKFILL);
 
@@ -175,7 +197,7 @@ class HtmlArticleCandidateCollectorTest {
         assertThat(articles.getFirst().originalUrl())
                 .isEqualTo("https://stripe.com/blog/how-we-built-it-real-time-analytics-for-stripe-billing");
         assertThat(articles.getFirst().publishedAt()).isEqualTo(LocalDateTime.of(2025, 3, 17, 0, 0));
-        assertThat(articles.getFirst().shortContext()).contains("real-time analytics");
+        assertThat(articles.getFirst().shortContext()).isEqualTo("Detail context from Stripe's article page.");
     }
 
     private HtmlArticleCandidateCollector collector(SourceDocumentClient client) {
@@ -183,8 +205,23 @@ class HtmlArticleCandidateCollectorTest {
                 client,
                 new ArticleListParserRegistry(List.of(
                         new HtmlArticleListParser(ArticleListParserPropertiesFixture.full())
-                ))
+                )),
+                new ArticleDetailExtractor(client)
         );
+    }
+
+    private String detail(String title) {
+        return """
+                <html>
+                  <head>
+                    <meta name="description" content="Detail context for %s" />
+                  </head>
+                  <body>
+                    <h1>%s</h1>
+                    <time datetime="2026-06-16">June 16, 2026</time>
+                  </body>
+                </html>
+                """.formatted(title, title);
     }
 
     private BlogSource discordSource() {

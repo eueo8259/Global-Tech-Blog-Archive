@@ -123,6 +123,30 @@ class HtmlArticleListParserTest {
                 .isEqualTo("https://www.uber.com/kr/en/blog/scaling-real-time-traffic/");
     }
 
+    @org.junit.jupiter.api.Test
+    void parseExcludesUnexpectedHostLinks() {
+        BlogSource source = source(
+                "stripe",
+                "https://stripe.com/blog/engineering"
+        );
+        String html = """
+                <main>
+                  <a href="https://stripe.events/acnext_seattle">
+                    The future of agentic commerce is here
+                  </a>
+                  <a href="/blog/how-we-built-real-time-analytics">
+                    How we built real-time analytics for Stripe Billing
+                  </a>
+                </main>
+                """;
+
+        var cards = parser.parse(source, html);
+
+        assertThat(cards).hasSize(1);
+        assertThat(cards.getFirst().originalUrl())
+                .isEqualTo("https://stripe.com/blog/how-we-built-real-time-analytics");
+    }
+
     static Stream<Arguments> htmlSources() {
         return Stream.of(
                 Arguments.of("openai", "https://openai.com/news/", "/news/engineering-systems", "Engineering"),
