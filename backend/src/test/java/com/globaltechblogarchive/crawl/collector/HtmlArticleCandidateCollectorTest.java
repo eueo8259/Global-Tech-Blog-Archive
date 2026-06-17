@@ -153,6 +153,34 @@ class HtmlArticleCandidateCollectorTest {
         assertThat(client.listRequests()).containsExactly(source.getSiteUrl());
     }
 
+    @Test
+    void stripeInitialCollectsEngineeringCardsWithVisibleDates() {
+        BlogSource source = stripeSource();
+        String list = """
+                <main>
+                  <article class="BlogIndexPost">
+                    <span>Engineering</span>
+                    <a href="/blog/how-we-built-it-real-time-analytics-for-stripe-billing">
+                      How we built it: Real-time analytics for Stripe Billing
+                    </a>
+                    <span>March 17, 2025</span>
+                    <p>How Stripe built real-time analytics for billing data.</p>
+                  </article>
+                </main>
+                """;
+        RecordingClient client = new RecordingClient(Map.of(source.getSiteUrl(), list));
+
+        var articles = collector(client).collect(source, CrawlMode.INITIAL);
+
+        assertThat(articles).hasSize(1);
+        assertThat(articles.getFirst().originalTitle())
+                .isEqualTo("How we built it: Real-time analytics for Stripe Billing");
+        assertThat(articles.getFirst().originalUrl())
+                .isEqualTo("https://stripe.com/blog/how-we-built-it-real-time-analytics-for-stripe-billing");
+        assertThat(articles.getFirst().publishedAt()).isEqualTo(LocalDateTime.of(2025, 3, 17, 0, 0));
+        assertThat(articles.getFirst().shortContext()).contains("real-time analytics");
+    }
+
     private HtmlArticleCandidateCollector collector(SourceDocumentClient client) {
         return new HtmlArticleCandidateCollector(
                 client,
@@ -179,6 +207,17 @@ class HtmlArticleCandidateCollectorTest {
                 "uber",
                 "Uber Engineering Blog",
                 "https://www.uber.com/blog/engineering",
+                null,
+                CollectionMethod.HTML_SCRAPING
+        );
+    }
+
+    private BlogSource stripeSource() {
+        return BlogSource.create(
+                Company.create("stripe", "Stripe"),
+                "stripe",
+                "Stripe Engineering Blog",
+                "https://stripe.com/blog/engineering",
                 null,
                 CollectionMethod.HTML_SCRAPING
         );
