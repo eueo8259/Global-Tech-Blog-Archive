@@ -47,7 +47,7 @@ test('shows the prototype-style article archive without an ELSE filter', async (
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'ALL' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'ELSE' })).toHaveCount(0);
-  await expect(page.getByText('1개 아티클')).toBeVisible();
+  await expect(page.getByText('1 article')).toBeVisible();
   const articleLink = page.getByRole('link', {
     name: /대규모 시스템에서 API 지연 시간을 줄이는 방법/,
   });
@@ -84,6 +84,7 @@ test('searches companies and combines company and category filters from page zer
   await page.goto('/');
   await page.getByRole('button', { name: '다음' }).click();
   await expect(page.getByText('2 / 2 페이지')).toBeVisible();
+  await expect(page.getByText('21 articles')).toBeVisible();
 
   await page.getByRole('button', { name: '전체 회사' }).click();
   const searchInput = page.getByRole('searchbox', { name: '회사 검색' });
@@ -164,6 +165,7 @@ test('shows empty state for filters with no articles', async ({ page }) => {
     await route.fulfill({ json: { ...articlePage, articles: [], totalElements: 0 } });
   });
   await page.goto('/');
+  await expect(page.getByText('0 articles')).toBeVisible();
   await expect(page.getByText('선택한 필터에 해당하는 기사가 없습니다.')).toBeVisible();
 });
 

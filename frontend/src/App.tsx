@@ -8,6 +8,12 @@ import { CompanyFilter } from './features/company/CompanyFilter';
 import type { CompanyFilterValue } from './features/company/types';
 import { useCompanies } from './features/company/useCompanies';
 
+function formatArticleCount(totalElements: number) {
+  const articleLabel = totalElements === 1 ? 'article' : 'articles';
+
+  return `${totalElements} ${articleLabel}`;
+}
+
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<ArticleCategoryFilter>('ALL');
   const [selectedCompanyKey, setSelectedCompanyKey] = useState<CompanyFilterValue>(null);
@@ -61,7 +67,7 @@ function App() {
           </h1>
           {!isLoading && !error && (
             <p className="article-count" aria-live="polite">
-              {articlePage.totalElements}개 아티클
+              {formatArticleCount(articlePage.totalElements)}
             </p>
           )}
           <ArticleList articles={articlePage.articles} error={error} isLoading={isLoading} />

@@ -52,6 +52,7 @@ class ArticleControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.articles").isArray())
                 .andExpect(jsonPath("$.articles[0].title").value("Translated title"))
                 .andExpect(jsonPath("$.articles[0].summary").doesNotExist());
