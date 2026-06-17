@@ -1,7 +1,6 @@
 package com.globaltechblogarchive.crawl.api;
 
-import com.globaltechblogarchive.crawl.api.dto.ArticleCrawlResponse;
-import com.globaltechblogarchive.crawl.api.dto.InitialArticleCrawlResponse;
+import com.globaltechblogarchive.crawl.api.dto.CrawlSummaryResponse;
 import com.globaltechblogarchive.crawl.application.ArticleCrawlService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
@@ -16,23 +15,13 @@ public class ArticleCrawlController {
 
     private final ArticleCrawlService articleCrawlService;
 
-    @PostMapping("/api/admin/article-crawls/run")
-    public ArticleCrawlResponse run() {
-        return ArticleCrawlResponse.from(articleCrawlService.run());
+    @PostMapping("/api/admin/article-crawls/scheduled-run")
+    public CrawlSummaryResponse runScheduled() {
+        return CrawlSummaryResponse.from(articleCrawlService.runScheduled());
     }
 
-    @PostMapping("/api/admin/article-crawls/initial-run")
-    public InitialArticleCrawlResponse runInitial() {
-        return InitialArticleCrawlResponse.from(articleCrawlService.runInitial());
-    }
-
-    @PostMapping("/api/admin/article-crawls/sources/{sourceKey}/run")
-    public ArticleCrawlResponse runSource(@PathVariable String sourceKey) {
-        return ArticleCrawlResponse.from(articleCrawlService.runSource(sourceKey));
-    }
-
-    @PostMapping("/api/admin/article-crawls/sources/{sourceKey}/initial-run")
-    public InitialArticleCrawlResponse runSourceInitial(@PathVariable String sourceKey) {
-        return InitialArticleCrawlResponse.from(articleCrawlService.runSourceInitial(sourceKey));
+    @PostMapping("/api/admin/article-crawls/sources/{sourceKey}/backfill-run")
+    public CrawlSummaryResponse runSourceBackfill(@PathVariable String sourceKey) {
+        return CrawlSummaryResponse.from(articleCrawlService.runSourceBackfill(sourceKey));
     }
 }

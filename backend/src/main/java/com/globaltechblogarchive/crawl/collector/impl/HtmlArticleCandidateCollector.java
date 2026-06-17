@@ -42,7 +42,7 @@ public class HtmlArticleCandidateCollector implements ArticleCandidateCollector 
     }
 
     private List<ParsedArticle> collectListPages(BlogSource source, ArticleListParser parser, CrawlMode mode) {
-        if ("uber".equals(source.getSourceKey()) && mode == CrawlMode.INITIAL) {
+        if ("uber".equals(source.getSourceKey()) && mode == CrawlMode.BACKFILL) {
             Map<String, ParsedArticle> articles = new LinkedHashMap<>();
             for (String url : List.of(source.getSiteUrl(), pageUrl(source.getSiteUrl(), 2))) {
                 for (ParsedArticle article : parser.parse(source, fetcher.fetch(url))) {
@@ -61,7 +61,7 @@ public class HtmlArticleCandidateCollector implements ArticleCandidateCollector 
 
     private List<ParsedArticle> collectDiscordDetails(List<ParsedArticle> parsedArticles, CrawlMode mode) {
         List<ParsedArticle> detailedArticles = parsedArticles.stream()
-                .limit(ArticleCandidateCollectionPolicy.MAX_CANDIDATES)
+                .limit(ArticleCandidateCollectionPolicy.maxCandidates(mode))
                 .map(this::fetchDiscordDetail)
                 .toList();
         return ArticleCandidateCollectionPolicy.apply(detailedArticles, mode);

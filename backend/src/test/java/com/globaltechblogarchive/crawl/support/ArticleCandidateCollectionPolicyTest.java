@@ -50,7 +50,22 @@ class ArticleCandidateCollectionPolicyTest {
     }
 
     @Test
-    void initialModeSortsDatedCandidatesFirstAndUsesMissingDatesAsFallback() {
+    void applyKeepsMissingDateCandidatesInRecentMode() {
+        LocalDateTime now = LocalDateTime.now();
+        List<ParsedArticle> cards = List.of(
+                card("recent", now.minusHours(1)),
+                card("old", now.minusDays(3)),
+                card("missing", null)
+        );
+
+        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlMode.RECENT);
+
+        assertThat(filtered).extracting(ParsedArticle::originalTitle)
+                .containsExactly("recent", "missing");
+    }
+
+    @Test
+    void backfillModeSortsDatedCandidatesFirstAndUsesMissingDatesAsFallback() {
         LocalDateTime now = LocalDateTime.now();
         List<ParsedArticle> cards = List.of(
                 card("missing-first", null),
@@ -59,24 +74,24 @@ class ArticleCandidateCollectionPolicyTest {
                 card("missing-second", null)
         );
 
-        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlMode.INITIAL);
+        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlMode.BACKFILL);
 
         assertThat(filtered).extracting(ParsedArticle::originalTitle)
                 .containsExactly("newest", "older", "missing-first", "missing-second");
     }
 
     @Test
-    void initialModeLimitsCandidatesToTwentyBeforeMissingDateFallback() {
+    void backfillModeLimitsCandidatesToFiftyBeforeMissingDateFallback() {
         LocalDateTime now = LocalDateTime.now();
         List<ParsedArticle> cards = new ArrayList<>();
         cards.add(card("missing", null));
-        for (int index = 0; index < 20; index++) {
+        for (int index = 0; index < 50; index++) {
             cards.add(card("dated-" + index, now.minusHours(index)));
         }
 
-        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlMode.INITIAL);
+        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlMode.BACKFILL);
 
-        assertThat(filtered).hasSize(20);
+        assertThat(filtered).hasSize(50);
         assertThat(filtered).extracting(ParsedArticle::originalTitle).doesNotContain("missing");
     }
 

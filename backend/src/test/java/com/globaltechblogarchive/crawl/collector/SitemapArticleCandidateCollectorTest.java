@@ -66,7 +66,7 @@ class SitemapArticleCandidateCollectorTest {
     }
 
     @Test
-    void initialModeFetchesAtMostTwentyDetailsAfterSortingSitemapEntries() {
+    void backfillModeFetchesUpToFiftyDetailsAfterSortingSitemapEntries() {
         BlogSource source = BlogSource.create(
                 Company.create("shopify", "Shopify"),
                 "shopify",
@@ -87,20 +87,17 @@ class SitemapArticleCandidateCollectorTest {
                     ? "<html><head></head></html>"
                     : "<html><head><title>Article " + index + "</title></head></html>";
             documents.put(url, detail);
-            if (index < 20) {
-                expectedDetails.add(url);
-            }
+            expectedDetails.add(url);
         }
         sitemap.append("</urlset>");
         documents.put("https://shopify.engineering/sitemap.xml", sitemap.toString());
         RecordingClient client = new RecordingClient(documents);
         SitemapArticleCandidateCollector collector = new SitemapArticleCandidateCollector(client);
 
-        List<?> cards = collector.collect(source, CrawlMode.INITIAL);
+        List<?> cards = collector.collect(source, CrawlMode.BACKFILL);
 
-        assertThat(cards).hasSize(19);
+        assertThat(cards).hasSize(29);
         assertThat(client.detailRequests()).containsExactlyElementsOf(expectedDetails);
-        assertThat(client.detailRequests()).doesNotContain("https://shopify.engineering/article-20");
     }
 
     private static class StubClient extends SourceDocumentClient {

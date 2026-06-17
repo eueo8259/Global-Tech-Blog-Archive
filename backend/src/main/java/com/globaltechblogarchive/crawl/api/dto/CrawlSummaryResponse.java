@@ -3,7 +3,7 @@ package com.globaltechblogarchive.crawl.api.dto;
 import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
 import java.util.List;
 
-public record InitialArticleCrawlResponse(
+public record CrawlSummaryResponse(
         Long runId,
         int sourceCount,
         int successCount,
@@ -16,11 +16,11 @@ public record InitialArticleCrawlResponse(
         int aiFailedCount,
         int previouslyApprovedCount,
         int previouslyRejectedCount,
-        List<InitialSourceCrawlResponse> sources
+        List<SourceCrawlSummaryResponse> sources
 ) {
 
-    public static InitialArticleCrawlResponse from(ArticleCrawlResult result) {
-        return new InitialArticleCrawlResponse(
+    public static CrawlSummaryResponse from(ArticleCrawlResult result) {
+        return new CrawlSummaryResponse(
                 result.runId(),
                 result.sourceCount(),
                 result.successCount(),
@@ -34,7 +34,7 @@ public record InitialArticleCrawlResponse(
                 result.previouslyApprovedCount(),
                 result.previouslyRejectedCount(),
                 result.sources().stream()
-                        .map(InitialSourceCrawlResponse::from)
+                        .map(SourceCrawlSummaryResponse::from)
                         .toList()
         );
     }

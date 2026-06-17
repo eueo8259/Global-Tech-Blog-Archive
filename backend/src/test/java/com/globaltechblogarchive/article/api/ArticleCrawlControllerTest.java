@@ -7,15 +7,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.api.ArticleCrawlController;
-import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
 import com.globaltechblogarchive.crawl.application.ArticleCrawlService;
+import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
 import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
-import com.globaltechblogarchive.company.domain.Company;
+import com.globaltechblogarchive.source.domain.BlogSource;
+import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,110 +37,15 @@ class ArticleCrawlControllerTest {
     }
 
     @Test
-    void runReturnsCrawlResultStructure() throws Exception {
-        ArticleCandidate candidate = new ArticleCandidate(
-                "stripe",
-                "Stripe",
-                "Scaling APIs",
-                "https://stripe.com/blog/scaling-apis",
-                LocalDateTime.of(2026, 6, 1, 0, 0),
-                "API context",
-                "hash",
-                false,
-                ArticleCandidateDecisionStatus.NEW,
-                List.of()
-        );
-        ArticleCrawlResult result = new ArticleCrawlResult(
-                1L,
-                1,
-                1,
-                0,
-                1,
-                0,
-                1,
-                1,
-                1,
-                0,
-                0,
-                0,
-                0,
-                List.of(SourceCrawlResult.success(
-                        com.globaltechblogarchive.source.domain.BlogSource.create(
-                                Company.create("stripe", "Stripe"),
-                                "stripe",
-                                "Stripe Engineering",
-                                "https://stripe.com/blog/engineering",
-                                null,
-                                com.globaltechblogarchive.source.domain.CollectionMethod.HTML_SCRAPING
-                        ),
-                        List.of(candidate),
-                        new CrawlRunSummary(
-                                1,
-                                0,
-                                1,
-                                1,
-                                0,
-                                0,
-                                0,
-                                0
-                        )
-
-                ))
-        );
-        when(articleCrawlService.run()).thenReturn(result);
-
-        mockMvc.perform(post("/api/admin/article-crawls/run"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.runId").value(1))
-                .andExpect(jsonPath("$.sourceCount").value(1))
-                .andExpect(jsonPath("$.storedCount").value(1))
-                .andExpect(jsonPath("$.aiApprovedCount").value(1))
-                .andExpect(jsonPath("$.aiRejectedCount").value(0))
-                .andExpect(jsonPath("$.aiFailedCount").value(0))
-                .andExpect(jsonPath("$.previouslyApprovedCount").value(0))
-                .andExpect(jsonPath("$.previouslyRejectedCount").value(0))
-                .andExpect(jsonPath("$.sources[0].companyKey").value("stripe"))
-                .andExpect(jsonPath("$.sources[0].candidates[0].originalTitle").value("Scaling APIs"))
-                .andExpect(jsonPath("$.sources[0].candidates[0].duplicate").value(false))
-                .andExpect(jsonPath("$.sources[0].candidates[0].decisionStatus").value("NEW"))
-                .andExpect(jsonPath("$.sources[0].candidates[0].validationWarnings").isArray())
-                .andExpect(jsonPath("$.sources[0].qualityWarnings").isArray());
-
-        verify(articleCrawlService).run();
-    }
-
-    @Test
-    void runInitialReturnsSummaryWithoutCandidateDetails() throws Exception {
-        ArticleCrawlResult result = new ArticleCrawlResult(
+    void runScheduledReturnsSummaryWithoutCandidateDetails() throws Exception {
+        ArticleCrawlResult result = result(
                 2L,
-                1,
-                1,
-                0,
-                2,
-                0,
-                2,
-                2,
-                1,
-                0,
-                0,
-                1,
-                0,
-                List.of(SourceCrawlResult.success(
-                        com.globaltechblogarchive.source.domain.BlogSource.create(
-                                Company.create("openai", "OpenAI"),
-                                "openai",
-                                "OpenAI News",
-                                "https://openai.com/news/",
-                                "https://openai.com/news/rss.xml",
-                                com.globaltechblogarchive.source.domain.CollectionMethod.RSS
-                        ),
-                        List.of(),
-                        new CrawlRunSummary(2, 0, 2, 1, 0, 0, 1, 0)
-                ))
+                source("openai", "OpenAI News", "https://openai.com/news/", "https://openai.com/news/rss.xml", CollectionMethod.RSS),
+                new CrawlRunSummary(2, 0, 2, 1, 0, 0, 1, 0)
         );
-        when(articleCrawlService.runInitial()).thenReturn(result);
+        when(articleCrawlService.runScheduled()).thenReturn(result);
 
-        mockMvc.perform(post("/api/admin/article-crawls/initial-run"))
+        mockMvc.perform(post("/api/admin/article-crawls/scheduled-run"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.runId").value(2))
                 .andExpect(jsonPath("$.storedCount").value(2))
@@ -147,105 +55,20 @@ class ArticleCrawlControllerTest {
                 .andExpect(jsonPath("$.sources[0].storedCount").value(2))
                 .andExpect(jsonPath("$.sources[0].candidates").doesNotExist());
 
-        verify(articleCrawlService).runInitial();
+        verify(articleCrawlService).runScheduled();
     }
 
     @Test
-    void runSourceReturnsSingleSourceCrawlResult() throws Exception {
-        ArticleCrawlResult result = new ArticleCrawlResult(
-                3L,
-                1,
-                1,
-                0,
-                1,
-                0,
-                1,
-                1,
-                1,
-                0,
-                0,
-                0,
-                0,
-                List.of(SourceCrawlResult.success(
-                        com.globaltechblogarchive.source.domain.BlogSource.create(
-                                Company.create("uber", "Uber"),
-                                "uber",
-                                "Uber Engineering Blog",
-                                "https://www.uber.com/blog/engineering",
-                                null,
-                                com.globaltechblogarchive.source.domain.CollectionMethod.HTML_SCRAPING
-                        ),
-                        List.of(),
-                        new CrawlRunSummary(1, 0, 1, 1, 0, 0, 0, 0)
-                ))
-        );
-        when(articleCrawlService.runSource("uber")).thenReturn(result);
-
-        mockMvc.perform(post("/api/admin/article-crawls/sources/uber/run"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.runId").value(3))
-                .andExpect(jsonPath("$.sourceCount").value(1))
-                .andExpect(jsonPath("$.sources[0].sourceKey").value("uber"));
-
-        verify(articleCrawlService).runSource("uber");
-    }
-
-    @Test
-    void runSourceInitialReturnsSingleSourceInitialSummary() throws Exception {
-        ArticleCandidate firstCandidate = new ArticleCandidate(
-                "uber",
-                "Uber",
-                "Scaling traffic",
-                "https://www.uber.com/kr/en/blog/scaling-real-time-traffic/",
-                LocalDateTime.of(2026, 6, 1, 0, 0),
-                "Traffic context",
-                "hash-1",
-                false,
-                ArticleCandidateDecisionStatus.AI_APPROVED,
-                List.of()
-        );
-        ArticleCandidate secondCandidate = new ArticleCandidate(
-                "uber",
-                "Uber",
-                "JUnit migration",
-                "https://www.uber.com/kr/en/blog/junit-migration/",
-                LocalDateTime.of(2026, 5, 1, 0, 0),
-                "JUnit context",
-                "hash-2",
-                false,
-                ArticleCandidateDecisionStatus.AI_APPROVED,
-                List.of()
-        );
-        ArticleCrawlResult result = new ArticleCrawlResult(
+    void runSourceBackfillReturnsSingleSourceSummary() throws Exception {
+        ArticleCrawlResult result = result(
                 4L,
-                1,
-                1,
-                0,
-                2,
-                0,
-                2,
-                2,
-                2,
-                0,
-                0,
-                0,
-                0,
-                List.of(SourceCrawlResult.success(
-                        com.globaltechblogarchive.source.domain.BlogSource.create(
-                                Company.create("uber", "Uber"),
-                                "uber",
-                                "Uber Engineering Blog",
-                                "https://www.uber.com/blog/engineering",
-                                null,
-                                com.globaltechblogarchive.source.domain.CollectionMethod.HTML_SCRAPING
-                        ),
-                        List.of(firstCandidate, secondCandidate),
-                        new CrawlRunSummary(2, 0, 2, 2, 0, 0, 0, 0)
-                ))
+                source("uber", "Uber Engineering Blog", "https://www.uber.com/blog/engineering", null,
+                        CollectionMethod.HTML_SCRAPING),
+                new CrawlRunSummary(2, 0, 2, 2, 0, 0, 0, 0)
         );
-        when(articleCrawlService.runSourceInitial("uber")).thenReturn(result);
+        when(articleCrawlService.runSourceBackfill("uber")).thenReturn(result);
 
-        mockMvc.perform(post("/api/admin/article-crawls/sources/uber/initial-run"))
+        mockMvc.perform(post("/api/admin/article-crawls/sources/uber/backfill-run"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.runId").value(4))
                 .andExpect(jsonPath("$.sourceCount").value(1))
@@ -253,6 +76,61 @@ class ArticleCrawlControllerTest {
                 .andExpect(jsonPath("$.sources[0].candidateCount").value(2))
                 .andExpect(jsonPath("$.sources[0].candidates").doesNotExist());
 
-        verify(articleCrawlService).runSourceInitial("uber");
+        verify(articleCrawlService).runSourceBackfill("uber");
+    }
+
+    private ArticleCrawlResult result(Long runId, BlogSource source, CrawlRunSummary summary) {
+        return new ArticleCrawlResult(
+                runId,
+                1,
+                1,
+                0,
+                summary.discoveredCount(),
+                summary.duplicateCount(),
+                summary.storedCount(),
+                summary.candidateCount(),
+                summary.aiApprovedCount(),
+                summary.aiRejectedCount(),
+                summary.aiFailedCount(),
+                summary.previouslyApprovedCount(),
+                summary.previouslyRejectedCount(),
+                List.of(SourceCrawlResult.success(source, candidates(source, summary.candidateCount()), summary))
+        );
+    }
+
+    private List<ArticleCandidate> candidates(BlogSource source, int count) {
+        List<ArticleCandidate> candidates = new ArrayList<>();
+        for (int index = 0; index < count; index++) {
+            candidates.add(new ArticleCandidate(
+                    source.getSourceKey(),
+                    source.getCompany().getCompanyName(),
+                    "Article " + index,
+                    source.getSiteUrl() + "/article-" + index,
+                    LocalDateTime.of(2026, 6, 1, 0, 0),
+                    "Context " + index,
+                    "hash-" + index,
+                    false,
+                    ArticleCandidateDecisionStatus.NEW,
+                    List.of()
+            ));
+        }
+        return candidates;
+    }
+
+    private BlogSource source(
+            String sourceKey,
+            String sourceName,
+            String siteUrl,
+            String feedUrl,
+            CollectionMethod method
+    ) {
+        return BlogSource.create(
+                Company.create(sourceKey, sourceName),
+                sourceKey,
+                sourceName,
+                siteUrl,
+                feedUrl,
+                method
+        );
     }
 }
