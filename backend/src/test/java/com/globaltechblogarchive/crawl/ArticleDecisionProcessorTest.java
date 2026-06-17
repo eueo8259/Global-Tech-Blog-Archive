@@ -75,6 +75,7 @@ class ArticleDecisionProcessorTest {
         ArgumentCaptor<List<ArticleMetadataInput>> inputs = ArgumentCaptor.forClass(List.class);
         verify(aiClient, times(2)).decide(inputs.capture());
         assertThat(inputs.getAllValues()).allSatisfy(batch -> assertThat(batch).hasSize(10));
+        assertThat(inputs.getAllValues().getFirst().getFirst().shortContext()).isEqualTo("Context 0");
         assertThat(processed.candidates().subList(0, 10))
                 .extracting(ArticleCandidate::decisionStatus)
                 .containsOnly(ArticleCandidateDecisionStatus.AI_FAILED);

@@ -13,4 +13,7 @@ public interface BlogSourceRepository extends JpaRepository<BlogSource, Long> {
 
     @EntityGraph(attributePaths = "company")
     Optional<BlogSource> findWithCompanyById(Long id);
+
+    @EntityGraph(attributePaths = "company")
+    Optional<BlogSource> findBySourceKeyAndEnabledTrue(String sourceKey);
 }

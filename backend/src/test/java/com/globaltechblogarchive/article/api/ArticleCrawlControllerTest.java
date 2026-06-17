@@ -149,4 +149,110 @@ class ArticleCrawlControllerTest {
 
         verify(articleCrawlService).runInitial();
     }
+
+    @Test
+    void runSourceReturnsSingleSourceCrawlResult() throws Exception {
+        ArticleCrawlResult result = new ArticleCrawlResult(
+                3L,
+                1,
+                1,
+                0,
+                1,
+                0,
+                1,
+                1,
+                1,
+                0,
+                0,
+                0,
+                0,
+                List.of(SourceCrawlResult.success(
+                        com.globaltechblogarchive.source.domain.BlogSource.create(
+                                Company.create("uber", "Uber"),
+                                "uber",
+                                "Uber Engineering Blog",
+                                "https://www.uber.com/blog/engineering",
+                                null,
+                                com.globaltechblogarchive.source.domain.CollectionMethod.HTML_SCRAPING
+                        ),
+                        List.of(),
+                        new CrawlRunSummary(1, 0, 1, 1, 0, 0, 0, 0)
+                ))
+        );
+        when(articleCrawlService.runSource("uber")).thenReturn(result);
+
+        mockMvc.perform(post("/api/admin/article-crawls/sources/uber/run"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.runId").value(3))
+                .andExpect(jsonPath("$.sourceCount").value(1))
+                .andExpect(jsonPath("$.sources[0].sourceKey").value("uber"));
+
+        verify(articleCrawlService).runSource("uber");
+    }
+
+    @Test
+    void runSourceInitialReturnsSingleSourceInitialSummary() throws Exception {
+        ArticleCandidate firstCandidate = new ArticleCandidate(
+                "uber",
+                "Uber",
+                "Scaling traffic",
+                "https://www.uber.com/kr/en/blog/scaling-real-time-traffic/",
+                LocalDateTime.of(2026, 6, 1, 0, 0),
+                "Traffic context",
+                "hash-1",
+                false,
+                ArticleCandidateDecisionStatus.AI_APPROVED,
+                List.of()
+        );
+        ArticleCandidate secondCandidate = new ArticleCandidate(
+                "uber",
+                "Uber",
+                "JUnit migration",
+                "https://www.uber.com/kr/en/blog/junit-migration/",
+                LocalDateTime.of(2026, 5, 1, 0, 0),
+                "JUnit context",
+                "hash-2",
+                false,
+                ArticleCandidateDecisionStatus.AI_APPROVED,
+                List.of()
+        );
+        ArticleCrawlResult result = new ArticleCrawlResult(
+                4L,
+                1,
+                1,
+                0,
+                2,
+                0,
+                2,
+                2,
+                2,
+                0,
+                0,
+                0,
+                0,
+                List.of(SourceCrawlResult.success(
+                        com.globaltechblogarchive.source.domain.BlogSource.create(
+                                Company.create("uber", "Uber"),
+                                "uber",
+                                "Uber Engineering Blog",
+                                "https://www.uber.com/blog/engineering",
+                                null,
+                                com.globaltechblogarchive.source.domain.CollectionMethod.HTML_SCRAPING
+                        ),
+                        List.of(firstCandidate, secondCandidate),
+                        new CrawlRunSummary(2, 0, 2, 2, 0, 0, 0, 0)
+                ))
+        );
+        when(articleCrawlService.runSourceInitial("uber")).thenReturn(result);
+
+        mockMvc.perform(post("/api/admin/article-crawls/sources/uber/initial-run"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.runId").value(4))
+                .andExpect(jsonPath("$.sourceCount").value(1))
+                .andExpect(jsonPath("$.sources[0].sourceKey").value("uber"))
+                .andExpect(jsonPath("$.sources[0].candidateCount").value(2))
+                .andExpect(jsonPath("$.sources[0].candidates").doesNotExist());
+
+        verify(articleCrawlService).runSourceInitial("uber");
+    }
 }

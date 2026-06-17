@@ -22,6 +22,19 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class HtmlArticleListParser implements ArticleListParser {
 
+    private static final List<String> UBER_CATEGORY_PATHS = List.of(
+            "/blog/advertising/",
+            "/blog/earn/",
+            "/blog/ride/",
+            "/blog/eat/",
+            "/blog/merchants/",
+            "/blog/business/",
+            "/blog/health/",
+            "/blog/higher-education/",
+            "/blog/transit/",
+            "/blog/engineering/",
+            "/blog/community-support/"
+    );
     private static final Pattern ARTICLE_BLOCK = Pattern.compile(
             "(?is)<(article|li|div)[^>]*(article|post|card|entry|blog)[^>]*>.*?</\\1>"
     );
@@ -133,12 +146,22 @@ public class HtmlArticleListParser implements ArticleListParser {
                 return false;
             }
         }
+        if (isUberCategoryLink(source, lowerHref)) {
+            return false;
+        }
         boolean pathMatches = config.articlePathSignals().isEmpty()
                 || config.articlePathSignals().stream().anyMatch(lowerHref::contains);
         boolean textMatches = config.requiredTextSignals().isEmpty()
                 || config.requiredTextSignals().stream().anyMatch(signal ->
                 lowerTitle.contains(signal) || block.toLowerCase(Locale.ROOT).contains(signal));
         return pathMatches && textMatches;
+    }
+
+    private boolean isUberCategoryLink(BlogSource source, String lowerHref) {
+        if (!"uber".equals(source.getSourceKey())) {
+            return false;
+        }
+        return UBER_CATEGORY_PATHS.stream().anyMatch(lowerHref::contains);
     }
 
     private String articleTitle(String attrs, String block, String linkText) {

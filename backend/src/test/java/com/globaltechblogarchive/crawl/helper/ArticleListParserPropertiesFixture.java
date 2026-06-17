@@ -53,7 +53,6 @@ public class ArticleListParserPropertiesFixture {
                 Map.entry("airbnb", new ParserConfig(List.of("medium.com/airbnb-engineering", "airbnb.tech"), List.of(), List.of("engineering", "data", "mobile", "backend"))),
                 Map.entry("stripe", new ParserConfig(List.of("/blog/"), List.of(), List.of("engineering"))),
                 Map.entry("cloudflare", new ParserConfig(List.of("/"), List.of("engineering", "developers", "infrastructure", "security", "ai", "reliability", "database", "networking"), List.of("engineering", "developers", "infrastructure", "security", "ai", "reliability", "database", "networking"))),
-                Map.entry("linkedin", new ParserConfig(List.of("/blog/"), List.of(), List.of("engineering"))),
                 Map.entry("doordash", new ParserConfig(List.of("/engineering-blog/", "/blog/"), List.of(), List.of("backend", "mobile", "data", "culture"))),
                 Map.entry("discord", new ParserConfig(List.of("/blog/", "/category/engineering"), List.of(), List.of("engineering", "developers"))),
                 Map.entry("shopify", new ParserConfig(List.of("/"), List.of(), List.of("engineering"))),

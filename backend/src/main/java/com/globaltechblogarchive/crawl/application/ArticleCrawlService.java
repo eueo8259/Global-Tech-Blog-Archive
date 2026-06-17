@@ -4,6 +4,8 @@ import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
 import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.global.error.ErrorCode;
+import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
 import java.util.ArrayList;
@@ -27,9 +29,29 @@ public class ArticleCrawlService {
         return run(CrawlMode.INITIAL);
     }
 
+    public ArticleCrawlResult runSource(String sourceKey) {
+        return runSource(sourceKey, CrawlMode.RECENT);
+    }
+
+    public ArticleCrawlResult runSourceInitial(String sourceKey) {
+        return runSource(sourceKey, CrawlMode.INITIAL);
+    }
+
     private ArticleCrawlResult run(CrawlMode mode) {
+        return runSources(blogSourceRepository.findByEnabledTrue(), mode);
+    }
+
+    private ArticleCrawlResult runSource(String sourceKey, CrawlMode mode) {
+        BlogSource source = blogSourceRepository.findBySourceKeyAndEnabledTrue(sourceKey)
+                .orElseThrow(() -> new InvalidInputException(
+                        ErrorCode.INVALID_INPUT_VALUE,
+                        "Enabled source not found: " + sourceKey
+                ));
+        return runSources(List.of(source), mode);
+    }
+
+    private ArticleCrawlResult runSources(List<BlogSource> sources, CrawlMode mode) {
         Long runId = transactionService.startRun();
-        List<BlogSource> sources = blogSourceRepository.findByEnabledTrue();
         List<SourceCrawlResult> sourceResults = new ArrayList<>();
         CrawlRunSummary summary = CrawlRunSummary.empty();
 

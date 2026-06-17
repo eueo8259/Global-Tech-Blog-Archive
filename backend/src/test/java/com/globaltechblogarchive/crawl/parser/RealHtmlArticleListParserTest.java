@@ -37,4 +37,26 @@ class RealHtmlArticleListParserTest {
             assertThat(card.shortContext()).isNotBlank();
         });
     }
+
+    @Test
+    void parseStripeEngineeringReturnsArticleCardsWithPublicationDates() {
+        BlogSource source = BlogSource.create(
+                Company.create("stripe", "Stripe"),
+                "stripe",
+                "Stripe Engineering Blog",
+                "https://stripe.com/blog/engineering",
+                null,
+                CollectionMethod.HTML_SCRAPING
+        );
+
+        var cards = parser.parse(source, fetcher.fetch(source.getSiteUrl()));
+
+        assertThat(cards).isNotEmpty();
+        assertThat(cards).allSatisfy(card -> {
+            assertThat(card.originalTitle()).isNotBlank();
+            assertThat(card.originalUrl()).startsWith("https://stripe.com/blog/");
+            assertThat(card.publishedAt()).isNotNull();
+            assertThat(card.shortContext()).isNotBlank();
+        });
+    }
 }

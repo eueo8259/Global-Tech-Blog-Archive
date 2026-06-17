@@ -80,9 +80,10 @@ class OpenAiArticleMetadataRequestFactory {
             ObjectNode item = objectMapper.createObjectNode();
             item.put("index", input.index());
             item.put("title", input.title());
+            item.put("shortContext", input.shortContext());
             items.add(item);
         }
-        return "Classify these article titles: " + items;
+        return "Classify these article candidates: " + items;
     }
 
     private ObjectNode responseTextFormat() {

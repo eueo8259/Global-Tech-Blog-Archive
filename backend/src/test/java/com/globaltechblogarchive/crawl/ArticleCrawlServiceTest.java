@@ -1,6 +1,7 @@
 package com.globaltechblogarchive.crawl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyIterable;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -37,6 +38,8 @@ import com.globaltechblogarchive.crawl.repository.ArticleCollectionRunRepository
 import com.globaltechblogarchive.crawl.support.UrlHash;
 import com.globaltechblogarchive.crawl.support.UrlNormalizer;
 import com.globaltechblogarchive.company.domain.Company;
+import com.globaltechblogarchive.global.error.ErrorCode;
+import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
@@ -163,6 +166,51 @@ class ArticleCrawlServiceTest {
         assertThat(result.sourceCount()).isEqualTo(1);
         verify(collector).collect(source, CrawlMode.INITIAL);
         verify(transactionService).completeRun(7L, 1, 1, 0, CrawlRunSummary.empty());
+    }
+
+    @Test
+    void runSourceUsesOnlyRequestedSource() {
+        BlogSource source = source(1L, "uber");
+        when(transactionService.startRun()).thenReturn(8L);
+        when(blogSourceRepository.findBySourceKeyAndEnabledTrue("uber")).thenReturn(Optional.of(source));
+        when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
+        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of());
+
+        ArticleCrawlResult result = articleCrawlService.runSource("uber");
+
+        assertThat(result.runId()).isEqualTo(8L);
+        assertThat(result.sourceCount()).isEqualTo(1);
+        assertThat(result.sources().getFirst().sourceKey()).isEqualTo("uber");
+        verify(blogSourceRepository, never()).findByEnabledTrue();
+        verify(collector).collect(source, CrawlMode.RECENT);
+        verify(transactionService).completeRun(8L, 1, 1, 0, CrawlRunSummary.empty());
+    }
+
+    @Test
+    void runSourceInitialUsesInitialModeForRequestedSource() {
+        BlogSource source = source(1L, "uber");
+        when(transactionService.startRun()).thenReturn(9L);
+        when(blogSourceRepository.findBySourceKeyAndEnabledTrue("uber")).thenReturn(Optional.of(source));
+        when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
+        when(collector.collect(source, CrawlMode.INITIAL)).thenReturn(List.of());
+
+        ArticleCrawlResult result = articleCrawlService.runSourceInitial("uber");
+
+        assertThat(result.runId()).isEqualTo(9L);
+        assertThat(result.sourceCount()).isEqualTo(1);
+        verify(collector).collect(source, CrawlMode.INITIAL);
+    }
+
+    @Test
+    void runSourceThrowsInvalidInputWhenEnabledSourceDoesNotExist() {
+        when(blogSourceRepository.findBySourceKeyAndEnabledTrue("missing")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> articleCrawlService.runSource("missing"))
+                .isInstanceOfSatisfying(InvalidInputException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE))
+                .hasMessage("Enabled source not found: missing");
+
+        verify(transactionService, never()).startRun();
     }
 
     @Test

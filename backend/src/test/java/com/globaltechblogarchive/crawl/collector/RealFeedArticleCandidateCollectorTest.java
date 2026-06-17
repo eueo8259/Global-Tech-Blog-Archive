@@ -53,7 +53,6 @@ class RealFeedArticleCandidateCollectorTest {
         return Stream.of(
                 Arguments.of("openai", CollectionMethod.RSS, "https://openai.com/news/", "https://openai.com/news/rss.xml"),
                 Arguments.of("figma", CollectionMethod.ATOM, "https://www.figma.com/blog/engineering/", "https://www.figma.com/blog/feed/atom.xml"),
-                Arguments.of("stripe", CollectionMethod.RSS, "https://stripe.com/blog/engineering", "https://stripe.com/blog/feed.rss"),
                 Arguments.of("cloudflare", CollectionMethod.RSS, "https://blog.cloudflare.com/", "https://blog.cloudflare.com/tag/engineering/rss/"),
                 Arguments.of("datadog", CollectionMethod.RSS, "https://www.datadoghq.com/blog/engineering/", "https://www.datadoghq.com/blog/engineering/index.xml"),
                 Arguments.of("amazon-science", CollectionMethod.RSS, "https://www.amazon.science/blog", "https://www.amazon.science/index.rss")

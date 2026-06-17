@@ -96,6 +96,33 @@ class HtmlArticleListParserTest {
                 .isEqualTo("https://careersatdoordash.com/blog/doordash-clusterless-ml-feature-store/?utm_source=engineering&ref=list");
     }
 
+    @org.junit.jupiter.api.Test
+    void parseExcludesUberCategoryLinks() {
+        BlogSource source = source(
+                "uber",
+                "https://www.uber.com/blog/engineering"
+        );
+        String html = """
+                <main>
+                  <a href="/kr/en/blog/advertising/">
+                    Advertising Learn more about advertising on Uber.
+                  </a>
+                  <a href="/kr/en/blog/engineering/">
+                    Engineering The technology behind Uber Engineering
+                  </a>
+                  <a href="/kr/en/blog/scaling-real-time-traffic/">
+                    Scaling Real-Time Traffic Forecasting with a Graph-Aware Transformer
+                  </a>
+                </main>
+                """;
+
+        var cards = parser.parse(source, html);
+
+        assertThat(cards).hasSize(1);
+        assertThat(cards.getFirst().originalUrl())
+                .isEqualTo("https://www.uber.com/kr/en/blog/scaling-real-time-traffic/");
+    }
+
     static Stream<Arguments> htmlSources() {
         return Stream.of(
                 Arguments.of("openai", "https://openai.com/news/", "/news/engineering-systems", "Engineering"),
@@ -105,7 +132,6 @@ class HtmlArticleListParserTest {
                 Arguments.of("airbnb", "https://airbnb.tech/", "https://medium.com/airbnb-engineering/platform", "Engineering"),
                 Arguments.of("stripe", "https://stripe.com/blog/engineering", "/blog/database-systems", "Engineering"),
                 Arguments.of("cloudflare", "https://blog.cloudflare.com/", "/networking-at-edge", "Networking"),
-                Arguments.of("linkedin", "https://engineering.linkedin.com/content/engineering/en-us/blog", "/blog/data-systems", "Engineering"),
                 Arguments.of("doordash", "https://careersatdoordash.com/career-areas/engineering/", "/engineering-blog/backend-platform", "Backend"),
                 Arguments.of("discord", "https://discord.com/category/engineering", "/blog/realtime-engineering", "Developers"),
                 Arguments.of("shopify", "https://shopify.engineering/", "/database-at-scale", "Engineering"),
