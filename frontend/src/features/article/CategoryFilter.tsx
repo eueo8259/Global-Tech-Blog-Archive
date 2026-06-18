@@ -9,6 +9,15 @@ const categories: ArticleCategoryFilter[] = [
   'AI',
 ];
 
+const categoryLabels: Record<ArticleCategoryFilter, string> = {
+  ALL: 'All articles',
+  FRONTEND: 'Frontend',
+  BACKEND: 'Backend',
+  DEVOPS: 'DevOps',
+  ARCHITECTURE: 'Architecture',
+  AI: 'AI',
+};
+
 interface CategoryFilterProps {
   selectedCategory: ArticleCategoryFilter;
   onSelect: (category: ArticleCategoryFilter) => void;
@@ -25,7 +34,7 @@ export function CategoryFilter({ selectedCategory, onSelect }: CategoryFilterPro
           onClick={() => onSelect(category)}
           type="button"
         >
-          {category}
+          <span className="category-filter-label">{categoryLabels[category]}</span>
         </button>
       ))}
     </div>
