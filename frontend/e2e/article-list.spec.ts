@@ -45,7 +45,10 @@ test('shows the prototype-style article archive without an ELSE filter', async (
   await expect(
     page.getByText('세계적인 기술 기업의 엔지니어링 블로그를 한곳에서 만나보세요.'),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: 'ALL' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'All articles' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await expect(page.getByRole('button', { name: 'ELSE' })).toHaveCount(0);
   await expect(page.getByText('1 article')).toBeVisible();
   const articleLink = page.getByRole('link', {
@@ -82,8 +85,9 @@ test('searches companies and combines company and category filters from page zer
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: '다음' }).click();
-  await expect(page.getByText('2 / 2 페이지')).toBeVisible();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByRole('button', { name: '페이지 선택' })).toContainText('2');
+  await expect(page.getByText('of 2')).toBeVisible();
   await expect(page.getByText('21 articles')).toBeVisible();
 
   await page.getByRole('button', { name: '전체 회사' }).click();
