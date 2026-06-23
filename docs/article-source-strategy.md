@@ -13,16 +13,16 @@ The MVP collects articles only from the following companies:
 | Company | Main Topics |
 | --- | --- |
 | OpenAI | AI, Agentic AI, Engineering, Safety, Security |
-| Anthropic | Agentic AI, Evals, Context Engineering, AI Safety, Developer Tools |
+| Anthropic | Agentic AI, Evals, Context Engineering, AI Safety, Developer Tools, Claude Code |
 | Netflix | Distributed Systems, Streaming, Data Platform, Personalization, Reliability |
 | Figma | Infrastructure, Realtime Collaboration, Frontend Performance, Database/Storage, Developer Experience |
 | Meta | Infrastructure, AI/ML, Mobile, Data Infrastructure, Security, Open Source |
 | Uber | Backend, Data/ML, Realtime Systems, Maps, Optimization, Security |
 | Airbnb | Infrastructure, Data, AI/ML, Search, Payments, Mobile/Web |
+| Pinterest | Infrastructure, Search, Recommendations, Data Platform, Backend, ML |
 | Stripe | Payments, API Design, Database, Developer Experience, Risk/Fraud, Infrastructure |
 | Cloudflare | Network, Security, Edge Computing, Reliability, Infrastructure, Open Source |
 | GitHub | Developer Experience, Platform Engineering, Security, Search, AI/Copilot, Frontend |
-| LinkedIn | Search, Feed, Recommendations, AI, Data Streaming, Infrastructure |
 | DoorDash | Logistics, Experimentation, Data Platform, Backend, ML, Reliability |
 | Discord | Realtime Systems, Messaging, Voice, Elixir/Rust, Data, Reliability |
 | Shopify | Commerce Platform, AI/ML, Search, Infrastructure, Mobile, Ruby/Rails |
@@ -74,10 +74,35 @@ AI -> Devops -> Architecture -> Backend -> Frontend -> Else
 1. Use RSS or Atom feeds as the default collection method.
 2. Use HTML list-page parsing only when one of these conditions is true:
    - the source does not provide an RSS or Atom feed
-   - the feed omits one or more MVP-required fields: title, original URL, published date, summary, or company/source identity
+   - the feed omits one or more MVP-required fields: title, article URL, published date, or company/source identity
    - the feed contains only product/news entries while the source has a separate engineering article list page
-3. Store title, original URL, normalized URL, summary, company, published date, collected date, and category.
-4. Do not fetch article detail pages only to discover canonical URLs in the MVP.
+3. Store approved articles only after AI decision review.
+4. Store translated title, source-provided article URL, article URL hash, company, published date, row creation time, and category.
+5. Do not store article summaries for the MVP.
+6. Do not fetch article detail pages only to discover canonical URLs in the MVP.
+
+## Current Source Methods
+
+| Company | Source | Method | Feed URL |
+| --- | --- | --- | --- |
+| OpenAI | OpenAI News | RSS | `https://openai.com/news/rss.xml` |
+| Anthropic | Anthropic Engineering | SITEMAP | `https://www.anthropic.com/sitemap.xml` |
+| Anthropic | Claude Blog | HTML_SCRAPING | N/A |
+| Netflix | RSS | `https://netflixtechblog.com/feed` |
+| Figma | ATOM | `https://www.figma.com/blog/feed/atom.xml` |
+| Meta | RSS | `https://engineering.fb.com/feed/` |
+| Uber | HTML_SCRAPING | N/A |
+| Airbnb | RSS | `https://medium.com/feed/airbnb-engineering` |
+| Pinterest | RSS | `https://medium.com/feed/pinterest-engineering` |
+| Stripe | HTML_SCRAPING | N/A |
+| Cloudflare | RSS | `https://blog.cloudflare.com/tag/engineering/rss/` |
+| GitHub | RSS | `https://github.blog/engineering/feed/` |
+| DoorDash | WORDPRESS_REST | `https://careersatdoordash.com/wp-json/wp/v2/posts?per_page=20&categories=8` |
+| Discord | HTML_SCRAPING | N/A |
+| Shopify | SITEMAP | `https://shopify.engineering/sitemap.xml` |
+| Datadog | RSS | `https://www.datadoghq.com/blog/engineering/index.xml` |
+| Slack | RSS | `https://slack.engineering/feed/` |
+| Amazon Science | RSS | `https://www.amazon.science/index.rss` |
 
 ## Future Considerations
 

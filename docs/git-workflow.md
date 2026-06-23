@@ -15,8 +15,8 @@ Repository documentation, backend/frontend code, DB schema, dependencies, migrat
 
 ### Branch Strategy
 
-* `main` is the production-ready branch.
-* `develop` is the primary integration branch.
+* `develop` is the default branch and primary integration branch.
+* `main` is the production-ready release branch.
 * Create all working branches from `develop`.
 * Merge working branches into `develop` through Pull Requests.
 * Merge `develop` into `main` when a release is ready.
@@ -30,7 +30,10 @@ Before starting any work:
 3. Implement the change.
 4. Create a Pull Request linked to the Issue.
 5. Merge the Pull Request into `develop`.
-6. Close the Issue automatically when the Pull Request is merged.
+6. Verify the linked Issue is closed after the Pull Request is merged into `develop`.
+
+`develop` is the completion point for issue work in this repository.
+Because `develop` is the default branch, GitHub issue closing keywords in PR bodies should close linked issues when PRs merge into `develop`. After merge, verify the linked Issue state and close it manually only if GitHub did not close it automatically.
 
 ### Branch Naming
 
@@ -64,6 +67,11 @@ Rules:
 * Every branch must be linked to a GitHub Issue.
 * Use short, descriptive topics.
 * Use lowercase and kebab-case.
+* Validate branch names before creating or switching branches:
+
+```text
+^(feature|fix|docs|refactor|test|chore)/[0-9]+/[a-z0-9]+(-[a-z0-9]+)*$
+```
 
 ### Commit Messages
 
@@ -84,12 +92,62 @@ chore: update dependencies
 * Keep Pull Requests focused on a single purpose.
 * Do not mix features, refactoring, and formatting changes in the same Pull Request.
 * Include a summary of what changed and why.
-* Link the Pull Request to the Issue using GitHub closing keywords.
+* 팀원이 내용을 직접 이해하고 검토할 수 있도록 Pull Request 제목과 본문은 한국어로 작성한다.
+* Conventional Commit 타입은 영어로 유지하고, 제목 설명은 한국어로 작성한다. 예: `feat: 기사 목록 페이지 구현`.
+* Pull Request 본문의 섹션 제목, 요약, 작업 배경, 변경 사항, 참고 사항, 검증 내용은 모두 한국어로 작성한다.
+* 자동화 도구, 커넥터, AI 에이전트도 동일한 한국어 Pull Request 작성 규칙을 따라야 한다.
 
-Example:
+Pull Request 제목은 커밋 메시지와 동일한 Conventional Commit 형식을 사용한다. 예: `feat: 소스별 기사 후보 수집`, `refactor: 크롤링 구조 재구성`. 명시적으로 요청하지 않는 한 PR 제목에 `[codex]`, `[ai]` 같은 도구 또는 에이전트 접두사를 추가하지 않는다.
+
+Validate PR titles before creating or updating Pull Requests:
 
 ```text
-Closes #12
-Fixes #15
-Resolves #18
+^(feat|fix|docs|refactor|test|chore)(\([^)]+\))?: .+
 ```
+
+When creating a Pull Request through any automation, connector, CLI, or AI agent, first read `.github/PULL_REQUEST_TEMPLATE.md` if it exists. Use that template as the PR body structure instead of writing a custom summary. Fill the related issue, summary, motivation, changes, notes, and verification fields. After creation, verify the PR title, base branch, draft state, related issue section, and body format match repository conventions.
+
+When creating a PR through an automation, connector, CLI, or AI agent, do not assume the GitHub Pull Request template was applied automatically. Inspect or construct the PR body explicitly and verify that the repository template structure is present before considering PR creation complete.
+
+### Automation Tool Selection
+
+Automated agents must use the repository's connected GitHub App or connector as
+the default interface for GitHub-hosted operations, including:
+
+* creating, reading, and updating Issues
+* creating and inspecting Pull Requests
+* reading or updating Pull Request metadata, comments, and review state
+
+Use local `git` for local repository operations:
+
+* branch creation and switching
+* staging and committing changes
+* pushing branches to the configured remote
+
+Use the `gh` CLI only as a fallback when the connected GitHub App or connector
+does not support the required operation. When the App or connector can complete
+the requested GitHub operation, agents must not require `gh auth status`, ask
+the user to run `gh auth login`, or block the workflow because a local `gh`
+token is missing or expired.
+
+An unavailable local `gh` session does not prevent local `git` commit/push or
+GitHub App/connector Issue and Pull Request operations. If a true fallback to
+`gh` is required, explain which unsupported operation requires it before asking
+for authentication.
+
+### Automation Checklist
+
+Before any automated branch, commit, push, or PR action:
+
+1. Read this workflow file and `.github/PULL_REQUEST_TEMPLATE.md` if PR work is involved.
+2. Print or state the issue number, base branch, intended branch name, commit message, PR title, PR base, and draft state.
+3. Validate the branch name and PR title against the regex rules above.
+4. Confirm no plugin, connector, or agent default naming convention overrides repository rules.
+5. Stop before writes if any value is missing, malformed, or conflicts with this workflow.
+
+After any automated branch, commit, push, or PR action:
+
+1. Re-check the current branch and upstream branch.
+2. Re-check the PR title, base branch, draft state, and body template headings.
+3. Verify the related issue section is filled with the actual issue number.
+4. Fix mismatches immediately before reporting completion.

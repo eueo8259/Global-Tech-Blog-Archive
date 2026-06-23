@@ -1,0 +1,96 @@
+crawl:
+  parser:
+    blocked-link-parts:
+      - "mailto:"
+      - "javascript:"
+      - "/careers"
+      - "/jobs"
+      - "/contact"
+      - "/privacy"
+      - "/terms"
+      - "linkedin.com"
+      - "twitter.com"
+      - "facebook.com"
+      - "instagram.com"
+      - "youtube.com"
+      - "x.com"
+      - "dash.cloudflare.com"
+      - "devdegree.ca"
+      - "shopify.github.io"
+      - "/rss"
+      - "/feed"
+      - "/subscribe"
+      - "/tag/"
+      - "/category/"
+      - "/author/"
+      - "/topics/"
+      - "/search"
+      - "/start"
+      - "/page/"
+    blocked-titles:
+      - "blog"
+      - "engineering"
+      - "ai"
+      - "database"
+      - "security"
+      - "placeholder"
+      - "get started free"
+      - "start your business . build your brand"
+      - "open source at shopify"
+      - "dev degree"
+      - "shopify engineering on x"
+      - "the cloudflare blog"
+      - "maker stories"
+    configs:
+      openai:
+        article-path-signals: [ "/news/" ]
+        required-text-signals: [ "engineering", "security", "research", "developers" ]
+        context-signals: [ "engineering", "security", "research", "developers" ]
+      anthropic-engineering:
+        article-path-signals: [ "/news/" ]
+        required-text-signals: [ "research", "product", "policy", "announcement" ]
+        context-signals: [ "research", "product", "policy", "announcement" ]
+      claude-blog:
+        article-path-signals: [ "/blog/" ]
+        required-text-signals: [ ]
+        context-signals: [ "claude code", "agents", "engineering", "developers" ]
+      figma:
+        article-path-signals: [ "/blog/" ]
+        required-text-signals: [ "inside figma engineering", "engineering" ]
+        context-signals: [ "engineering" ]
+      uber:
+        article-path-signals: [ "/blog/" ]
+        required-text-signals: [ ]
+        context-signals: [ "engineering" ]
+      airbnb:
+        article-path-signals: [ "medium.com/airbnb-engineering", "airbnb.tech" ]
+        required-text-signals: [ ]
+        context-signals: [ "engineering", "data", "mobile", "backend" ]
+      stripe:
+        article-path-signals: [ "/blog/" ]
+        required-text-signals: [ ]
+        context-signals: [ "engineering" ]
+      cloudflare:
+        article-path-signals: [ "/" ]
+        required-text-signals: [ "engineering", "developers", "infrastructure", "security", "ai", "reliability", "database", "networking" ]
+        context-signals: [ "engineering", "developers", "infrastructure", "security", "ai", "reliability", "database", "networking" ]
+      doordash:
+        article-path-signals: [ "/engineering-blog/", "/blog/" ]
+        required-text-signals: [ ]
+        context-signals: [ "backend", "mobile", "data", "culture" ]
+      discord:
+        article-path-signals: [ "/blog/", "/category/engineering" ]
+        required-text-signals: [ ]
+        context-signals: [ "engineering", "developers" ]
+      shopify:
+        article-path-signals: [ "/" ]
+        required-text-signals: [ ]
+        context-signals: [ "engineering" ]
+      datadog:
+        article-path-signals: [ "/blog/" ]
+        required-text-signals: [ ]
+        context-signals: [ "engineering" ]
+      amazon-science:
+        article-path-signals: [ "/blog/" ]
+        required-text-signals: [ ]
+        context-signals: [ "machine learning", "robotics", "systems", "ai" ]

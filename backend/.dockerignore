@@ -1,0 +1,6 @@
+.gradle/
+build/
+.idea/
+*.log
+runtime-*.log
+NoneArticleSaveLink.md

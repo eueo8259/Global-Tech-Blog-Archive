@@ -1,6 +1,8 @@
-## Related Issue
+# Related Issue
 
-Closes #
+## 🎯 이슈 번호
+
+close {#이슈 번호 기입}
 
 ## Summary
 

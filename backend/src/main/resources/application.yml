@@ -1,15 +1,18 @@
 spring:
   application:
     name: global-tech-blog-archive
+  profiles:
+    default: local
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/global_tech_blog_archive}
-    username: ${DB_USERNAME:archive_user}
-    password: ${DB_PASSWORD:archive_password}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  flyway:
+    enabled: true
   jpa:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  config:
+    import: "crawl/crawl-parser.yml"
 
 server:
   port: ${SERVER_PORT:8080}

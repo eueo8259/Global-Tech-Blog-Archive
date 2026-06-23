@@ -16,8 +16,8 @@ The MVP stores article metadata only. It does not store full article bodies, use
 | Company | The organization that owns or publishes the engineering blog. |
 | Source | A configured company blog endpoint used by the collector. |
 | Category | The single primary classification assigned to an article. |
-| Original URL | The URL found during collection and used as the user-facing article link. |
-| Normalized URL | The normalized form of the original URL used for deduplication. |
+| Article URL | The external article URL provided by the source and returned to users. |
+| Article URL Hash | SHA-256 hash of the article URL used for database uniqueness. |
 | Collection Method | The method used to collect from a source: `RSS`, `ATOM`, or `HTML_SCRAPING`. |
 
 ## 3. Entities
@@ -31,12 +31,12 @@ Database table: `articles`
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | id | BIGINT | yes | Primary key |
-| source_id | BIGINT | yes | Foreign key to `blog_sources.id` |
-| title | VARCHAR(500) | yes | Article title |
-| summary | TEXT | no | Feed summary, page description, or extracted short description |
-| original_url | VARCHAR(2000) | yes | User-facing source-of-truth URL |
-| normalized_url | VARCHAR(2000) | yes | Deduplication URL generated before persistence |
-| category | VARCHAR(30) | yes | Java enum value stored as a string |
+| company_id | BIGINT | yes | Foreign key to `companies.id` |
+| title | VARCHAR(500) | yes | User-facing title. AI-approved article rows store the translated Korean title. |
+| summary | TEXT | no | Legacy DB column. It is not mapped by the backend `Article` entity and is not exposed by the public article API. |
+| article_url | VARCHAR(2000) | yes | Source-provided user-facing article URL and deduplication base |
+| article_url_hash | VARCHAR(64) | yes | SHA-256 hash of `article_url` used for the unique constraint |
+| category | VARCHAR(30) | yes | AI decision category for approved articles. `ELSE` is not stored in `articles` for AI-reviewed rows. |
 | published_at | DATETIME | yes | Source publication time; use collection time when source publication time is missing |
 | created_at | DATETIME | yes | Row creation time; also the first collection time |
 | updated_at | DATETIME | yes | Row update time |
@@ -44,8 +44,8 @@ Database table: `articles`
 Required constraints and indexes:
 
 ```sql
-CONSTRAINT fk_articles_source FOREIGN KEY (source_id) REFERENCES blog_sources(id);
-UNIQUE KEY uq_source_normalized_url (source_id, normalized_url);
+CONSTRAINT fk_articles_company FOREIGN KEY (company_id) REFERENCES companies(id);
+UNIQUE KEY uq_company_article_url_hash (company_id, article_url_hash);
 INDEX idx_category_published (category, published_at);
 INDEX idx_published (published_at);
 ```
@@ -54,7 +54,7 @@ INDEX idx_published (published_at);
 
 `Company` is the publishing organization represented by a stable key and display name.
 
-There is no separate `companies` table in the MVP. Company fields are stored on `blog_sources`.
+Database table: `companies`
 
 Required fields:
 
@@ -80,6 +80,33 @@ ELSE
 
 `ALL` is a UI/API filter option only. It must not be stored in the database.
 
+### Article AI Decision
+
+`ArticleAiDecision` stores the AI review result for a collected candidate.
+
+Database table: `article_ai_decisions`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | yes | Primary key |
+| company_id | BIGINT | yes | Foreign key to `companies.id` |
+| article_url_hash | VARCHAR(64) | yes | SHA-256 hash used with company and prompt version as the AI decision identity |
+| article_url | VARCHAR(2000) | yes | Source-provided user-facing article URL |
+| original_title | VARCHAR(500) | yes | Title seen during crawl |
+| translated_title | VARCHAR(500) | yes | Korean title returned by AI |
+| category | VARCHAR(30) | yes | AI category: `FRONTEND`, `BACKEND`, `DEVOPS`, `ARCHITECTURE`, `AI`, or `ELSE` |
+| save_target | TINYINT(1) | yes | Whether this candidate should be saved to `articles` |
+| model | VARCHAR(100) | yes | Model used for the decision |
+| prompt_version | VARCHAR(50) | yes | Prompt version used for re-review control |
+| created_at | DATETIME | yes | Row creation time |
+| updated_at | DATETIME | yes | Row update time |
+
+Required constraints:
+
+```sql
+UNIQUE KEY uq_article_ai_decision_company_url_hash_prompt (company_id, article_url_hash, prompt_version);
+```
+
 ### Source
 
 `Source` is a configured company blog endpoint used by the collector.
@@ -89,8 +116,9 @@ Database table: `blog_sources`
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | id | BIGINT | yes | Primary key |
-| company_key | VARCHAR(50) | yes | Stable lowercase key, unique |
-| company_name | VARCHAR(100) | yes | Display name |
+| company_id | BIGINT | yes | Foreign key to `companies.id` |
+| source_key | VARCHAR(80) | yes | Stable lowercase source key, unique |
+| source_name | VARCHAR(100) | yes | Display name for this source |
 | site_url | VARCHAR(500) | yes | Blog home or engineering page URL |
 | feed_url | VARCHAR(500) | no | RSS/Atom URL; null for HTML scraping |
 | collection_method | VARCHAR(30) | yes | Java enum value: `RSS`, `ATOM`, or `HTML_SCRAPING` |
@@ -104,7 +132,7 @@ Database table: `blog_sources`
 Required constraints:
 
 ```sql
-UNIQUE KEY uq_blog_sources_company_key (company_key);
+UNIQUE KEY uq_blog_sources_source_key (source_key);
 ```
 
 Field rules:
@@ -122,36 +150,65 @@ Field rules:
 The aggregate includes:
 
 - article identity
-- source reference
-- title and summary
-- original URL and normalized URL
+- company reference
+- translated title
+- article URL
+- article URL hash
 - category
 - publication and persistence timestamps
 
 The aggregate does not include:
 
+- summary
 - full article body
 - article tags
 - user-specific state
 - collection run history
 
-`Source` is referenced by `source_id`. Updating source configuration must not require updating existing articles.
+`Company` is referenced by `company_id`. Updating source configuration must not require updating existing articles.
 
 ## 5. Business Rules
 
 - The collector runs automatically on a schedule by default.
 - The collector reads only `blog_sources` rows where `enabled = 1`.
+- Recent collection keeps up to 20 candidates per source from the last two days and excludes candidates without a publication time.
+- Initial collection keeps up to 20 candidates per source without a date window; dated candidates are ordered newest first and undated candidates fill remaining positions afterward.
+- Each source collection is committed independently so one source failure does not roll back successful results from other sources in the same run.
 - RSS and Atom collection use `feed_url`.
 - HTML scraping uses `site_url`.
-- Article category assignment is handled by the classifier before persistence.
+- Article category assignment is handled by AI decision before persistence.
 - Each article has exactly one stored category.
-- The original URL is preserved and used as the article link returned to the frontend.
-- The normalized URL is used only for deduplication.
-- Duplicate articles are blocked by `UNIQUE(source_id, normalized_url)`.
-- When a duplicate is detected, the article is skipped.
-- The duplicate handling implementation may use `INSERT IGNORE`, `ON DUPLICATE KEY UPDATE`, or exception handling.
+- The crawler stores the source-provided URL as `article_url`.
+- `article_url` is both the user-facing article link and the deduplication base.
+- Query parameters are preserved in the MVP.
+- URL normalization is intentionally minimal: resolve relative URLs, normalize path syntax, lowercase scheme/host, decode escaped `&`, trim whitespace, and drop fragments.
+- `article_url_hash` is the SHA-256 hash of `article_url`.
+- Duplicate article rows are blocked by `UNIQUE(company_id, article_url_hash)` as the final database safety net.
+- AI re-review and crawl pre-processing use `article_ai_decisions`, not `articles`, as the primary cache/gate.
+- `article_ai_decisions.save_target=true` and `category != ELSE` allows saving to `articles`.
+- `article_ai_decisions.save_target=false` or `category=ELSE` prevents saving to `articles`.
+- Previously approved decisions may save article rows without calling AI again.
+- Previously rejected decisions do not call AI again and do not save article rows.
+- AI failures are recorded in crawl logs as `AI_FAILED`; no decision row is created because no valid AI decision exists.
+- If the prompt changes, increment `prompt_version` to allow re-review.
 - If the source does not provide a publication time, set `published_at` to the collection time.
 - `created_at` represents the first time the article row was stored.
 - Source collection success updates `last_collected_at`.
 - Source collection failure updates `last_error_at` and `last_error_msg`.
-- Full collection history is not stored in the MVP.
+- Collection run logs store discovered candidates and their decision status.
+
+Database schema and company/source reference data are managed by immutable
+Flyway migrations. Locally collected articles and AI decisions may be promoted
+once through the bootstrap archive process documented in
+`backend/docs/bootstrap-deployment.md`; collection run logs are not promoted.
+
+Candidate decision statuses used in crawl logs:
+
+```text
+NEW
+PREVIOUSLY_APPROVED
+PREVIOUSLY_REJECTED
+AI_APPROVED
+AI_REJECTED
+AI_FAILED
+```

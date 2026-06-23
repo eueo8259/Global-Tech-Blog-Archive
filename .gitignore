@@ -8,6 +8,8 @@ build/
 .env
 .env.*
 !.env.example
+!.env.prod.example
+artifacts/bootstrap/
 
 ### Frontend ###
 node_modules/
@@ -16,6 +18,7 @@ coverage/
 tmp/
 
 ### IntelliJ IDEA ###
+backend/.idea/
 .idea/modules.xml
 .idea/jarRepositories.xml
 .idea/compiler.xml

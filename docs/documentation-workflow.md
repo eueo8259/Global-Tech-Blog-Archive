@@ -24,6 +24,17 @@ Update the Notion page when changing:
 3. Update Notion when domain decisions or learning notes change.
 4. Report whether Notion was updated in the final response.
 
+## AGENTS.md Files
+
+Use `AGENTS.md` files as concise routing and guardrail documents.
+
+- Root `AGENTS.md` should stay short, around 60-70 lines.
+- Keep repository-wide principles in root `AGENTS.md`.
+- Move detailed workflow rules to `docs/git-workflow.md`.
+- Move backend implementation rules to `backend/AGENTS.md` or `backend/docs/`.
+- Do not duplicate long command lists, PR rules, or scope-specific rules in root `AGENTS.md`.
+- When root `AGENTS.md` grows, move detailed guidance to the narrowest relevant doc and leave a pointer.
+
 ## If Notion Is Unavailable
 
 If Notion cannot be accessed, provide the exact replacement text for manual update.

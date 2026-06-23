@@ -1,0 +1,4 @@
+interface:
+  display_name: "TechPort 통합 테스트"
+  short_description: "Docker부터 브라우저까지 TechPort 통합 환경 검증"
+  default_prompt: "Use $techport-integration-test to verify the TechPort stack from Docker MySQL through the browser UI."

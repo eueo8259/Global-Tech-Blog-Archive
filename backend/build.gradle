@@ -20,11 +20,64 @@ java {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-mysql'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
     runtimeOnly 'com.mysql:mysql-connector-j'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.testcontainers:mysql'
+    testImplementation 'org.testcontainers:junit-jupiter'
 }
 
 test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'real'
+    }
+}
+
+tasks.register('realTest', Test) {
+    description = 'Runs tests against real external article sources.'
+    group = 'verification'
+    useJUnitPlatform {
+        includeTags 'real'
+    }
+    shouldRunAfter test
+}
+
+bootJar {
+    archiveFileName = 'app.jar'
+}
+
+tasks.register('archiveBootstrapExport', org.springframework.boot.gradle.tasks.run.BootRun) {
+    group = 'application'
+    description = 'Exports articles and AI decisions to an NDJSON bootstrap archive.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.globaltechblogarchive.GlobalTechBlogArchiveApplication'
+    args '--spring.main.web-application-type=none', '--bootstrap.command=export'
+    doFirst {
+        if (!project.hasProperty('file')) {
+            throw new GradleException('Usage: archiveBootstrapExport -Pfile=<absolute-path>')
+        }
+        args "--bootstrap.file=${project.property('file')}"
+    }
+}
+
+tasks.register('archiveBootstrapImport', org.springframework.boot.gradle.tasks.run.BootRun) {
+    group = 'application'
+    description = 'Imports an NDJSON bootstrap archive into an empty content database.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.globaltechblogarchive.GlobalTechBlogArchiveApplication'
+    args '--spring.main.web-application-type=none', '--bootstrap.command=import'
+    doFirst {
+        if (!project.hasProperty('file')) {
+            throw new GradleException('Usage: archiveBootstrapImport -Pfile=<absolute-path>')
+        }
+        args "--bootstrap.file=${project.property('file')}"
+    }
 }

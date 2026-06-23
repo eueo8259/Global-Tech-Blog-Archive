@@ -1,107 +1,69 @@
 # Global Tech Blog Archive
 
-Engineering team blog archive service. Built for developers who want to discover technical articles, engineering stories, architecture decisions, and development experiences shared by engineering teams. Currently in MVP development.
+Engineering team blog archive service for discovering technical articles,
+engineering stories, architecture decisions, and development experiences from
+engineering teams. Currently in MVP development.
 
-## Tech Layers
+## Project
 
-- **Backend**: Java 21, Spring Boot 3.5, Spring Data JPA
-- **Frontend**: React 19, TypeScript 5, Vite
-- **Database**: MySQL 8.4 LTS
+- Backend: Java 21, Spring Boot 3.5, Spring Data JPA
+- Frontend: React 19, TypeScript 5, Vite
+- Database: MySQL 8.4 LTS
 
-## Project Structure
+## Scope Rules
 
-```text
-backend/      # Java 21, Spring Boot, Spring Data JPA
-frontend/     # React, TypeScript, Vite
-docs/         # Detailed design notes and decisions
-```
+Read this file first, then read the nearest lower-scope `AGENTS.md` before
+changing files in a subdirectory.
 
-## Key Files
+- `backend/AGENTS.md`: backend-specific rules
+- `frontend/AGENTS.md`: frontend-specific rules
+- `docs/git-workflow.md`: branch, issue, commit, and PR rules
+- `backend/docs/`: backend implementation, API, persistence, and testing rules
 
-```text
-backend/
-|-- src/main/java/       # Backend application source code
-|-- src/test/java/       # Backend tests
-|-- src/main/resources/  # Backend configuration files
-`-- build.gradle         # Backend build and dependency configuration
+## Core Principles
 
-frontend/
-|-- src/                 # Frontend application source code
-|-- package.json         # Frontend scripts and dependencies
-`-- vite.config.ts       # Vite configuration
+- Prefer MVP over completeness.
+- Prefer simple solutions over complex abstractions.
+- Build functionality incrementally in small steps.
+- Match existing architecture and style before inventing new patterns.
+- Keep changes surgical; do not mix unrelated scopes in one PR.
+- Authentication is not required for the initial MVP.
 
-docs/
-|-- git-workflow.md              # Branch, issue, commit, and PR workflow rules
-|-- article-source-strategy.md   # Article source, company, and category strategy
-|-- architecture.md              # MVP system architecture and responsibility boundaries
-|-- domain-model.md              # MVP database schema and domain model
-`-- documentation-workflow.md    # Repo docs and Notion documentation workflow
-```
+## Safety Gates
 
-## Commands
+Discuss before implementing changes that affect:
 
-```bash
-# Backend
-cd backend
-./gradlew test        # Unit tests
-./gradlew build       # Build
-./gradlew bootRun     # Development server (port: 8080)
+- architecture or cross-cutting package structure
+- database schema or migrations
+- dependencies or major version upgrades
+- public API contracts or deployment settings
 
-# Frontend
-cd frontend
-npm install           # Install dependencies
-npm run dev           # Development server (port: 5173)
-npm run build         # Typecheck + production build
-npm run lint          # Lint
+## Verification
 
-# Database
-docker compose up -d mysql    # Start MySQL development DB (port: 3306)
-docker compose down           # Stop MySQL development DB
-```
+Run the smallest relevant check that proves the change.
 
-- Backend typecheck: included in `./gradlew build`
-- Frontend typecheck: included in `npm run build`
-- E2E test: TBD
-- Required checks before completion: `cd backend && ./gradlew test build`, `cd frontend && npm run build && npm run lint`
+- Backend details: `backend/AGENTS.md` and `backend/docs/testing-guidelines.md`
+- Frontend details: `frontend/AGENTS.md`, if present
+- Report commands run and whether they passed
+- If verification cannot run, explain why and what risk remains
 
-## Engineering Principles
+## Git And PR Workflow
 
-### Development Approach
+Follow `docs/git-workflow.md`.
 
-* Prefer MVP over completeness.
-* Prefer simple solutions over complex abstractions.
-* Build functionality incrementally in small steps.
-* Authentication is not required for the initial MVP.
+- Do not implement on `main`.
+- Work from an issue branch created from `develop`.
+- Before branch, commit, push, or PR actions, run the automation checklist in `docs/git-workflow.md`.
+- Use Conventional Commit style for commit messages and PR titles.
+- Use `.github/PULL_REQUEST_TEMPLATE.md` for PR bodies when it exists.
 
-### Change Management
+## Documentation Map
 
-Discuss the following changes before implementation:
-
-* Architecture changes
-* Database schema changes
-* New dependency additions
-
-### Implementation Gate
-
-Before code implementation or repo-tracked file edits for a feature/change:
-
-* Check the current branch.
-* Do not implement on `main`.
-* If not already on an issue branch, stop and create or ask for the GitHub Issue and branch first.
-* Working branches must follow docs/git-workflow.md.
-
-### Documentation
-
-- Detailed design decisions belong in docs/.
-- Detailed Git workflow rules belong in docs/git-workflow.md.
-- Article source and category strategy belongs in docs/article-source-strategy.md.
-- Architecture and domain model decisions belong in docs/architecture.md and docs/domain-model.md.
-- Notion documentation workflow belongs in docs/documentation-workflow.md.
-
-## Common Mistakes to Avoid
-
-TBD
-
-## Git Workflow
-
-Follow docs/git-workflow.md.
+- Repository design decisions: `docs/`
+- Git workflow details: `docs/git-workflow.md`
+- Domain model: `docs/domain-model.md`
+- Source strategy: `docs/article-source-strategy.md`
+- Architecture: `docs/architecture.md`
+- Notion workflow: `docs/documentation-workflow.md`
+- Backend implementation guidance: `backend/docs/`
+- Frontend implementation guidance: `frontend/docs/`
