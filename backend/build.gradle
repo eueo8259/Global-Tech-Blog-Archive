@@ -50,6 +50,10 @@ tasks.register('realTest', Test) {
     shouldRunAfter test
 }
 
+bootJar {
+    archiveFileName = 'app.jar'
+}
+
 tasks.register('archiveBootstrapExport', org.springframework.boot.gradle.tasks.run.BootRun) {
     group = 'application'
     description = 'Exports articles and AI decisions to an NDJSON bootstrap archive.'
