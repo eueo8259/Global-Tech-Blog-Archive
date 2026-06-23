@@ -53,6 +53,12 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Debug AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Debug CloudFront distributions
+        run: aws cloudfront list-distributions --query "DistributionList.Items[].{Id:Id,Domain:DomainName,Comment:Comment}" --output table
+
       - name: Upload frontend assets to S3
         run: aws s3 sync dist s3://${{ secrets.FRONTEND_S3_BUCKET }} --delete
 
