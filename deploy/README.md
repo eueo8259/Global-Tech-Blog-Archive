@@ -77,6 +77,8 @@ Required AWS setup:
 
 - GitHub Actions OIDC role can push to and read from the backend ECR repository,
   and send SSM commands to the target EC2 instance.
+  Docker push checks the pushed image manifest, so the role needs ECR read
+  actions such as `ecr:BatchGetImage` in addition to write actions.
 - EC2 instance profile has `AmazonSSMManagedInstanceCore` and
   `AmazonEC2ContainerRegistryReadOnly`.
 - SSM Agent is running and the EC2 instance appears as a managed node.

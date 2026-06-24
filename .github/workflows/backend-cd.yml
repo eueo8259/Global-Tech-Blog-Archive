@@ -52,6 +52,28 @@ jobs:
           echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
           echo "image-tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
+      - name: Check ECR push prerequisites
+        run: |
+          aws ecr describe-repositories \
+            --repository-names "${{ secrets.BACKEND_ECR_REPOSITORY }}" \
+            --region "${{ secrets.AWS_REGION }}" \
+            --output text >/dev/null
+
+          set +e
+          BATCH_GET_OUTPUT=$(aws ecr batch-get-image \
+            --repository-name "${{ secrets.BACKEND_ECR_REPOSITORY }}" \
+            --image-ids imageTag=latest \
+            --region "${{ secrets.AWS_REGION }}" \
+            --output text 2>&1)
+          BATCH_GET_STATUS=$?
+          set -e
+
+          if [ "${BATCH_GET_STATUS}" -ne 0 ] && echo "${BATCH_GET_OUTPUT}" | grep -qi "AccessDenied"; then
+            echo "::error::Missing ECR read permission. Add ecr:BatchGetImage to the backend GitHub Actions role."
+            echo "${BATCH_GET_OUTPUT}"
+            exit 1
+          fi
+
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region "${{ secrets.AWS_REGION }}" \
