@@ -95,7 +95,7 @@ jobs:
           cat > ssm-commands.json <<'JSON'
           {
             "commands": [
-              "set -euo pipefail",
+              "set -eu",
               "if ! command -v aws >/dev/null 2>&1; then apt-get update && apt-get install -y curl unzip && curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip -o /tmp/awscliv2.zip && unzip -q -o /tmp/awscliv2.zip -d /tmp && /tmp/aws/install --update; fi",
               "cd /home/ubuntu/Global-Tech-Blog-Archive",
               "sudo -u ubuntu git -C /home/ubuntu/Global-Tech-Blog-Archive checkout main",
