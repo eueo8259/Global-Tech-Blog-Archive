@@ -1,0 +1,45 @@
+name: Backend CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "deploy/**"
+      - "docker-compose.prod.yml"
+      - ".github/workflows/backend-cd.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.BACKEND_EC2_SSH_KEY }}" > ~/.ssh/backend_cd_key
+          chmod 600 ~/.ssh/backend_cd_key
+          ssh-keyscan -H "${{ secrets.BACKEND_EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy Docker Compose stack
+        run: |
+          ssh -i ~/.ssh/backend_cd_key "${{ secrets.BACKEND_EC2_USER }}@${{ secrets.BACKEND_EC2_HOST }}" <<'EOF'
+            set -euo pipefail
+            cd ~/Global-Tech-Blog-Archive
+            git checkout main
+            git pull --ff-only origin main
+            sudo docker compose --env-file .env -f docker-compose.prod.yml up -d --build
+            sudo docker compose --env-file .env -f docker-compose.prod.yml ps
+            curl -fsS http://localhost/health
+          EOF

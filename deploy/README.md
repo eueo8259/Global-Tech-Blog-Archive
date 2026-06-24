@@ -55,3 +55,22 @@ docker compose --env-file .env -f docker-compose.prod.yml down
 
 Keep the `mysql-data` Docker volume unless you intentionally want to remove the
 database.
+
+## GitHub Actions CD
+
+Backend CD deploys the single EC2 Docker Compose stack from the `main` branch.
+The workflow connects to the EC2 instance over SSH, pulls the latest `main`
+branch, rebuilds the backend image, restarts the stack, and checks the Nginx
+health endpoint.
+
+Required repository secrets:
+
+| Secret                | Description                                          |
+| --------------------- | ---------------------------------------------------- |
+| `BACKEND_EC2_HOST`    | EC2 public IP or DNS name                            |
+| `BACKEND_EC2_USER`    | SSH user, for example `ubuntu`                       |
+| `BACKEND_EC2_SSH_KEY` | Private SSH key that can connect to the EC2 instance |
+
+The workflow intentionally keeps production application secrets in the EC2
+`.env` file. It does not copy database passwords or API keys from GitHub
+Secrets into the server.
