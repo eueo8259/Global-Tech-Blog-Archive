@@ -13,9 +13,7 @@ services:
       - techport
 
   backend:
-    build:
-      context: ./backend
-    image: techport-backend:local
+    image: ${BACKEND_IMAGE:-986995923369.dkr.ecr.ap-northeast-2.amazonaws.com/techport-backend:latest}
     container_name: techport-backend
     restart: unless-stopped
     environment:
@@ -48,7 +46,11 @@ services:
     expose:
       - "3306"
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 10

@@ -1,0 +1,112 @@
+name: Backend CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "deploy/**"
+      - "docker-compose.prod.yml"
+      - ".github/workflows/backend-cd.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: backend-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.BACKEND_AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Resolve backend image
+        id: image
+        run: |
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
+          IMAGE_URI="${ECR_REGISTRY}/${{ secrets.BACKEND_ECR_REPOSITORY }}"
+
+          echo "ecr-registry=${ECR_REGISTRY}" >> "$GITHUB_OUTPUT"
+          echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+          echo "image-tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region "${{ secrets.AWS_REGION }}" \
+            | docker login --username AWS --password-stdin "${{ steps.image.outputs.ecr-registry }}"
+
+      - name: Build and push backend image
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            --file backend/Dockerfile \
+            --tag "${{ steps.image.outputs.image-uri }}:${{ steps.image.outputs.image-tag }}" \
+            --tag "${{ steps.image.outputs.image-uri }}:latest" \
+            --push \
+            backend
+
+      - name: Deploy backend stack through SSM
+        run: |
+          cat > ssm-commands.json <<'JSON'
+          {
+            "commands": [
+              "set -euo pipefail",
+              "if ! command -v aws >/dev/null 2>&1; then apt-get update && apt-get install -y curl unzip && curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip -o /tmp/awscliv2.zip && unzip -q -o /tmp/awscliv2.zip -d /tmp && /tmp/aws/install --update; fi",
+              "cd /home/ubuntu/Global-Tech-Blog-Archive",
+              "sudo -u ubuntu git -C /home/ubuntu/Global-Tech-Blog-Archive checkout main",
+              "sudo -u ubuntu git -C /home/ubuntu/Global-Tech-Blog-Archive pull --ff-only origin main",
+              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.image.outputs.ecr-registry }}",
+              "BACKEND_IMAGE=${{ steps.image.outputs.image-uri }}:${{ steps.image.outputs.image-tag }} docker compose --env-file .env -f docker-compose.prod.yml pull backend",
+              "BACKEND_IMAGE=${{ steps.image.outputs.image-uri }}:${{ steps.image.outputs.image-tag }} docker compose --env-file .env -f docker-compose.prod.yml up -d",
+              "docker compose --env-file .env -f docker-compose.prod.yml ps",
+              "curl -fsS http://localhost/health"
+            ]
+          }
+          JSON
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.BACKEND_EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy backend ${GITHUB_SHA}" \
+            --parameters file://ssm-commands.json \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM command id: ${COMMAND_ID}"
+
+          set +e
+          aws ssm wait command-executed \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${{ secrets.BACKEND_EC2_INSTANCE_ID }}"
+          WAIT_STATUS=$?
+          set -e
+
+          aws ssm get-command-invocation \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${{ secrets.BACKEND_EC2_INSTANCE_ID }}" \
+            --query "{Status:Status,StandardOutputContent:StandardOutputContent,StandardErrorContent:StandardErrorContent}" \
+            --output json
+
+          exit "${WAIT_STATUS}"
