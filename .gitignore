@@ -10,6 +10,7 @@ build/
 !.env.example
 !.env.prod.example
 artifacts/bootstrap/
+backend/app.jar
 
 ### Frontend ###
 node_modules/
