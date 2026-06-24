@@ -75,8 +75,8 @@ Required repository secrets:
 
 Required AWS setup:
 
-- GitHub Actions OIDC role can push to the backend ECR repository and send SSM
-  commands to the target EC2 instance.
+- GitHub Actions OIDC role can push to and read from the backend ECR repository,
+  and send SSM commands to the target EC2 instance.
 - EC2 instance profile has `AmazonSSMManagedInstanceCore` and
   `AmazonEC2ContainerRegistryReadOnly`.
 - SSM Agent is running and the EC2 instance appears as a managed node.
