@@ -29,6 +29,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Build backend jar
+        working-directory: backend
+        run: |
+          chmod +x ./gradlew
+          ./gradlew bootJar -x test --no-daemon
+
+      - name: Prepare Docker build artifact
+        run: cp backend/build/libs/app.jar backend/app.jar
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -52,6 +68,28 @@ jobs:
           echo "image-uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
           echo "image-tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
+      - name: Check ECR push prerequisites
+        run: |
+          aws ecr describe-repositories \
+            --repository-names "${{ secrets.BACKEND_ECR_REPOSITORY }}" \
+            --region "${{ secrets.AWS_REGION }}" \
+            --output text >/dev/null
+
+          set +e
+          BATCH_GET_OUTPUT=$(aws ecr batch-get-image \
+            --repository-name "${{ secrets.BACKEND_ECR_REPOSITORY }}" \
+            --image-ids imageTag=latest \
+            --region "${{ secrets.AWS_REGION }}" \
+            --output text 2>&1)
+          BATCH_GET_STATUS=$?
+          set -e
+
+          if [ "${BATCH_GET_STATUS}" -ne 0 ] && echo "${BATCH_GET_OUTPUT}" | grep -qi "AccessDenied"; then
+            echo "::error::Missing ECR read permission. Add ecr:BatchGetImage to the backend GitHub Actions role."
+            echo "${BATCH_GET_OUTPUT}"
+            exit 1
+          fi
+
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region "${{ secrets.AWS_REGION }}" \
@@ -73,7 +111,7 @@ jobs:
           cat > ssm-commands.json <<'JSON'
           {
             "commands": [
-              "set -euo pipefail",
+              "set -eu",
               "if ! command -v aws >/dev/null 2>&1; then apt-get update && apt-get install -y curl unzip && curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip -o /tmp/awscliv2.zip && unzip -q -o /tmp/awscliv2.zip -d /tmp && /tmp/aws/install --update; fi",
               "cd /home/ubuntu/Global-Tech-Blog-Archive",
               "sudo -u ubuntu git -C /home/ubuntu/Global-Tech-Blog-Archive checkout main",
