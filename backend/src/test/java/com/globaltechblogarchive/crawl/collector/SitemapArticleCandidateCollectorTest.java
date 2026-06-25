@@ -66,6 +66,44 @@ class SitemapArticleCandidateCollectorTest {
     }
 
     @Test
+    void recentModeFiltersByDetailPublishedAtAfterSitemapLastModifiedSelection() {
+        BlogSource source = BlogSource.create(
+                Company.create("anthropic", "Anthropic"),
+                "anthropic-engineering",
+                "Anthropic Engineering",
+                "https://www.anthropic.com/engineering",
+                "https://www.anthropic.com/sitemap.xml",
+                CollectionMethod.SITEMAP
+        );
+        String lastModified = OffsetDateTime.now(ZoneOffset.UTC).minusHours(1).toString();
+        String oldPublishedAt = OffsetDateTime.now(ZoneOffset.UTC).minusDays(10).toString();
+        String sitemap = """
+                <urlset>
+                  <url>
+                    <loc>https://www.anthropic.com/engineering/old-but-recently-modified</loc>
+                    <lastmod>%s</lastmod>
+                  </url>
+                </urlset>
+                """.formatted(lastModified);
+        String detail = """
+                <html>
+                  <head>
+                    <meta property="og:title" content="Old But Recently Modified" />
+                    <meta property="article:published_time" content="%s" />
+                  </head>
+                </html>
+                """.formatted(oldPublishedAt);
+        SitemapArticleCandidateCollector collector = new SitemapArticleCandidateCollector(new StubClient(Map.of(
+                "https://www.anthropic.com/sitemap.xml", sitemap,
+                "https://www.anthropic.com/engineering/old-but-recently-modified", detail
+        )));
+
+        var cards = collector.collect(source, CrawlMode.RECENT);
+
+        assertThat(cards).isEmpty();
+    }
+
+    @Test
     void backfillModeFetchesUpToFiftyDetailsAfterSortingSitemapEntries() {
         BlogSource source = BlogSource.create(
                 Company.create("shopify", "Shopify"),
