@@ -1,4 +1,5 @@
 import type { ArticleCategoryFilter, ArticlePage } from './types';
+import { buildApiUrl } from '../../shared/api/client';
 
 interface GetArticlesParams {
   category: ArticleCategoryFilter;
@@ -23,7 +24,7 @@ export async function getArticles({
   if (companyKey) {
     searchParams.set('companyKey', companyKey);
   }
-  const response = await fetch(`/api/articles?${searchParams.toString()}`, { signal });
+  const response = await fetch(buildApiUrl(`/articles?${searchParams.toString()}`), { signal });
 
   if (!response.ok) {
     throw new Error(`Failed to load articles: ${response.status}`);
