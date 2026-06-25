@@ -16,3 +16,9 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+
+crawl:
+  scheduler:
+    enabled: ${CRAWL_SCHEDULER_ENABLED:false}
+    cron: "${CRAWL_SCHEDULER_CRON:0 0 3 * * *}"
+    zone: ${CRAWL_SCHEDULER_ZONE:Asia/Seoul}
