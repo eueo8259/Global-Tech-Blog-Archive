@@ -39,10 +39,11 @@ public class SitemapArticleCandidateCollector implements ArticleCandidateCollect
         List<SitemapEntry> entries = parse(source, fetcher.fetch(sitemapUrl)).stream()
                 .filter(entry -> isArticleUrl(source, entry.location()))
                 .toList();
-        return ArticleCandidateCollectionPolicy.select(entries, mode, SitemapEntry::lastModified).stream()
+        List<ParsedArticle> cards = ArticleCandidateCollectionPolicy.select(entries, mode, SitemapEntry::lastModified).stream()
                 .map(entry -> toCard(source, entry))
                 .filter(card -> !card.originalTitle().isBlank())
                 .toList();
+        return ArticleCandidateCollectionPolicy.apply(cards, mode);
     }
 
     List<SitemapEntry> parse(BlogSource source, String xml) {
