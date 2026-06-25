@@ -4,12 +4,47 @@ This setup runs the production backend stack on one EC2 instance with Docker Com
 
 ## Services
 
-- `nginx`: public gateway on port `80`
+- `nginx`: public gateway on ports `80` and `443`
 - `backend`: Spring Boot API on the internal Docker network
 - `mysql`: MySQL 8.4 on the internal Docker network
 
-Only expose ports `22`, `80`, and later `443` in the EC2 security group. Do not
-open `8080` or `3306` to the internet.
+Only expose ports `22`, `80`, and `443` in the EC2 security group. Do not open
+`8080` or `3306` to the internet.
+
+## HTTPS Certificates
+
+Nginx terminates HTTPS for `api.techport.dev` and proxies API requests to the
+backend container over the internal Docker network.
+
+Certificate files live on the EC2 host under `/etc/letsencrypt` and are mounted
+read-only into the Nginx container. Do not copy certificate files, private keys,
+or Certbot account files into this repository.
+
+Before deploying the HTTPS Nginx config for the first time, issue the
+certificate on the EC2 host. The first issuance can use standalone mode while
+Nginx is stopped because no certificate exists yet.
+
+```bash
+sudo mkdir -p /var/www/certbot
+docker compose --env-file .env -f docker-compose.prod.yml stop nginx
+sudo certbot certonly --standalone -d api.techport.dev
+docker compose --env-file .env -f docker-compose.prod.yml up -d
+```
+
+After the HTTPS config is running, renew with the webroot path served by Nginx.
+
+```bash
+sudo certbot renew --webroot -w /var/www/certbot
+docker compose --env-file .env -f docker-compose.prod.yml exec nginx nginx -s reload
+```
+
+Check HTTPS after deployment.
+
+```bash
+curl -i https://api.techport.dev/health
+curl -i https://api.techport.dev/api/articles
+curl -I http://api.techport.dev/health
+```
 
 ## First Deploy
 
@@ -30,8 +65,8 @@ docker compose --env-file .env -f docker-compose.prod.yml up -d
 Check the gateway and API.
 
 ```bash
-curl http://localhost/health
-curl http://localhost/api/articles
+curl -i https://api.techport.dev/health
+curl -i https://api.techport.dev/api/articles
 ```
 
 ## Operations
