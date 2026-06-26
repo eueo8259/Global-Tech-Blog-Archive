@@ -43,6 +43,7 @@ public class ArticleCandidateFactory {
                     articleUrl,
                     card.publishedAt(),
                     TextCleaner.shortContext(card.shortContext(), card.originalTitle()),
+                    card.categoryHint(),
                     articleUrlHash,
                     duplicate,
                     decisionStatus(decision),

@@ -20,6 +20,8 @@ class FeedArticleCandidateCollectorTest {
                     <title>Scaling Java services</title>
                     <link>/engineering/scaling-java</link>
                     <pubDate>Mon, 01 Jun 2026 10:00:00 GMT</pubDate>
+                    <category>Backend</category>
+                    <category><![CDATA[Production Engineering]]></category>
                     <description><![CDATA[<p>How the platform team scaled backend services.</p>]]></description>
                   </item>
                 </channel></rss>
@@ -32,6 +34,7 @@ class FeedArticleCandidateCollectorTest {
         assertThat(cards.getFirst().originalUrl()).isEqualTo("https://example.com/engineering/scaling-java");
         assertThat(cards.getFirst().publishedAt()).isEqualTo("2026-06-01T10:00:00");
         assertThat(cards.getFirst().shortContext()).contains("platform team");
+        assertThat(cards.getFirst().categoryHint()).isEqualTo("Backend, Production Engineering");
     }
 
     @Test
@@ -43,6 +46,7 @@ class FeedArticleCandidateCollectorTest {
                     <title>Realtime collaboration architecture</title>
                     <link rel="alternate" href="https://example.com/blog/realtime" />
                     <published>2026-06-02T11:30:00Z</published>
+                    <category term="Frontend" />
                     <summary>Architecture notes from the editor team.</summary>
                   </entry>
                 </feed>
@@ -54,6 +58,7 @@ class FeedArticleCandidateCollectorTest {
         assertThat(cards.getFirst().originalTitle()).isEqualTo("Realtime collaboration architecture");
         assertThat(cards.getFirst().originalUrl()).isEqualTo("https://example.com/blog/realtime");
         assertThat(cards.getFirst().shortContext()).isEqualTo("Architecture notes from the editor team.");
+        assertThat(cards.getFirst().categoryHint()).isEqualTo("Frontend");
     }
 
     private BlogSource source(CollectionMethod method) {

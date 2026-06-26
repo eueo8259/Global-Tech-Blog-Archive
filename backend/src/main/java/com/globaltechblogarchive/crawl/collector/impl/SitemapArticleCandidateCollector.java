@@ -83,7 +83,8 @@ public class SitemapArticleCandidateCollector implements ArticleCandidateCollect
                 cleanTitle(title, source.getCompany().getCompanyName()),
                 entry.location(),
                 publishedAt,
-                TextCleaner.shortContext(description, title)
+                TextCleaner.shortContext(description, title),
+                HtmlMetadataExtractor.categoryHint(html)
         );
     }
 

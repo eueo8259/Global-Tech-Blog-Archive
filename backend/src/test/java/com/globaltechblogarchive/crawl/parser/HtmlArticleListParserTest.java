@@ -28,7 +28,7 @@ class HtmlArticleListParserTest {
                 <main>
                   <nav><a href="/careers">Jobs</a><a href="/feed">RSS</a></nav>
                   <article class="article-card">
-                    <span>%s</span>
+                    <span class="category-label">%s</span>
                     <time datetime="2026-06-01">June 1, 2026</time>
                     <a href="%s">How we improved engineering systems</a>
                     <p>Deep notes about %s and production lessons.</p>
@@ -44,6 +44,7 @@ class HtmlArticleListParserTest {
         assertThat(cards.getFirst().originalUrl()).startsWith("http");
         assertThat(cards.getFirst().shortContext()).isNotBlank();
         assertThat(cards.getFirst().shortContext()).hasSizeLessThanOrEqualTo(500);
+        assertThat(cards.getFirst().categoryHint()).isEqualTo(signal);
     }
 
     @org.junit.jupiter.api.Test
