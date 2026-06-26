@@ -98,7 +98,8 @@ public class ArticleDecisionProcessor {
             inputs.add(new ArticleMetadataInput(
                     index,
                     candidate.originalTitle(),
-                    candidate.shortContext()
+                    candidate.shortContext(),
+                    candidate.categoryHint()
             ));
         }
         return inputs;

@@ -76,6 +76,7 @@ class ArticleDecisionProcessorTest {
         verify(aiClient, times(2)).decide(inputs.capture());
         assertThat(inputs.getAllValues()).allSatisfy(batch -> assertThat(batch).hasSize(10));
         assertThat(inputs.getAllValues().getFirst().getFirst().shortContext()).isEqualTo("Context 0");
+        assertThat(inputs.getAllValues().getFirst().getFirst().categoryHint()).isEqualTo("Category 0");
         assertThat(processed.candidates().subList(0, 10))
                 .extracting(ArticleCandidate::decisionStatus)
                 .containsOnly(ArticleCandidateDecisionStatus.AI_FAILED);
@@ -135,6 +136,7 @@ class ArticleDecisionProcessorTest {
                     "https://example.com/article-" + index,
                     LocalDateTime.of(2026, 6, 1, 10, 0).minusHours(index),
                     "Context " + index,
+                    "Category " + index,
                     "hash-" + index,
                     false,
                     ArticleCandidateDecisionStatus.NEW,
