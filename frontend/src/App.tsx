@@ -40,6 +40,13 @@ function App() {
       <header className="site-header">
         <div className="header-content">
           <a className="site-logo" href="/" aria-label="TechPort 홈">
+            <img
+              className="site-logo-icon"
+              src="/techport-icon.png"
+              alt=""
+              width="40"
+              height="40"
+            />
             TechPort
           </a>
           <p className="site-description">

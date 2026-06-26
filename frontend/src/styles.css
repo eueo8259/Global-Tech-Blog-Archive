@@ -60,13 +60,21 @@ a {
 }
 
 .site-logo {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
   color: #111111;
   font-size: 2.25rem;
   font-weight: 700;
-  letter-spacing: -0.025em;
   line-height: 1.22;
   text-decoration: none;
+}
+
+.site-logo-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 10px;
 }
 
 .site-description {
