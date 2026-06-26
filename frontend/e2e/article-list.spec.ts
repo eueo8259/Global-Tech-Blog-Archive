@@ -41,6 +41,7 @@ test('shows the prototype-style article archive without an ELSE filter', async (
 
   await page.goto('/');
 
+  await expect(page).toHaveTitle('TechPort');
   await expect(page.getByRole('link', { name: 'TechPort 홈' })).toBeVisible();
   await expect(
     page.getByText('세계적인 기술 기업의 엔지니어링 블로그를 한곳에서 만나보세요.'),
