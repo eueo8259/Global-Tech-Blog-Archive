@@ -49,7 +49,7 @@ OpenAI, Netflix, Meta, GitHub 등 글로벌 기술 기업의 엔지니어링 아
 
 ## 아키텍처
 
-![TechPort 인프라 아키텍처](docs/images/techport-architecture-v3.svg)
+![TechPort 인프라 아키텍처](docs/images/techport-architecture-v4.svg)
 
 프론트엔드는 Vercel에서 제공하고, API 요청은 AWS EC2의 Nginx를 거쳐
 Spring Boot 애플리케이션으로 전달됩니다. Spring Boot와 MySQL은 동일한
