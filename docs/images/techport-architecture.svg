@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="860" viewBox="0 0 1400 860" role="img" aria-labelledby="title description">
+  <title id="title">TechPort 인프라 아키텍처</title>
+  <desc id="description">Vercel 프론트엔드와 AWS EC2 백엔드, MySQL, 외부 기술 블로그, OpenAI API 및 GitHub Actions 배포 흐름</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#14213d" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#344054"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .title { font: 700 30px Arial, "Noto Sans KR", sans-serif; fill: #111827; }
+      .subtitle { font: 400 15px Arial, "Noto Sans KR", sans-serif; fill: #667085; }
+      .section { font: 700 18px Arial, "Noto Sans KR", sans-serif; fill: #344054; }
+      .label { font: 700 18px Arial, "Noto Sans KR", sans-serif; fill: #101828; }
+      .small { font: 400 14px Arial, "Noto Sans KR", sans-serif; fill: #475467; }
+      .tiny { font: 600 12px Arial, "Noto Sans KR", sans-serif; fill: #667085; }
+      .box { fill: #ffffff; stroke: #d0d5dd; stroke-width: 2; rx: 14; filter: url(#shadow); }
+      .arrow { fill: none; stroke: #344054; stroke-width: 2.5; marker-end: url(#arrow); }
+      .deploy { fill: none; stroke: #2563eb; stroke-width: 2.5; stroke-dasharray: 8 7; marker-end: url(#arrowBlue); }
+    </style>
+  </defs>
+
+  <rect width="1400" height="860" fill="#ffffff"/>
+  <text x="55" y="58" class="title">TechPort Infrastructure Architecture</text>
+  <text x="55" y="86" class="subtitle">실제 운영 환경의 요청 처리, 외부 연동 및 백엔드 배포 흐름</text>
+
+  <!-- Runtime flow -->
+  <rect x="48" y="122" width="1304" height="438" rx="20" fill="#f8fafc" stroke="#e4e7ec" stroke-width="2"/>
+  <text x="72" y="157" class="section">서비스 요청 흐름</text>
+
+  <!-- User -->
+  <circle cx="119" cy="301" r="35" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <circle cx="119" cy="289" r="10" fill="#6366f1"/>
+  <path d="M99 321 C102 303,136 303,139 321" fill="#6366f1"/>
+  <text x="119" y="360" text-anchor="middle" class="label">사용자</text>
+  <text x="119" y="383" text-anchor="middle" class="small">Browser</text>
+
+  <!-- Vercel -->
+  <rect x="225" y="232" width="220" height="145" class="box"/>
+  <path d="M335 257 L358 296 L312 296 Z" fill="#111827"/>
+  <text x="335" y="329" text-anchor="middle" class="label">Vercel</text>
+  <text x="335" y="353" text-anchor="middle" class="small">React · TypeScript · Vite</text>
+
+  <!-- HTTPS -->
+  <path d="M157 301 H218" class="arrow"/>
+  <text x="187" y="287" text-anchor="middle" class="tiny">HTTPS</text>
+
+  <!-- AWS boundary -->
+  <rect x="520" y="185" width="780" height="330" rx="18" fill="#fffaf0" stroke="#f59e0b" stroke-width="2.5"/>
+  <rect x="544" y="166" width="158" height="38" rx="8" fill="#ff9900"/>
+  <text x="623" y="191" text-anchor="middle" style="font:700 16px Arial, sans-serif;fill:#232f3e">AWS · Seoul Region</text>
+
+  <!-- EC2 boundary -->
+  <rect x="550" y="225" width="720" height="255" rx="16" fill="#ffffff" stroke="#f7b84b" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="575" y="255" class="section">EC2 · Docker Compose</text>
+
+  <!-- Nginx -->
+  <rect x="585" y="292" width="178" height="116" rx="14" fill="#ecfdf3" stroke="#12b76a" stroke-width="2"/>
+  <polygon points="618,320 640,307 662,320 662,347 640,360 618,347" fill="#009639"/>
+  <text x="682" y="333" class="label">Nginx</text>
+  <text x="674" y="381" text-anchor="middle" class="small">HTTPS · Reverse Proxy</text>
+
+  <!-- Spring -->
+  <rect x="820" y="292" width="190" height="116" rx="14" fill="#f0fdf4" stroke="#65a30d" stroke-width="2"/>
+  <circle cx="859" cy="333" r="24" fill="#6db33f"/>
+  <path d="M846 336 C854 319,872 319,877 324 C866 325,854 332,849 344" fill="none" stroke="#ffffff" stroke-width="3"/>
+  <text x="891" y="338" class="label">Spring Boot</text>
+  <text x="915" y="381" text-anchor="middle" class="small">Java 21 · REST API · Collector</text>
+
+  <!-- MySQL -->
+  <rect x="1068" y="292" width="165" height="116" rx="14" fill="#eff8ff" stroke="#2e90fa" stroke-width="2"/>
+  <ellipse cx="1110" cy="324" rx="25" ry="10" fill="#4479a1"/>
+  <path d="M1085 324 V350 C1085 363,1135 363,1135 350 V324" fill="#4479a1"/>
+  <ellipse cx="1110" cy="350" rx="25" ry="10" fill="#315d7c"/>
+  <text x="1170" y="340" text-anchor="middle" class="label">MySQL</text>
+  <text x="1150" y="381" text-anchor="middle" class="small">8.4 LTS</text>
+
+  <path d="M445 304 H578" class="arrow"/>
+  <text x="511" y="290" text-anchor="middle" class="tiny">api.techport.dev</text>
+  <path d="M763 350 H813" class="arrow"/>
+  <text x="788" y="337" text-anchor="middle" class="tiny">:8080</text>
+  <path d="M1010 350 H1061" class="arrow"/>
+  <text x="1035" y="337" text-anchor="middle" class="tiny">JPA</text>
+
+  <!-- External integrations -->
+  <rect x="584" y="432" width="650" height="50" rx="10" fill="#f9fafb" stroke="#d0d5dd"/>
+  <text x="604" y="462" class="small">컨테이너 내부 네트워크 · 외부에는 Nginx의 80/443 포트만 공개</text>
+
+  <rect x="705" y="575" width="250" height="96" class="box"/>
+  <text x="830" y="610" text-anchor="middle" class="label">글로벌 기술 블로그</text>
+  <text x="830" y="637" text-anchor="middle" class="small">RSS · Atom · Sitemap · HTML</text>
+
+  <rect x="1025" y="575" width="220" height="96" class="box"/>
+  <circle cx="1070" cy="616" r="22" fill="#111827"/>
+  <text x="1148" y="612" text-anchor="middle" class="label">OpenAI API</text>
+  <text x="1148" y="638" text-anchor="middle" class="small">선별 · 번역 · 분류</text>
+
+  <path d="M830 575 V505 H915 V415" class="arrow"/>
+  <path d="M1135 575 V505 H960 V415" class="arrow"/>
+
+  <!-- Deployment flow -->
+  <rect x="48" y="710" width="1304" height="105" rx="20" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2"/>
+  <text x="72" y="744" class="section">백엔드 배포 흐름</text>
+
+  <rect x="235" y="738" width="190" height="55" rx="12" fill="#ffffff" stroke="#98a2b3" stroke-width="2"/>
+  <circle cx="270" cy="765" r="16" fill="#24292f"/>
+  <text x="340" y="771" text-anchor="middle" class="label">GitHub Actions</text>
+
+  <rect x="545" y="738" width="170" height="55" rx="12" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+  <text x="630" y="771" text-anchor="middle" class="label">Amazon ECR</text>
+
+  <rect x="835" y="738" width="170" height="55" rx="12" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+  <text x="920" y="771" text-anchor="middle" class="label">AWS SSM</text>
+
+  <rect x="1120" y="738" width="150" height="55" rx="12" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+  <text x="1195" y="771" text-anchor="middle" class="label">EC2 배포</text>
+
+  <path d="M425 765 H538" class="deploy"/>
+  <text x="481" y="751" text-anchor="middle" class="tiny">Docker image push</text>
+  <path d="M715 765 H828" class="deploy"/>
+  <text x="771" y="751" text-anchor="middle" class="tiny">image tag</text>
+  <path d="M1005 765 H1113" class="deploy"/>
+  <text x="1059" y="751" text-anchor="middle" class="tiny">pull &amp; restart</text>
+</svg>

@@ -49,23 +49,15 @@ OpenAI, Netflix, Meta, GitHub 등 글로벌 기술 기업의 엔지니어링 아
 
 ## 아키텍처
 
-```mermaid
-flowchart LR
-    Blogs["글로벌 기술 블로그<br/>RSS · Atom · Sitemap · HTML"]
-    Collector["Article Collector"]
-    AI["AI Review<br/>선별 · 번역 · 분류"]
-    DB[("MySQL")]
-    API["Spring Boot API"]
-    Web["React Web"]
-    User["사용자"]
+![TechPort 인프라 아키텍처](docs/images/techport-architecture.svg)
 
-    Blogs --> Collector --> AI --> DB
-    DB --> API --> Web --> User
-```
+프론트엔드는 Vercel에서 제공하고, API 요청은 AWS EC2의 Nginx를 거쳐
+Spring Boot 애플리케이션으로 전달됩니다. Spring Boot와 MySQL은 동일한
+EC2의 Docker Compose 내부 네트워크에서 통신하며, 외부에는 Nginx만 공개합니다.
 
-수집기는 외부 블로그에서 아티클 메타데이터를 가져오고, AI 검토를 통과한
-글만 MySQL에 저장합니다. Spring Boot API는 최신순 목록과 필터 결과를
-제공하며 React 프론트엔드가 이를 사용자에게 보여줍니다.
+백엔드는 GitHub Actions에서 컨테이너 이미지를 빌드해 Amazon ECR에 저장하고,
+AWS SSM으로 EC2에 배포합니다. Spring Boot 수집기는 외부 기술 블로그에서
+아티클을 가져와 OpenAI API의 선별·번역·분류를 거친 결과를 저장합니다.
 
 ## 프로젝트 구조
 
