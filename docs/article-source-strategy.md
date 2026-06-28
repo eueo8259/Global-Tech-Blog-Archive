@@ -23,7 +23,6 @@ The MVP collects articles only from the following companies:
 | Stripe | Payments, API Design, Database, Developer Experience, Risk/Fraud, Infrastructure |
 | Cloudflare | Network, Security, Edge Computing, Reliability, Infrastructure, Open Source |
 | GitHub | Developer Experience, Platform Engineering, Security, Search, AI/Copilot, Frontend |
-| DoorDash | Logistics, Experimentation, Data Platform, Backend, ML, Reliability |
 | Discord | Realtime Systems, Messaging, Voice, Elixir/Rust, Data, Reliability |
 | Shopify | Commerce Platform, AI/ML, Search, Infrastructure, Mobile, Ruby/Rails |
 | Datadog | Observability, SRE, Metrics/Logs/Traces, Security, Data Platform, AI Observability |
@@ -97,7 +96,6 @@ AI -> Devops -> Architecture -> Backend -> Frontend -> Else
 | Stripe | HTML_SCRAPING | N/A |
 | Cloudflare | RSS | `https://blog.cloudflare.com/tag/engineering/rss/` |
 | GitHub | RSS | `https://github.blog/engineering/feed/` |
-| DoorDash | WORDPRESS_REST | `https://careersatdoordash.com/wp-json/wp/v2/posts?per_page=20&categories=8` |
 | Discord | HTML_SCRAPING | N/A |
 | Shopify | SITEMAP | `https://shopify.engineering/sitemap.xml` |
 | Datadog | RSS | `https://www.datadoghq.com/blog/engineering/index.xml` |

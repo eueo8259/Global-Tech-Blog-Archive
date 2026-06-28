@@ -18,7 +18,7 @@ The MVP stores article metadata only. It does not store full article bodies, use
 | Category | The single primary classification assigned to an article. |
 | Article URL | The external article URL provided by the source and returned to users. |
 | Article URL Hash | SHA-256 hash of the article URL used for database uniqueness. |
-| Collection Method | The method used to collect from a source: `RSS`, `ATOM`, or `HTML_SCRAPING`. |
+| Collection Method | The method used to collect from a source: `RSS`, `ATOM`, `SITEMAP`, or `HTML_SCRAPING`. |
 
 ## 3. Entities
 
@@ -121,7 +121,7 @@ Database table: `blog_sources`
 | source_name | VARCHAR(100) | yes | Display name for this source |
 | site_url | VARCHAR(500) | yes | Blog home or engineering page URL |
 | feed_url | VARCHAR(500) | no | RSS/Atom URL; null for HTML scraping |
-| collection_method | VARCHAR(30) | yes | Java enum value: `RSS`, `ATOM`, or `HTML_SCRAPING` |
+| collection_method | VARCHAR(30) | yes | Java enum value: `RSS`, `ATOM`, `SITEMAP`, or `HTML_SCRAPING` |
 | enabled | TINYINT(1) | yes | `1` means collect this source; `0` means skip |
 | last_collected_at | DATETIME | no | Last successful collection time |
 | last_error_at | DATETIME | no | Last failed collection time |
@@ -137,7 +137,7 @@ UNIQUE KEY uq_blog_sources_source_key (source_key);
 
 Field rules:
 
-- `feed_url` is required when `collection_method` is `RSS` or `ATOM`.
+- `feed_url` is required when `collection_method` is `RSS`, `ATOM`, or `SITEMAP`.
 - `feed_url` must be null when `collection_method` is `HTML_SCRAPING`.
 - `enabled` defaults to `1`.
 
@@ -175,6 +175,7 @@ The aggregate does not include:
 - Initial collection keeps up to 20 candidates per source without a date window; dated candidates are ordered newest first and undated candidates fill remaining positions afterward.
 - Each source collection is committed independently so one source failure does not roll back successful results from other sources in the same run.
 - RSS and Atom collection use `feed_url`.
+- Sitemap collection uses `feed_url`.
 - HTML scraping uses `site_url`.
 - Article category assignment is handled by AI decision before persistence.
 - Each article has exactly one stored category.

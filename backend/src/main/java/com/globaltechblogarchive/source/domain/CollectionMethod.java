@@ -4,6 +4,5 @@ public enum CollectionMethod {
     RSS,
     ATOM,
     SITEMAP,
-    HTML_SCRAPING,
-    WORDPRESS_REST
+    HTML_SCRAPING
 }
