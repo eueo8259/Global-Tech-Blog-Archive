@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">TechPort 서버 아키텍처</title>
+  <desc id="desc">사용자 요청, EC2 Docker Compose 내부 통신, 외부 기술 블로그와 OpenAI 연동, GitHub Actions 배포 흐름</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#0f172a" flood-opacity=".10"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0 0v6l9-3z" fill="#334155"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0 0v6l9-3z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .h1{font:700 31px Arial,"Noto Sans KR",sans-serif;fill:#0f172a}
+      .sub{font:400 15px Arial,"Noto Sans KR",sans-serif;fill:#64748b}
+      .section{font:700 17px Arial,"Noto Sans KR",sans-serif;fill:#334155}
+      .name{font:700 18px Arial,"Noto Sans KR",sans-serif;fill:#0f172a}
+      .body{font:400 13px Arial,"Noto Sans KR",sans-serif;fill:#64748b}
+      .tiny{font:600 12px Arial,"Noto Sans KR",sans-serif;fill:#64748b}
+      .card{fill:#fff;stroke:#cbd5e1;stroke-width:1.8;filter:url(#shadow)}
+      .flow{fill:none;stroke:#334155;stroke-width:2.4;marker-end:url(#arrow)}
+      .deploy{fill:none;stroke:#2563eb;stroke-width:2.4;stroke-dasharray:8 7;marker-end:url(#arrowBlue)}
+    </style>
+  </defs>
+
+  <rect width="1440" height="900" fill="#fff"/>
+  <text x="52" y="55" class="h1">TechPort Server Architecture</text>
+  <text x="52" y="82" class="sub">서비스 요청부터 아티클 수집·AI 처리·저장, 그리고 운영 배포까지</text>
+
+  <!-- Client -->
+  <rect x="45" y="120" width="220" height="520" rx="18" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="67" y="153" class="section">CLIENT</text>
+  <circle cx="155" cy="228" r="38" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <circle cx="155" cy="215" r="11" fill="#6366f1"/>
+  <path d="M132 248c4-21 42-21 46 0" fill="#6366f1"/>
+  <text x="155" y="290" text-anchor="middle" class="name">사용자</text>
+  <text x="155" y="313" text-anchor="middle" class="body">Web Browser</text>
+
+  <rect x="80" y="385" width="150" height="120" rx="14" class="card"/>
+  <path d="M155 410l24 41h-48z" fill="#111827"/>
+  <text x="155" y="477" text-anchor="middle" class="name">Vercel</text>
+  <text x="155" y="496" text-anchor="middle" class="body">React · Vite</text>
+  <path d="M155 328v49" class="flow"/>
+  <text x="168" y="358" class="tiny">HTTPS</text>
+
+  <!-- AWS -->
+  <rect x="330" y="120" width="780" height="600" rx="20" fill="#fffaf0" stroke="#f59e0b" stroke-width="2.5"/>
+  <rect x="350" y="102" width="215" height="38" rx="8" fill="#ff9900"/>
+  <text x="457" y="127" text-anchor="middle" style="font:700 16px Arial,sans-serif;fill:#232f3e">AWS · ap-northeast-2</text>
+
+  <!-- EC2 -->
+  <rect x="370" y="170" width="700" height="500" rx="18" fill="#fff" stroke="#f6ad37" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="395" y="204" class="section">EC2 INSTANCE</text>
+
+  <!-- Public edge -->
+  <rect x="405" y="235" width="630" height="125" rx="15" fill="#f0fdf4" stroke="#86efac" stroke-width="1.7"/>
+  <text x="425" y="262" class="tiny">PUBLIC ENTRY</text>
+  <rect x="535" y="270" width="360" height="65" rx="12" fill="#fff" stroke="#22c55e" stroke-width="2"/>
+  <polygon points="563,286 578,277 593,286 593,305 578,314 563,305" fill="#009639"/>
+  <text x="620" y="299" class="name">Nginx</text>
+  <text x="620" y="319" class="body">TLS 종료 · Reverse Proxy · 80/443 공개</text>
+
+  <!-- Docker network -->
+  <rect x="405" y="390" width="630" height="235" rx="15" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.7"/>
+  <text x="425" y="419" class="tiny">DOCKER COMPOSE · PRIVATE NETWORK</text>
+
+  <rect x="465" y="458" width="230" height="115" rx="14" class="card"/>
+  <circle cx="510" cy="500" r="27" fill="#6db33f"/>
+  <path d="M494 505c9-21 30-20 36-13-15 1-26 9-31 24" fill="none" stroke="#fff" stroke-width="3"/>
+  <text x="550" y="494" class="name">Spring Boot</text>
+  <text x="550" y="516" class="body">REST API · Collector</text>
+  <text x="550" y="536" class="body">AI Review · Scheduler</text>
+
+  <rect x="755" y="458" width="220" height="115" rx="14" class="card"/>
+  <ellipse cx="800" cy="491" rx="25" ry="10" fill="#4479a1"/>
+  <path d="M775 491v34c0 13 50 13 50 0v-34" fill="#4479a1"/>
+  <ellipse cx="800" cy="525" rx="25" ry="10" fill="#315d7c"/>
+  <text x="842" y="502" class="name">MySQL 8.4</text>
+  <text x="842" y="525" class="body">Article · Company</text>
+  <text x="842" y="545" class="body">AI Decision Cache</text>
+
+  <path d="M895 302h-180v148" class="flow"/>
+  <text x="730" y="377" class="tiny">:8080</text>
+  <path d="M695 516h52" class="flow"/>
+  <text x="721" y="502" text-anchor="middle" class="tiny">JPA</text>
+
+  <!-- Main request from Vercel -->
+  <path d="M230 445h85v-143h212" class="flow"/>
+  <text x="280" y="428" class="tiny">api.techport.dev</text>
+
+  <!-- External -->
+  <rect x="1170" y="120" width="225" height="520" rx="18" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="1192" y="153" class="section">EXTERNAL</text>
+
+  <rect x="1200" y="210" width="165" height="125" rx="14" class="card"/>
+  <circle cx="1282" cy="247" r="24" fill="#e0f2fe"/>
+  <path d="M1262 247h40M1282 227c-13 12-13 28 0 40M1282 227c13 12 13 28 0 40M1259 239h46M1259 255h46" fill="none" stroke="#0284c7" stroke-width="2"/>
+  <text x="1282" y="295" text-anchor="middle" class="name">기술 블로그</text>
+  <text x="1282" y="317" text-anchor="middle" class="body">RSS · Sitemap · HTML</text>
+
+  <rect x="1200" y="405" width="165" height="125" rx="14" class="card"/>
+  <circle cx="1282" cy="446" r="25" fill="#111827"/>
+  <path d="M1270 446c6-14 20-14 25-7-11 0-18 6-21 16M1282 425v42M1261 434l42 24M1303 434l-42 24" fill="none" stroke="#fff" stroke-width="2"/>
+  <text x="1282" y="492" text-anchor="middle" class="name">OpenAI API</text>
+  <text x="1282" y="514" text-anchor="middle" class="body">선별 · 번역 · 분류</text>
+
+  <path d="M695 478h390v-205h107" class="flow"/>
+  <text x="1085" y="260" text-anchor="end" class="tiny">아티클 후보 수집</text>
+  <path d="M695 536h430v-68h67" class="flow"/>
+  <text x="1085" y="522" text-anchor="end" class="tiny">AI 판정 요청</text>
+
+  <!-- Deployment -->
+  <rect x="45" y="765" width="1350" height="100" rx="18" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2"/>
+  <text x="67" y="799" class="section">CI / CD</text>
+
+  <rect x="210" y="786" width="190" height="55" rx="11" fill="#fff" stroke="#94a3b8" stroke-width="1.7"/>
+  <text x="305" y="819" text-anchor="middle" class="name">GitHub Actions</text>
+
+  <rect x="535" y="786" width="170" height="55" rx="11" fill="#fff" stroke="#f59e0b" stroke-width="1.7"/>
+  <text x="620" y="819" text-anchor="middle" class="name">Amazon ECR</text>
+
+  <rect x="840" y="786" width="155" height="55" rx="11" fill="#fff" stroke="#2563eb" stroke-width="1.7"/>
+  <text x="917" y="819" text-anchor="middle" class="name">AWS SSM</text>
+
+  <rect x="1130" y="786" width="165" height="55" rx="11" fill="#fff" stroke="#f59e0b" stroke-width="1.7"/>
+  <text x="1212" y="819" text-anchor="middle" class="name">EC2 Deploy</text>
+
+  <path d="M400 813h127" class="deploy"/>
+  <text x="463" y="800" text-anchor="middle" class="tiny">image push</text>
+  <path d="M705 813h127" class="deploy"/>
+  <text x="768" y="800" text-anchor="middle" class="tiny">image tag</text>
+  <path d="M995 813h127" class="deploy"/>
+  <text x="1058" y="800" text-anchor="middle" class="tiny">pull &amp; restart</text>
+
+  <!-- Legend -->
+  <line x1="910" y1="55" x2="965" y2="55" class="flow"/>
+  <text x="977" y="60" class="body">서비스·데이터 흐름</text>
+  <line x1="1135" y1="55" x2="1190" y2="55" class="deploy"/>
+  <text x="1202" y="60" class="body">배포 흐름</text>
+</svg>
