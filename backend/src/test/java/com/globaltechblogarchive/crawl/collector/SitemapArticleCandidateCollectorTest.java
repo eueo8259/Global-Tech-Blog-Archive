@@ -48,6 +48,7 @@ class SitemapArticleCandidateCollectorTest {
                     <meta property="og:title" content="Building Effective AI Agents" />
                     <meta name="description" content="Practical notes for building reliable agents." />
                     <meta property="article:published_time" content="%s" />
+                    <meta property="article:section" content="AI Research" />
                   </head>
                 </html>
                 """.formatted(publishedAt);
@@ -63,6 +64,7 @@ class SitemapArticleCandidateCollectorTest {
         assertThat(cards.getFirst().originalUrl()).isEqualTo("https://www.anthropic.com/engineering/building-effective-agents");
         assertThat(cards.getFirst().publishedAt()).isNotNull();
         assertThat(cards.getFirst().shortContext()).contains("reliable agents");
+        assertThat(cards.getFirst().categoryHint()).isEqualTo("AI Research");
     }
 
     @Test

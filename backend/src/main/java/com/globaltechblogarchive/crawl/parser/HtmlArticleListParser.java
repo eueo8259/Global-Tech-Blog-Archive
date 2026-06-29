@@ -49,6 +49,12 @@ public class HtmlArticleListParser implements ArticleListParser {
     private static final Pattern TIME = Pattern.compile(
             "(?is)<time\\b[^>]*(?:datetime=[\"']([^\"']+)[\"'])?[^>]*>(.*?)</time>"
     );
+    private static final Pattern CATEGORY_LINK = Pattern.compile(
+            "(?is)<a\\b(?=[^>]*(?:rel|class)=[\"'][^\"']*(category|tag|topic)[^\"']*[\"'])[^>]*>(.*?)</a>"
+    );
+    private static final Pattern CATEGORY_ELEMENT = Pattern.compile(
+            "(?is)<(span|div|p)\\b(?=[^>]*class=[\"'][^\"']*(category|tag|topic)[^\"']*[\"'])[^>]*>(.*?)</\\1>"
+    );
     private static final Pattern DATE_TEXT = Pattern.compile(
             "(?i)(\\b\\w+\\s+\\d{1,2},\\s+\\d{4}\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b|\\b\\d{4}\\.\\d{1,2}\\.\\d{1,2}\\b)"
     );
@@ -100,7 +106,7 @@ public class HtmlArticleListParser implements ArticleListParser {
             }
             String absoluteUrl = UrlNormalizer.absolute(source.getSiteUrl(), href);
             String context = buildContext(config, block, title);
-            return Optional.of(new ParsedArticle(title, absoluteUrl, parseDate(block), context));
+            return Optional.of(new ParsedArticle(title, absoluteUrl, parseDate(block), context, categoryHint(block)));
         }
         return Optional.empty();
     }
@@ -118,7 +124,7 @@ public class HtmlArticleListParser implements ArticleListParser {
             }
             String absoluteUrl = UrlNormalizer.absolute(source.getSiteUrl(), href);
             String context = buildContext(config, contextWindow, title);
-            cards.add(new ParsedArticle(title, absoluteUrl, parseDate(contextWindow), context));
+            cards.add(new ParsedArticle(title, absoluteUrl, parseDate(contextWindow), context, categoryHint(contextWindow)));
         }
         return cards;
     }
@@ -240,6 +246,25 @@ public class HtmlArticleListParser implements ArticleListParser {
 
     private LocalDateTime parseDateValue(String value) {
         return ArticleDateParser.parseListPageDate(value);
+    }
+
+    private String categoryHint(String block) {
+        String hint = firstMatchedText(block, CATEGORY_LINK);
+        if (hint.isBlank()) {
+            hint = firstMatchedText(block, CATEGORY_ELEMENT);
+        }
+        if (hint.isBlank()) {
+            return null;
+        }
+        return hint;
+    }
+
+    private String firstMatchedText(String block, Pattern pattern) {
+        Matcher matcher = pattern.matcher(block);
+        if (matcher.find()) {
+            return TextCleaner.clean(matcher.group(matcher.groupCount()));
+        }
+        return "";
     }
 
     private String firstNonBlank(String first, String second) {

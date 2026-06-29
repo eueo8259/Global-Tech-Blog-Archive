@@ -2,7 +2,6 @@ package com.globaltechblogarchive.crawl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
@@ -10,7 +9,6 @@ import com.globaltechblogarchive.crawl.collector.impl.ArticleDetailExtractor;
 import com.globaltechblogarchive.crawl.collector.impl.FeedArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.collector.impl.HtmlArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.collector.impl.SitemapArticleCandidateCollector;
-import com.globaltechblogarchive.crawl.collector.impl.WordPressRestArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.domain.CrawlMode;
 import com.globaltechblogarchive.crawl.helper.ArticleListParserPropertiesFixture;
 import com.globaltechblogarchive.crawl.parser.ArticleListParserRegistry;
@@ -22,7 +20,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -41,8 +38,7 @@ class RealArticleSourceCollectionCountTest {
                                 new HtmlArticleListParser(ArticleListParserPropertiesFixture.full())
                         )),
                         new ArticleDetailExtractor(fetcher)
-                ),
-                new WordPressRestArticleCandidateCollector(fetcher, new ObjectMapper())
+                )
         );
 
         List<SourceCount> counts = sources().stream()

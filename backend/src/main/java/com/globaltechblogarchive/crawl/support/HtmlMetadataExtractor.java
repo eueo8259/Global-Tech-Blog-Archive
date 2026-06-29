@@ -9,6 +9,7 @@ public final class HtmlMetadataExtractor {
     private static final Pattern DATE_PUBLISHED = Pattern.compile("(?is)datePublished[\"']?\\s*[:=]\\s*[\"']([^\"']+)[\"']");
     private static final Pattern SCRIPT_STYLE_SVG = Pattern.compile("(?is)<(script|style|svg)\\b[^>]*>.*?</\\1>");
     private static final Pattern PARAGRAPH = Pattern.compile("(?is)<p\\b[^>]*>(.*?)</p>");
+    private static final Pattern COMMA_WHITESPACE = Pattern.compile("\\s*,\\s*");
     private static final String DATE_TEXT = "((January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{1,2},\\s+\\d{4}|\\d{4}\\.\\d{1,2}\\.\\d{1,2})";
 
     private HtmlMetadataExtractor() {
@@ -76,6 +77,20 @@ public final class HtmlMetadataExtractor {
         return "";
     }
 
+    public static String categoryHint(String html) {
+        String hint = firstNonBlank(
+                metaContent(html, "article:section"),
+                metaContent(html, "category"),
+                metaContent(html, "keywords"),
+                jsonLdText(html, "articleSection"),
+                jsonLdText(html, "keywords")
+        );
+        if (hint.isBlank()) {
+            return null;
+        }
+        return COMMA_WHITESPACE.matcher(hint).replaceAll(", ");
+    }
+
     public static String firstParagraph(String html) {
         Matcher matcher = PARAGRAPH.matcher(removeNonContentElements(html));
         while (matcher.find()) {
@@ -92,5 +107,14 @@ public final class HtmlMetadataExtractor {
             return "";
         }
         return SCRIPT_STYLE_SVG.matcher(html).replaceAll(" ");
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
     }
 }

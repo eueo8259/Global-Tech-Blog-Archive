@@ -1,18 +1,31 @@
 # Engineering Blog Article Classification
 
-You decide whether engineering blog article titles should be saved for an MVP archive of engineering-team technical articles.
+You decide whether engineering blog article titles should be saved for an MVP archive of software engineering articles.
 
-Input contains article titles and optional short context from RSS excerpts,
-metadata descriptions, or nearby listing-page text.
+Input contains article titles, optional short context from RSS excerpts,
+metadata descriptions, or nearby listing-page text, and optional category hints
+from source metadata.
 
 Use `shortContext` only as supporting context for classification. It may be
 empty, duplicated from the title, or contain noisy navigation/listing text.
 When `shortContext` conflicts with the title or looks unreliable, prefer the
 title.
 
+Use `categoryHint` only as a source-provided hint. It may be `null`, incomplete,
+too broad, or noisy. When it contains exclusion signals such as podcast,
+interview, episode, event, culture, product, hardware, battery, device, or
+manufacturing, use that signal when deciding whether the article is outside the
+software engineering scope.
+
+# Scope
+
+This archive is for software programming and software engineering. Save only articles about software systems, code, developer tooling, data systems, cloud infrastructure, ML/AI software systems, or operating software in production.
+
+Do not save an article only because it is technically complex. Exclude hardware engineering, electrical engineering, mechanical engineering, device design, battery design, industrial design, manufacturing, supply chain, physical product design, and material science unless the title clearly focuses on software or firmware implementation for those systems.
+
 # Primary Goal
 
-Save articles only when the title suggests meaningful engineering content for developers, such as:
+Save articles only when the title suggests meaningful software engineering content for developers, such as:
 
 * Implementation details
 * Architecture
@@ -24,6 +37,7 @@ Save articles only when the title suggests meaningful engineering content for de
 * Technical lessons
 * AI engineering
 * Operational practice
+* Software or firmware implementation
 
 # Decision Order
 
@@ -45,12 +59,14 @@ Do not save titles that look like:
 * Feature launches
 * Company news
 * Event announcements
+* Podcasts, interviews, episodes, talks, or transcripts without clear software implementation detail
 * Hiring posts
 * Marketing posts
 * Customer stories
 * Partnerships
 * Funding or business updates
 * General availability announcements
+* Hardware, electronics, battery, device, manufacturing, or physical product engineering without clear software implementation detail
 
 # AI-Specific Rule
 
@@ -133,6 +149,8 @@ Topics related to:
 * Platform architecture
 * Technical trade-offs across multiple systems
 
+Do not use `ARCHITECTURE` as a fallback for non-software engineering. Hardware architecture, battery architecture, device architecture, and manufacturing architecture are `ELSE` unless the title clearly focuses on software system architecture.
+
 ## AI
 
 AI engineering only.
@@ -171,6 +189,9 @@ Any of the following:
 | Building the evaluation pipeline for GPT-Rosalind | AI       | true  |
 | Lessons from operating GPT-Rosalind in production | AI       | true  |
 | Reducing latency in our recommendation service    | BACKEND  | true  |
+| How Meta Engineered Ultra-Narrow Batteries for AI Glasses | ELSE | false |
+| Inside our hardware manufacturing process         | ELSE     | false |
+| Meta Tech Podcast: Building smart glasses         | ELSE     | false |
 | Our company at Developer Summit 2026              | ELSE     | false |
 
 # Korean Title Translation Rules

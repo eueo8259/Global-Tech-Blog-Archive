@@ -12,7 +12,9 @@ import com.globaltechblogarchive.crawl.support.XmlDocumentSupport;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -62,7 +64,8 @@ public class FeedArticleCandidateCollector implements ArticleCandidateCollector 
                     TextCleaner.clean(title),
                     absoluteUrl,
                     ArticleDateParser.parseFeedDate(firstNonBlank(text(item, "pubDate"), text(item, "dc:date"))),
-                    TextCleaner.shortContext(text(item, "description"), title)
+                    TextCleaner.shortContext(text(item, "description"), title),
+                    categoryHint(item)
             ));
         }
         return cards;
@@ -82,7 +85,8 @@ public class FeedArticleCandidateCollector implements ArticleCandidateCollector 
                     TextCleaner.clean(title),
                     UrlNormalizer.absolute(source.getSiteUrl(), link),
                     ArticleDateParser.parseFeedDate(firstNonBlank(text(entry, "published"), text(entry, "updated"))),
-                    TextCleaner.shortContext(firstNonBlank(text(entry, "summary"), text(entry, "content")), title)
+                    TextCleaner.shortContext(firstNonBlank(text(entry, "summary"), text(entry, "content")), title),
+                    categoryHint(entry)
             ));
         }
         return cards;
@@ -112,5 +116,24 @@ public class FeedArticleCandidateCollector implements ArticleCandidateCollector 
             return first;
         }
         return second;
+    }
+
+    private String categoryHint(Element element) {
+        NodeList categories = element.getElementsByTagName("category");
+        Set<String> hints = new LinkedHashSet<>();
+        for (int index = 0; index < categories.getLength(); index++) {
+            Element category = (Element) categories.item(index);
+            String value = TextCleaner.clean(firstNonBlank(
+                    category.getAttribute("term"),
+                    category.getTextContent()
+            ));
+            if (!value.isBlank()) {
+                hints.add(value);
+            }
+        }
+        if (hints.isEmpty()) {
+            return null;
+        }
+        return String.join(", ", hints);
     }
 }

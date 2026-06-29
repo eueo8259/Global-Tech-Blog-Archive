@@ -81,6 +81,11 @@ class OpenAiArticleMetadataRequestFactory {
             item.put("index", input.index());
             item.put("title", input.title());
             item.put("shortContext", input.shortContext());
+            if (input.categoryHint() == null || input.categoryHint().isBlank()) {
+                item.putNull("categoryHint");
+            } else {
+                item.put("categoryHint", input.categoryHint());
+            }
             items.add(item);
         }
         return "Classify these article candidates: " + items;
