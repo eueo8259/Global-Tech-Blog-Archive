@@ -94,11 +94,33 @@ public class ArticleDiscoveryLog {
         return item;
     }
 
+    public ArticleCandidate toRetryCandidate() {
+        return new ArticleCandidate(
+                companyKey,
+                companyName,
+                originalTitle,
+                articleUrl,
+                publishedAt,
+                shortContext,
+                articleUrlHash,
+                false,
+                ArticleCandidateDecisionStatus.NEW,
+                deserializeWarnings(validationWarnings)
+        );
+    }
+
     private static String serializeWarnings(List<String> warnings) {
         if (warnings == null || warnings.isEmpty()) {
             return "";
         }
         return String.join(",", warnings);
+    }
+
+    private static List<String> deserializeWarnings(String warnings) {
+        if (warnings == null || warnings.isBlank()) {
+            return List.of();
+        }
+        return List.of(warnings.split(","));
     }
 
     @PrePersist

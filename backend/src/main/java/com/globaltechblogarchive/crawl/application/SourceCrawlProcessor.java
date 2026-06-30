@@ -18,6 +18,7 @@ import com.globaltechblogarchive.crawl.support.UrlNormalizer;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -58,6 +59,27 @@ public class SourceCrawlProcessor {
         );
         storeCandidates(run, source, processed.candidates());
         source.markCollected(LocalDateTime.now());
+
+        CrawlRunSummary summary = CrawlRunSummary.from(processed);
+        return SourceCrawlResult.success(source, processed.candidates(), summary);
+    }
+
+    @Transactional
+    public SourceCrawlResult retryAiFailures(Long runId, Long sourceId, List<Long> failureLogIds) {
+        ArticleCollectionRun run = collectionRunRepository.findById(runId)
+                .orElseThrow(() -> new IllegalArgumentException("Collection run not found: " + runId));
+        BlogSource source = blogSourceRepository.findWithCompanyById(sourceId)
+                .orElseThrow(() -> new IllegalArgumentException("Blog source not found: " + sourceId));
+        List<ArticleCandidate> candidates = collectionItemRepository.findAllById(failureLogIds).stream()
+                .map(ArticleDiscoveryLog::toRetryCandidate)
+                .toList();
+        ProcessedCandidates processed = decisionProcessor.process(
+                source,
+                candidates,
+                new HashMap<>(),
+                PROMPT_VERSION
+        );
+        storeCandidates(run, source, processed.candidates());
 
         CrawlRunSummary summary = CrawlRunSummary.from(processed);
         return SourceCrawlResult.success(source, processed.candidates(), summary);

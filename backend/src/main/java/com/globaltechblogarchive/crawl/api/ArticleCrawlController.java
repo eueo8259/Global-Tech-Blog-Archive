@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Profile("local")
@@ -23,5 +24,10 @@ public class ArticleCrawlController {
     @PostMapping("/api/admin/article-crawls/sources/{sourceKey}/backfill-run")
     public CrawlSummaryResponse runSourceBackfill(@PathVariable String sourceKey) {
         return CrawlSummaryResponse.from(articleCrawlService.runSourceBackfill(sourceKey));
+    }
+
+    @PostMapping("/api/admin/article-crawls/ai-failures/retry")
+    public CrawlSummaryResponse retryAiFailures(@RequestParam(defaultValue = "20") int limit) {
+        return CrawlSummaryResponse.from(articleCrawlService.retryAiFailures(limit));
     }
 }
