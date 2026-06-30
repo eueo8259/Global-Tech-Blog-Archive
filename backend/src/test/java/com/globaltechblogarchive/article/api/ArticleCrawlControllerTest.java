@@ -79,6 +79,26 @@ class ArticleCrawlControllerTest {
         verify(articleCrawlService).runSourceBackfill("uber");
     }
 
+    @Test
+    void retryAiFailuresUsesRequestedLimit() throws Exception {
+        ArticleCrawlResult result = result(
+                5L,
+                source("openai", "OpenAI News", "https://openai.com/news/", "https://openai.com/news/rss.xml",
+                        CollectionMethod.RSS),
+                new CrawlRunSummary(1, 0, 0, 0, 1, 0, 0, 0)
+        );
+        when(articleCrawlService.retryAiFailures(10)).thenReturn(result);
+
+        mockMvc.perform(post("/api/admin/article-crawls/ai-failures/retry")
+                        .param("limit", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.runId").value(5))
+                .andExpect(jsonPath("$.candidateCount").value(1))
+                .andExpect(jsonPath("$.aiRejectedCount").value(1));
+
+        verify(articleCrawlService).retryAiFailures(10);
+    }
+
     private ArticleCrawlResult result(Long runId, BlogSource source, CrawlRunSummary summary) {
         return new ArticleCrawlResult(
                 runId,
