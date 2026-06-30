@@ -31,6 +31,7 @@ import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
 import com.globaltechblogarchive.crawl.domain.ArticleCollectionRun;
+import com.globaltechblogarchive.crawl.domain.ArticleDiscoveryLog;
 import com.globaltechblogarchive.crawl.domain.CrawlMode;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.crawl.repository.ArticleDiscoveryLogRepository;
@@ -103,6 +104,7 @@ class ArticleCrawlServiceTest {
 
         articleCrawlService = new ArticleCrawlService(
                 blogSourceRepository,
+                collectionItemRepository,
                 new SourceCrawlProcessor(
                         decisionRepository,
                         collectionItemRepository,
@@ -114,6 +116,44 @@ class ArticleCrawlServiceTest {
                 ),
                 transactionService
         );
+    }
+
+    @Test
+    void retryAiFailuresProcessesOnlyUnresolvedCandidatesReturnedByRepository() {
+        BlogSource source = source(1L, "openai");
+        ArticleDiscoveryLog failure = failedLog(10L, source, "hash-failed");
+        when(collectionItemRepository.findUnresolvedAiFailures(
+                any(),
+                any(),
+                any()
+        )).thenReturn(List.of(failure));
+        when(collectionItemRepository.findAllById(anyIterable())).thenReturn(List.of(failure));
+        when(aiClient.decide(anyList())).thenReturn(List.of(
+                new ArticleMetadataDecision(0, "Translated", ArticleCategory.ELSE, false, "NOT_ENGINEERING")
+        ));
+
+        ArticleCrawlResult result = articleCrawlService.retryAiFailures(20);
+
+        assertThat(result.runId()).isEqualTo(1L);
+        assertThat(result.sourceCount()).isEqualTo(1);
+        assertThat(result.candidateCount()).isEqualTo(1);
+        assertThat(result.aiRejectedCount()).isEqualTo(1);
+        assertThat(result.aiFailedCount()).isZero();
+        assertThat(result.storedCount()).isZero();
+        verify(decisionRepository).save(any(ArticleAiDecision.class));
+        verify(collectionItemRepository).saveAll(anyIterable());
+        verify(transactionService).completeRun(1L, 1, 1, 0, result.sources().getFirst().summary());
+    }
+
+    @Test
+    void retryAiFailuresRejectsLimitOutsideAllowedRange() {
+        assertThatThrownBy(() -> articleCrawlService.retryAiFailures(0))
+                .isInstanceOfSatisfying(InvalidInputException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE))
+                .hasMessage("AI failure retry limit must be between 1 and 100");
+
+        verify(collectionItemRepository, never()).findUnresolvedAiFailures(any(), any(), any());
+        verify(transactionService, never()).startRun();
     }
 
     @Test
@@ -438,5 +478,23 @@ class ArticleCrawlServiceTest {
                 "gpt-5-mini",
                 "v1"
         );
+    }
+
+    private ArticleDiscoveryLog failedLog(Long id, BlogSource source, String articleUrlHash) {
+        ArticleCandidate candidate = new ArticleCandidate(
+                source.getCompany().getCompanyKey(),
+                source.getCompany().getCompanyName(),
+                "Failed article",
+                "https://example.com/" + articleUrlHash,
+                LocalDateTime.of(2026, 6, 1, 10, 0),
+                "Context",
+                articleUrlHash,
+                false,
+                ArticleCandidateDecisionStatus.AI_FAILED,
+                List.of()
+        );
+        ArticleDiscoveryLog log = ArticleDiscoveryLog.create(run(99L), source, candidate);
+        ReflectionTestUtils.setField(log, "id", id);
+        return log;
     }
 }
