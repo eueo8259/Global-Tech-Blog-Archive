@@ -6,9 +6,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -17,7 +14,6 @@ public class SourceDocumentClient {
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .followRedirects(HttpClient.Redirect.NORMAL)
-            .sslContext(trustAllSslContext())
             .build();
 
     public String fetch(String url) {
@@ -45,29 +41,4 @@ public class SourceDocumentClient {
         }
     }
 
-    private SSLContext trustAllSslContext() {
-        try {
-            TrustManager[] trustManagers = new TrustManager[]{
-                    new X509TrustManager() {
-                        @Override
-                        public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
-                        }
-
-                        @Override
-                        public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {
-                        }
-
-                        @Override
-                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                            return new java.security.cert.X509Certificate[0];
-                        }
-                    }
-            };
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, trustManagers, new java.security.SecureRandom());
-            return sslContext;
-        } catch (Exception exception) {
-            throw new IllegalStateException("SSL context initialization failed", exception);
-        }
-    }
 }
