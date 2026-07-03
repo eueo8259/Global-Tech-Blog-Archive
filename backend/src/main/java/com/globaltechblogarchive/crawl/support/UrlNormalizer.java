@@ -1,5 +1,7 @@
 package com.globaltechblogarchive.crawl.support;
 
+import com.globaltechblogarchive.crawl.exception.SourceCollectionException;
+import com.globaltechblogarchive.global.error.ErrorCode;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Locale;
@@ -27,7 +29,11 @@ public final class UrlNormalizer {
             return new URI(scheme, uri.getUserInfo(), host, port, path, uri.getRawQuery(), null)
                     .toString();
         } catch (URISyntaxException exception) {
-            throw new IllegalArgumentException("Invalid URL: " + url, exception);
+            throw new SourceCollectionException(
+                    ErrorCode.SOURCE_CONTENT_PARSE_ERROR,
+                    "Invalid URL: " + url,
+                    exception
+            );
         }
     }
 

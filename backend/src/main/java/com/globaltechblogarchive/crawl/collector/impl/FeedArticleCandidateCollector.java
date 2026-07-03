@@ -4,6 +4,8 @@ import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.exception.SourceCollectionException;
+import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.crawl.support.ArticleDateParser;
 import com.globaltechblogarchive.crawl.support.ArticleCandidateCollectionPolicy;
 import com.globaltechblogarchive.crawl.support.TextCleaner;
@@ -36,7 +38,10 @@ public class FeedArticleCandidateCollector implements ArticleCandidateCollector 
     @Override
     public List<ParsedArticle> collect(BlogSource source, CrawlMode mode) {
         if (source.getFeedUrl() == null || source.getFeedUrl().isBlank()) {
-            throw new IllegalArgumentException("Feed URL is required for " + source.getSourceKey());
+            throw new SourceCollectionException(
+                    ErrorCode.SOURCE_COLLECTION_CONFIGURATION_ERROR,
+                    "Feed URL is required for " + source.getSourceKey()
+            );
         }
         return ArticleCandidateCollectionPolicy.apply(parse(source, fetcher.fetch(source.getFeedUrl())), mode);
     }

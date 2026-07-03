@@ -1,7 +1,10 @@
 package com.globaltechblogarchive.crawl.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.globaltechblogarchive.crawl.exception.SourceCollectionException;
+import com.globaltechblogarchive.global.error.ErrorCode;
 import org.junit.jupiter.api.Test;
 
 class UrlNormalizerTest {
@@ -32,5 +35,14 @@ class UrlNormalizerTest {
         );
 
         assertThat(normalized).isEqualTo("https://example.com/post");
+    }
+
+    @Test
+    void normalizeRejectsInvalidUrlUsingParseErrorCode() {
+        assertThatThrownBy(() -> UrlNormalizer.normalize("https://example.com/[invalid"))
+                .isInstanceOfSatisfying(SourceCollectionException.class, exception -> {
+                    assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.SOURCE_CONTENT_PARSE_ERROR);
+                    assertThat(exception.getCause()).isInstanceOf(java.net.URISyntaxException.class);
+                });
     }
 }

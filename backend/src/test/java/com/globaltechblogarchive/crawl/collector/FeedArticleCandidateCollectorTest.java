@@ -1,8 +1,11 @@
 package com.globaltechblogarchive.crawl.collector.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.globaltechblogarchive.company.domain.Company;
+import com.globaltechblogarchive.crawl.exception.SourceCollectionException;
+import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import org.junit.jupiter.api.Test;
@@ -59,6 +62,23 @@ class FeedArticleCandidateCollectorTest {
         assertThat(cards.getFirst().originalUrl()).isEqualTo("https://example.com/blog/realtime");
         assertThat(cards.getFirst().shortContext()).isEqualTo("Architecture notes from the editor team.");
         assertThat(cards.getFirst().categoryHint()).isEqualTo("Frontend");
+    }
+
+    @Test
+    void collectRejectsSourceWithoutFeedUrlUsingConfigurationErrorCode() {
+        BlogSource source = BlogSource.create(
+                Company.create("example", "Example"),
+                "example",
+                "Example Blog",
+                "https://example.com/blog/",
+                null,
+                CollectionMethod.RSS
+        );
+
+        assertThatThrownBy(() -> collector.collect(source, com.globaltechblogarchive.crawl.domain.CrawlMode.RECENT))
+                .isInstanceOfSatisfying(SourceCollectionException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(ErrorCode.SOURCE_COLLECTION_CONFIGURATION_ERROR));
     }
 
     private BlogSource source(CollectionMethod method) {
