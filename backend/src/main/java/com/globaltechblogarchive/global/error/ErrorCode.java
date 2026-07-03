@@ -14,7 +14,9 @@ public enum ErrorCode {
     SOURCE_FETCH_TIMEOUT_ERROR(HttpStatus.GATEWAY_TIMEOUT, "S004", "Source request timed out"),
     SOURCE_FETCH_HTTP_STATUS_ERROR(HttpStatus.BAD_GATEWAY, "S005", "Source returned an error response"),
     SOURCE_FETCH_NETWORK_ERROR(HttpStatus.BAD_GATEWAY, "S006", "Source network request failed"),
-    SOURCE_FETCH_INTERRUPTED_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S007", "Source request interrupted");
+    SOURCE_FETCH_INTERRUPTED_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S007", "Source request interrupted"),
+    SOURCE_COLLECTION_CONFIGURATION_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S008", "Source collection configuration error"),
+    SOURCE_CONTENT_PARSE_ERROR(HttpStatus.BAD_GATEWAY, "S009", "Source content parsing failed");
 
     private final HttpStatus status;
     private final String code;
