@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -400,7 +401,7 @@ class ArticleCrawlServiceTest {
         when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of(card));
         when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of());
-        when(articleRepository.existsByCompanyIdAndArticleUrlHash(1L, hash)).thenReturn(true);
+        when(articleRepository.findExistingHashes(1L, List.of(hash))).thenReturn(Set.of(hash));
 
         ArticleCrawlResult result = articleCrawlService.runScheduled();
 
@@ -431,7 +432,7 @@ class ArticleCrawlServiceTest {
         when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of(card));
         when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
                 .thenReturn(List.of(decision(source, hash, true, ArticleCategory.AI)));
-        when(articleRepository.existsByCompanyIdAndArticleUrlHash(1L, hash)).thenReturn(true);
+        when(articleRepository.findExistingHashes(1L, List.of(hash))).thenReturn(Set.of(hash));
 
         ArticleCrawlResult result = articleCrawlService.runScheduled();
 
