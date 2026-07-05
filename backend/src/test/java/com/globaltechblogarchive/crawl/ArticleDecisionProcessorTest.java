@@ -1,27 +1,21 @@
 package com.globaltechblogarchive.crawl;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.lenient;
 
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataDecision;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataInput;
-import com.globaltechblogarchive.article.application.ArticleService;
-import com.globaltechblogarchive.article.domain.Article;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.application.ArticleDecisionProcessor;
 import com.globaltechblogarchive.crawl.application.ArticleDecisionProcessor.ProcessedCandidates;
-import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
+import com.globaltechblogarchive.crawl.application.PreparedArticleDecision;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
-import com.globaltechblogarchive.crawl.repository.ArticleAiDecisionRepository;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.time.LocalDateTime;
@@ -39,22 +33,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ArticleDecisionProcessorTest {
 
     @Mock
-    private ArticleAiDecisionRepository decisionRepository;
-
-    @Mock
     private ArticleMetadataAiClient aiClient;
-
-    @Mock
-    private ArticleService articleService;
 
     private ArticleDecisionProcessor processor;
 
     @BeforeEach
     void setUp() {
-        processor = new ArticleDecisionProcessor(decisionRepository, aiClient, articleService);
+        processor = new ArticleDecisionProcessor(aiClient);
         when(aiClient.model()).thenReturn("test-model");
-        lenient().when(decisionRepository.save(any(ArticleAiDecision.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -83,9 +69,9 @@ class ArticleDecisionProcessorTest {
         assertThat(processed.candidates().subList(10, 20))
                 .extracting(ArticleCandidate::decisionStatus)
                 .containsOnly(ArticleCandidateDecisionStatus.AI_APPROVED);
-        assertThat(processed.storedArticleCount()).isEqualTo(10);
-        verify(decisionRepository, times(10)).save(any(ArticleAiDecision.class));
-        verify(articleService, times(10)).save(any(Article.class));
+        assertThat(processed.newDecisions()).hasSize(10);
+        assertThat(processed.newDecisions()).extracting(PreparedArticleDecision::model)
+                .containsOnly("test-model");
     }
 
     @Test
@@ -107,23 +93,26 @@ class ArticleDecisionProcessorTest {
                         ArticleCandidateDecisionStatus.AI_APPROVED,
                         ArticleCandidateDecisionStatus.AI_FAILED
                 );
-        assertThat(processed.storedArticleCount()).isEqualTo(1);
+        assertThat(processed.newDecisions()).hasSize(1);
     }
 
     @Test
-    void processPropagatesDecisionPersistenceFailureForSourceRollback() {
+    void processReturnsPreparedDecisionWithoutPersistingIt() {
         when(aiClient.decide(anyList())).thenReturn(decisions(1));
-        when(decisionRepository.save(any(ArticleAiDecision.class)))
-                .thenThrow(new IllegalStateException("database failed"));
 
-        assertThatThrownBy(() -> processor.process(
+        ProcessedCandidates processed = processor.process(
                 source(),
                 candidates(1),
                 new HashMap<>(),
                 "v1"
-        ))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("database failed");
+        );
+
+        assertThat(processed.newDecisions()).singleElement().satisfies(decision -> {
+            assertThat(decision.articleUrlHash()).isEqualTo("hash-0");
+            assertThat(decision.translatedTitle()).isEqualTo("Translated 0");
+            assertThat(decision.saveTarget()).isTrue();
+            assertThat(decision.promptVersion()).isEqualTo("v1");
+        });
     }
 
     private List<ArticleCandidate> candidates(int count) {

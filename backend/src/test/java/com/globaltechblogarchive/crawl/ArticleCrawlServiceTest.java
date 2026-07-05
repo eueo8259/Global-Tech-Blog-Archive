@@ -13,7 +13,6 @@ import static org.mockito.Mockito.when;
 
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataDecision;
-import com.globaltechblogarchive.article.application.ArticleService;
 import com.globaltechblogarchive.article.domain.Article;
 import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
@@ -25,6 +24,7 @@ import com.globaltechblogarchive.crawl.application.ArticleCrawlService;
 import com.globaltechblogarchive.crawl.application.ArticleDecisionProcessor;
 import com.globaltechblogarchive.crawl.application.SourceCrawlProcessor;
 import com.globaltechblogarchive.crawl.application.CrawlTransactionService;
+import com.globaltechblogarchive.crawl.application.CrawlPersistenceService;
 import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
 import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
@@ -100,7 +100,13 @@ class ArticleCrawlServiceTest {
                 Optional.of(run(invocation.getArgument(0))));
         lenient().when(blogSourceRepository.findWithCompanyById(any())).thenAnswer(invocation ->
                 Optional.ofNullable(sourcesById.get(invocation.getArgument(0))));
-        ArticleService articleService = new ArticleService(articleRepository);
+        CrawlPersistenceService persistenceService = new CrawlPersistenceService(
+                articleRepository,
+                decisionRepository,
+                collectionItemRepository,
+                collectionRunRepository,
+                blogSourceRepository
+        );
 
         articleCrawlService = new ArticleCrawlService(
                 blogSourceRepository,
@@ -110,9 +116,9 @@ class ArticleCrawlServiceTest {
                         collectionItemRepository,
                         collectorRegistry,
                         new ArticleCandidateFactory(articleRepository),
-                        new ArticleDecisionProcessor(decisionRepository, aiClient, articleService),
-                        blogSourceRepository,
-                        collectionRunRepository
+                        new ArticleDecisionProcessor(aiClient),
+                        persistenceService,
+                        blogSourceRepository
                 ),
                 transactionService
         );
@@ -140,7 +146,7 @@ class ArticleCrawlServiceTest {
         assertThat(result.aiRejectedCount()).isEqualTo(1);
         assertThat(result.aiFailedCount()).isZero();
         assertThat(result.storedCount()).isZero();
-        verify(decisionRepository).save(any(ArticleAiDecision.class));
+        verify(decisionRepository).saveAll(anyIterable());
         verify(collectionItemRepository).saveAll(anyIterable());
         verify(transactionService).completeRun(1L, 1, 1, 0, result.sources().getFirst().summary());
     }
@@ -294,14 +300,15 @@ class ArticleCrawlServiceTest {
         assertThat(result.aiFailedCount()).isZero();
         assertThat(result.previouslyApprovedCount()).isZero();
         assertThat(result.previouslyRejectedCount()).isZero();
-        ArgumentCaptor<Article> articleCaptor = ArgumentCaptor.forClass(Article.class);
-        verify(articleRepository).save(articleCaptor.capture());
-        Article article = articleCaptor.getValue();
-        assertThat(article.getTitle()).isEqualTo("Inference scaling");
-        assertThat(article.getCategory()).isEqualTo(ArticleCategory.AI);
-        ArgumentCaptor<ArticleAiDecision> decisionCaptor = ArgumentCaptor.forClass(ArticleAiDecision.class);
-        verify(decisionRepository, times(2)).save(decisionCaptor.capture());
-        assertThat(decisionCaptor.getAllValues()).extracting(ArticleAiDecision::getModel)
+        ArgumentCaptor<Iterable<Article>> articleCaptor = ArgumentCaptor.forClass(Iterable.class);
+        verify(articleRepository).saveAll(articleCaptor.capture());
+        assertThat(articleCaptor.getValue()).singleElement().satisfies(article -> {
+            assertThat(article.getTitle()).isEqualTo("Inference scaling");
+            assertThat(article.getCategory()).isEqualTo(ArticleCategory.AI);
+        });
+        ArgumentCaptor<Iterable<ArticleAiDecision>> decisionCaptor = ArgumentCaptor.forClass(Iterable.class);
+        verify(decisionRepository).saveAll(decisionCaptor.capture());
+        assertThat(decisionCaptor.getValue()).extracting(ArticleAiDecision::getModel)
                 .containsOnly("test-model");
         verify(collectionItemRepository).saveAll(anyIterable());
     }
@@ -347,7 +354,7 @@ class ArticleCrawlServiceTest {
         assertThat(result.previouslyApprovedCount()).isEqualTo(1);
         assertThat(result.previouslyRejectedCount()).isEqualTo(1);
         verify(aiClient, never()).decide(anyList());
-        verify(articleRepository).save(any(Article.class));
+        verify(articleRepository).saveAll(anyIterable());
     }
 
     @Test
@@ -373,7 +380,7 @@ class ArticleCrawlServiceTest {
                 .containsExactly(ArticleCandidateDecisionStatus.AI_FAILED);
         assertThat(result.storedCount()).isZero();
         assertThat(result.aiFailedCount()).isEqualTo(1);
-        verify(articleRepository, never()).save(any(Article.class));
+        verify(articleRepository, never()).saveAll(anyIterable());
         verify(collectionItemRepository).saveAll(anyIterable());
     }
 
@@ -404,7 +411,7 @@ class ArticleCrawlServiceTest {
         assertThat(result.storedCount()).isZero();
         assertThat(result.aiApprovedCount()).isZero();
         verify(aiClient, never()).decide(anyList());
-        verify(articleRepository, never()).save(any(Article.class));
+        verify(articleRepository, never()).saveAll(anyIterable());
         verify(collectionItemRepository).saveAll(anyIterable());
     }
 
@@ -435,7 +442,7 @@ class ArticleCrawlServiceTest {
         assertThat(result.previouslyApprovedCount()).isZero();
         assertThat(result.storedCount()).isZero();
         verify(aiClient, never()).decide(anyList());
-        verify(articleRepository, never()).save(any(Article.class));
+        verify(articleRepository, never()).saveAll(anyIterable());
         verify(collectionItemRepository).saveAll(anyIterable());
     }
 
