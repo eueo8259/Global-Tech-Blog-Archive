@@ -4,7 +4,6 @@ import com.globaltechblogarchive.article.api.dto.ArticlePageResponse;
 import com.globaltechblogarchive.article.domain.Article;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.article.repository.ArticleRepository;
-import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import lombok.RequiredArgsConstructor;
@@ -13,19 +12,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-
 @Service
 @RequiredArgsConstructor
 public class ArticleService {
 
     private final ArticleRepository articleRepository;
-
-    @Transactional
-    public void save(Article article) {
-        articleRepository.save(article);
-    }
-
 
     @Transactional(readOnly = true)
     public ArticlePageResponse getArticles(String category, String companyKey, int page, int size) {

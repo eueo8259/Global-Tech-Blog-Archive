@@ -1,6 +1,5 @@
 package com.globaltechblogarchive.crawl.application.dto;
 
-import com.globaltechblogarchive.crawl.application.ArticleDecisionProcessor.ProcessedCandidates;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
 import java.util.List;
@@ -20,12 +19,14 @@ public record CrawlRunSummary(
         return new CrawlRunSummary(0, 0, 0, 0, 0, 0, 0, 0);
     }
 
-    public static CrawlRunSummary from(ProcessedCandidates processed) {
-        List<ArticleCandidate> candidates = processed.candidates();
+    public static CrawlRunSummary from(
+            List<ArticleCandidate> candidates,
+            int storedArticleCount
+    ) {
         return new CrawlRunSummary(
                 candidates.size(),
                 countDuplicates(candidates),
-                processed.storedArticleCount(),
+                storedArticleCount,
                 countStatus(candidates, ArticleCandidateDecisionStatus.AI_APPROVED),
                 countStatus(candidates, ArticleCandidateDecisionStatus.AI_REJECTED),
                 countStatus(candidates, ArticleCandidateDecisionStatus.AI_FAILED),
