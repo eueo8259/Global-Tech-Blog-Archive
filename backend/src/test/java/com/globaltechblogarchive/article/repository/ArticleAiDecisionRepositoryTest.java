@@ -81,6 +81,30 @@ class ArticleAiDecisionRepositoryTest extends MySqlIntegrationTest {
     }
 
     @Test
+    void findAllByOrderByIdAscLoadsCompanyForBootstrapExport() {
+        BlogSource source = persistSource("bootstrap-source");
+        ArticleAiDecision decision = persistDecision(
+                source,
+                "bootstrap-hash",
+                "v1",
+                true,
+                ArticleCategory.BACKEND
+        );
+        entityManager.flush();
+        entityManager.clear();
+
+        List<ArticleAiDecision> decisions = decisionRepository.findAllByOrderByIdAsc();
+
+        ArticleAiDecision found = decisions.stream()
+                .filter(item -> item.getId().equals(decision.getId()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(entityManager.getEntityManager().getEntityManagerFactory()
+                .getPersistenceUnitUtil().isLoaded(found.getCompany()))
+                .isTrue();
+    }
+
+    @Test
     void uniqueConstraintBlocksSameSourceHashAndPromptVersion() {
         BlogSource source = persistSource("duplicate-source");
         persistDecision(source, "same-hash", "v1", false, ArticleCategory.ELSE);
