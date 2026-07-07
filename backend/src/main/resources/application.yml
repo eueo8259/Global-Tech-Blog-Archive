@@ -22,3 +22,9 @@ crawl:
     enabled: ${CRAWL_SCHEDULER_ENABLED:false}
     cron: "${CRAWL_SCHEDULER_CRON:0 0 3 * * *}"
     zone: ${CRAWL_SCHEDULER_ZONE:Asia/Seoul}
+
+slack:
+  client-id: ${SLACK_CLIENT_ID:}
+  client-secret: ${SLACK_CLIENT_SECRET:}
+  redirect-uri: ${SLACK_REDIRECT_URI:}
+  settings-base-url: ${SLACK_SETTINGS_BASE_URL:http://localhost:5173}
