@@ -50,8 +50,6 @@ class SourceDocumentClientTest {
         assertThatThrownBy(() -> new SourceDocumentClient().fetch(url()))
                 .isInstanceOfSatisfying(SourceFetchException.class, exception -> {
                     assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.SOURCE_FETCH_HTTP_STATUS_ERROR);
-                    assertThat(exception.getStatusCode()).isEqualTo(404);
-                    assertThat(exception.getCause()).isNull();
                 })
                 .hasMessage("Fetch failed with status 404");
     }
@@ -99,7 +97,7 @@ class SourceDocumentClientTest {
     }
 
     @Test
-    void fetchUsesCauseChainToClassifyFailureAndPreservesOriginalException() throws Exception {
+    void fetchUsesCauseChainToClassifyFailure() throws Exception {
         IOException cause = new IOException("wrapped", new UnknownHostException("unknown.example"));
 
         assertFailure(cause, ErrorCode.SOURCE_FETCH_DNS_ERROR);
@@ -114,8 +112,6 @@ class SourceDocumentClientTest {
                     .isInstanceOfSatisfying(SourceFetchException.class, exception -> {
                         assertThat(exception.getErrorCode())
                                 .isEqualTo(ErrorCode.SOURCE_FETCH_INTERRUPTED_ERROR);
-                        assertThat(exception.getStatusCode()).isNull();
-                        assertThat(exception.getCause()).isInstanceOf(InterruptedException.class);
                     })
                     .hasMessage("Fetch interrupted");
             assertThat(Thread.currentThread().isInterrupted()).isTrue();
@@ -145,8 +141,6 @@ class SourceDocumentClientTest {
         assertThatThrownBy(() -> new SourceDocumentClient(httpClient).fetch("https://example.com"))
                 .isInstanceOfSatisfying(SourceFetchException.class, exception -> {
                     assertThat(exception.getErrorCode()).isEqualTo(expectedErrorCode);
-                    assertThat(exception.getStatusCode()).isNull();
-                    assertThat(exception.getCause()).isSameAs(cause);
                 });
     }
 

@@ -5,19 +5,11 @@ import com.globaltechblogarchive.global.error.exception.BusinessException;
 
 public class SourceFetchException extends BusinessException {
 
-    private final Integer statusCode;
-
-    public SourceFetchException(
-            ErrorCode errorCode,
-            Integer statusCode,
-            String message,
-            Throwable cause
-    ) {
-        super(errorCode, message, cause);
-        this.statusCode = statusCode;
+    public SourceFetchException(ErrorCode errorCode) {
+        super(errorCode);
     }
 
-    public Integer getStatusCode() {
-        return statusCode;
+    public SourceFetchException(ErrorCode errorCode, String message) {
+        super(errorCode, message);
     }
 }

@@ -46,27 +46,18 @@ public class SourceDocumentClient {
             if (response.statusCode() >= 400) {
                 throw new SourceFetchException(
                         ErrorCode.SOURCE_FETCH_HTTP_STATUS_ERROR,
-                        response.statusCode(),
-                        "Fetch failed with status " + response.statusCode(),
-                        null
+                        "Fetch failed with status " + response.statusCode()
                 );
             }
             return response.body();
         } catch (IOException exception) {
             throw new SourceFetchException(
                     errorCode(exception),
-                    null,
-                    "Fetch failed: " + exception.getMessage(),
-                    exception
+                    "Fetch failed: " + exception.getMessage()
             );
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            throw new SourceFetchException(
-                    ErrorCode.SOURCE_FETCH_INTERRUPTED_ERROR,
-                    null,
-                    "Fetch interrupted",
-                    exception
-            );
+            throw new SourceFetchException(ErrorCode.SOURCE_FETCH_INTERRUPTED_ERROR, "Fetch interrupted");
         }
     }
 

@@ -42,7 +42,6 @@ class UrlNormalizerTest {
         assertThatThrownBy(() -> UrlNormalizer.normalize("https://example.com/[invalid"))
                 .isInstanceOfSatisfying(SourceCollectionException.class, exception -> {
                     assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.SOURCE_CONTENT_PARSE_ERROR);
-                    assertThat(exception.getCause()).isInstanceOf(java.net.URISyntaxException.class);
                 });
     }
 }

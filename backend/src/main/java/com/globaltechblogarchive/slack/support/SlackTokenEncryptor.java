@@ -61,7 +61,7 @@ public class SlackTokenEncryptor {
             if (encryptedPayload.length <= IV_LENGTH_BYTES) {
                 throw new SlackTokenDecryptionException(
                         ErrorCode.SLACK_TOKEN_DECRYPTION_ERROR,
-                        new IllegalArgumentException("Encrypted Slack token payload is too short")
+                        "Encrypted Slack token payload is too short"
                 );
             }
 
@@ -75,7 +75,7 @@ public class SlackTokenEncryptor {
         } catch (SlackTokenDecryptionException exception) {
             throw exception;
         } catch (IllegalArgumentException | GeneralSecurityException exception) {
-            throw new SlackTokenDecryptionException(ErrorCode.SLACK_TOKEN_DECRYPTION_ERROR, exception);
+            throw new SlackTokenDecryptionException(ErrorCode.SLACK_TOKEN_DECRYPTION_ERROR);
         }
     }
 

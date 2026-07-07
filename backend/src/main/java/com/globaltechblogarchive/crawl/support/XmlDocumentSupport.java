@@ -25,8 +25,7 @@ public final class XmlDocumentSupport {
         } catch (Exception exception) {
             throw new SourceCollectionException(
                     ErrorCode.SOURCE_CONTENT_PARSE_ERROR,
-                    failureMessage,
-                    exception
+                    failureMessage
             );
         }
     }

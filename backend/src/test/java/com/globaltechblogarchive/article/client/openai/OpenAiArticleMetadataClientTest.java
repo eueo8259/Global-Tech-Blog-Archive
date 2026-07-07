@@ -32,7 +32,6 @@ class OpenAiArticleMetadataClientTest {
         assertThatThrownBy(() -> client.decide(List.of(new ArticleMetadataInput(0, "Title", "Context"))))
                 .isInstanceOfSatisfying(ArticleMetadataAiClientException.class, exception -> {
                     assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR);
-                    assertThat(exception.getCause()).isNotNull();
                 });
 
         server.verify();

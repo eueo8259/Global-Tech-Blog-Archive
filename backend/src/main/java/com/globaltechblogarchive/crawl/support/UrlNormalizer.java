@@ -31,8 +31,7 @@ public final class UrlNormalizer {
         } catch (URISyntaxException exception) {
             throw new SourceCollectionException(
                     ErrorCode.SOURCE_CONTENT_PARSE_ERROR,
-                    "Invalid URL: " + url,
-                    exception
+                    "Invalid URL: " + url
             );
         }
     }
