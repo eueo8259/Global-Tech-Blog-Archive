@@ -45,8 +45,7 @@ public class OpenAiArticleMetadataClient implements ArticleMetadataAiClient {
         } catch (RestClientException exception) {
             throw new ArticleMetadataAiClientException(
                     ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR,
-                    "OpenAI request failed",
-                    exception
+                    "OpenAI request failed"
             );
         }
         return responseParser.parse(responseBody);

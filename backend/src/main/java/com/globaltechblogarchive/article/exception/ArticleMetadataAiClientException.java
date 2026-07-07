@@ -12,12 +12,4 @@ public class ArticleMetadataAiClientException extends BusinessException {
     public ArticleMetadataAiClientException(ErrorCode errorCode, String message) {
         super(errorCode, message);
     }
-
-    public ArticleMetadataAiClientException(ErrorCode errorCode, Throwable cause) {
-        super(errorCode, cause);
-    }
-
-    public ArticleMetadataAiClientException(ErrorCode errorCode, String message, Throwable cause) {
-        super(errorCode, message, cause);
-    }
 }

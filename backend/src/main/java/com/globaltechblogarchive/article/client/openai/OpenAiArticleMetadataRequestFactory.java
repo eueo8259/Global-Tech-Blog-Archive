@@ -45,7 +45,7 @@ class OpenAiArticleMetadataRequestFactory {
             }
             return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            throw aiClientException("Failed to read OpenAI system prompt: " + SYSTEM_PROMPT_PATH, e);
+            throw aiClientException("Failed to read OpenAI system prompt: " + SYSTEM_PROMPT_PATH);
         }
     }
 
@@ -58,16 +58,12 @@ class OpenAiArticleMetadataRequestFactory {
             }
             return objectMapper.readTree(inputStream);
         } catch (IOException e) {
-            throw aiClientException("Failed to read OpenAI response format schema", e);
+            throw aiClientException("Failed to read OpenAI response format schema");
         }
     }
 
     private ArticleMetadataAiClientException aiClientException(String message) {
         return new ArticleMetadataAiClientException(ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR, message);
-    }
-
-    private ArticleMetadataAiClientException aiClientException(String message, Throwable cause) {
-        return new ArticleMetadataAiClientException(ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR, message, cause);
     }
 
     private ArrayNode inputMessages(List<ArticleMetadataInput> inputs) {

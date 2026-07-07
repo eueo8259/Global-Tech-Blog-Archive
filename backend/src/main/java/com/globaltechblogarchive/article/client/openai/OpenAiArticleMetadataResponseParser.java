@@ -27,8 +27,7 @@ class OpenAiArticleMetadataResponseParser {
         } catch (JsonProcessingException exception) {
             throw new ArticleMetadataAiClientException(
                     ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR,
-                    "Failed to parse OpenAI response",
-                    exception
+                    "Failed to parse OpenAI response"
             );
         }
     }
@@ -118,8 +117,7 @@ class OpenAiArticleMetadataResponseParser {
         } catch (IllegalArgumentException exception) {
             throw new ArticleMetadataAiClientException(
                     ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR,
-                    "Invalid OpenAI category: " + value,
-                    exception
+                    "Invalid OpenAI category: " + value
             );
         }
     }
