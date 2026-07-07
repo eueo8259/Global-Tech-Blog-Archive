@@ -28,3 +28,7 @@ slack:
   client-secret: ${SLACK_CLIENT_SECRET:}
   redirect-uri: ${SLACK_REDIRECT_URI:}
   settings-base-url: ${SLACK_SETTINGS_BASE_URL:http://localhost:5173}
+  bot-token-encryption:
+    # Local test dummy key only. Do not use this value in production.
+    # Example: SLACK_BOT_TOKEN_ENCRYPTION_KEY_BASE64=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+    key-base64: ${SLACK_BOT_TOKEN_ENCRYPTION_KEY_BASE64:}
