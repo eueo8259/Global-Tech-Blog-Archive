@@ -198,6 +198,89 @@ The aggregate does not include:
 - Source collection failure updates `last_error_at` and `last_error_msg`.
 - Collection run logs store discovered candidates and their decision status.
 
+## 6. Slack Subscription Model
+
+Slack subscriptions use a workspace-level bot token instead of channel-specific
+webhook URLs.
+
+### Slack Workspace
+
+`SlackWorkspace` is the Slack installation/workspace that owns the encrypted bot
+token used for future channel messages.
+
+Database table: `slack_workspaces`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | yes | Primary key |
+| slack_team_id | VARCHAR(50) | yes | Slack workspace/team id |
+| slack_team_name | VARCHAR(100) | yes | Slack workspace display name |
+| encrypted_bot_token | VARCHAR(1000) | yes | AES-GCM encrypted Slack bot token |
+| bot_user_id | VARCHAR(50) | no | Slack bot user id returned by OAuth |
+| scope | VARCHAR(500) | no | Granted Slack OAuth scopes |
+| installed_at | DATETIME | yes | Installation or latest reinstall time |
+| created_at | DATETIME | yes | Row creation time |
+| updated_at | DATETIME | yes | Row update time |
+
+Required constraints:
+
+```sql
+UNIQUE KEY uq_slack_workspaces_team_id (slack_team_id);
+```
+
+### Slack Channel
+
+`SlackChannel` is a Slack channel inside one workspace. It does not store a bot
+token directly; messages use the parent workspace's bot token.
+
+Database table: `slack_channels`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | yes | Primary key |
+| slack_workspace_id | BIGINT | yes | Foreign key to `slack_workspaces.id` |
+| slack_channel_id | VARCHAR(50) | yes | Slack channel id |
+| slack_channel_name | VARCHAR(100) | yes | Slack channel display name |
+| created_at | DATETIME | yes | Row creation time |
+| updated_at | DATETIME | yes | Row update time |
+
+Required constraints:
+
+```sql
+UNIQUE KEY uq_slack_channels_workspace_channel (slack_workspace_id, slack_channel_id);
+```
+
+### Slack Channel Subscription
+
+`SlackChannelSubscription` connects a Slack channel to a company. It represents
+"this Slack channel subscribes to this company's new articles."
+
+Database table: `slack_channel_subscriptions`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | yes | Primary key |
+| slack_channel_id | BIGINT | yes | Foreign key to `slack_channels.id` |
+| company_id | BIGINT | yes | Foreign key to `companies.id` |
+| created_at | DATETIME | yes | Row creation time |
+
+Required constraints:
+
+```sql
+UNIQUE KEY uq_slack_channel_subscriptions_channel_company (slack_channel_id, company_id);
+INDEX idx_slack_channel_subscriptions_company (company_id);
+```
+
+Delivery lookup direction:
+
+```text
+new article for company A
+-> find slack_channel_subscriptions where company_id = A
+-> load slack channel and parent workspace
+-> decrypt workspace bot token
+-> send message to channel
+```
+
 Database schema and company/source reference data are managed by immutable
 Flyway migrations. Locally collected articles and AI decisions may be promoted
 once through the bootstrap archive process documented in
