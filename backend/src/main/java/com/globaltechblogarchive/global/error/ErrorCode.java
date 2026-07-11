@@ -17,7 +17,8 @@ public enum ErrorCode {
     SOURCE_FETCH_INTERRUPTED_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S007", "Source request interrupted"),
     SOURCE_COLLECTION_CONFIGURATION_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S008", "Source collection configuration error"),
     SOURCE_CONTENT_PARSE_ERROR(HttpStatus.BAD_GATEWAY, "S009", "Source content parsing failed"),
-    SLACK_TOKEN_DECRYPTION_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SL001", "Slack token decryption failed");
+    SLACK_TOKEN_DECRYPTION_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "SL001", "Slack token decryption failed"),
+    SLACK_OAUTH_ERROR(HttpStatus.BAD_GATEWAY, "SL002", "Slack OAuth request failed");
 
     private final HttpStatus status;
     private final String code;
