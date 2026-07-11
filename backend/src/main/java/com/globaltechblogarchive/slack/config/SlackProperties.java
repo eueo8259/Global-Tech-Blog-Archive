@@ -7,6 +7,7 @@ public record SlackProperties(
         String clientId,
         String clientSecret,
         String redirectUri,
+        String botScopes,
         String settingsBaseUrl
 ) {
 }
