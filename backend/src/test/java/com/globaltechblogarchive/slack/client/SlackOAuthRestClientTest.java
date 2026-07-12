@@ -91,6 +91,7 @@ class SlackOAuthRestClientTest {
         return new SlackProperties(
                 "client-id",
                 "client-secret",
+                "signing-secret",
                 "http://localhost:8080/slack/oauth/callback",
                 "commands,chat:write",
                 "http://localhost:5173"
