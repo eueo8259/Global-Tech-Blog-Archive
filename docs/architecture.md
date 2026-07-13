@@ -11,6 +11,7 @@ Global Tech Blog Archive collects engineering blog article metadata from selecte
 - Collector: RSS/Atom-first collection with explicitly limited HTML list-page parsing
 - Classifier: keyword-based single-category classification
 - Database: MySQL
+- Scheduled delivery: Spring Batch and Slack `chat.postMessage`
 - External Sources: company engineering blogs defined in `article-source-strategy.md`
 
 ### Domain Ownership
@@ -92,6 +93,27 @@ Spring Boot API
         v
 React Frontend
 ```
+
+Slack Daily Digest follows a separate scheduled read path:
+
+```text
+Stored Articles + Slack Subscriptions
+        |
+        v
+Spring Batch (09:00 Asia/Seoul)
+        |
+        v
+Channel-level Daily Digest
+        |
+        v
+Slack chat.postMessage
+```
+
+Article persistence does not create subscriber-specific delivery rows. The
+Daily Digest Job prepares `SlackDelivery` rows only for channels that have
+articles in their next delivery window, then sends each delivery independently.
+Slack API calls run outside the JPA transaction; short independent transactions
+claim work and record success or failure.
 
 ## 5. Storage Policy
 
