@@ -18,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class SlackRequestSignatureFilter extends OncePerRequestFilter {
 
     private static final String SLACK_COMMAND_PATH = "/slack/commands";
+    private static final String SLACK_INTERACTIVITY_PATH = "/slack/interactivity";
     private static final String SIGNATURE_HEADER = "X-Slack-Signature";
     private static final String TIMESTAMP_HEADER = "X-Slack-Request-Timestamp";
 
@@ -26,7 +27,8 @@ public class SlackRequestSignatureFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return !HttpMethod.POST.matches(request.getMethod())
-                || !SLACK_COMMAND_PATH.equals(request.getServletPath());
+                || (!SLACK_COMMAND_PATH.equals(request.getServletPath())
+                && !SLACK_INTERACTIVITY_PATH.equals(request.getServletPath()));
     }
 
     @Override
