@@ -26,6 +26,7 @@ crawl:
 slack:
   client-id: ${SLACK_CLIENT_ID:}
   client-secret: ${SLACK_CLIENT_SECRET:}
+  signing-secret: ${SLACK_SIGNING_SECRET:}
   redirect-uri: ${SLACK_REDIRECT_URI:}
   bot-scopes: ${SLACK_BOT_SCOPES:commands,chat:write}
   settings-base-url: ${SLACK_SETTINGS_BASE_URL:http://localhost:5173}

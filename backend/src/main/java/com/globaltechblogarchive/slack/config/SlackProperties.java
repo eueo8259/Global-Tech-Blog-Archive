@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record SlackProperties(
         String clientId,
         String clientSecret,
+        String signingSecret,
         String redirectUri,
         String botScopes,
         String settingsBaseUrl
