@@ -69,6 +69,15 @@ class SlackSubscriptionDomainTest {
     }
 
     @Test
+    void renameChannelUpdatesSlackChannelName() {
+        SlackChannel channel = SlackChannel.create(workspace(), "C123", "old-name");
+
+        channel.rename("new-name");
+
+        assertThat(channel.getSlackChannelName()).isEqualTo("new-name");
+    }
+
+    @Test
     void createSubscriptionConnectsChannelAndCompany() {
         SlackChannel channel = SlackChannel.create(workspace(), "C123", "articles");
         Company company = Company.create("openai", "OpenAI");
