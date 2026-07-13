@@ -43,6 +43,26 @@ class SlackRequestSignatureFilterTest {
     }
 
     @Test
+    void interactivityRequestRequiresSignatureVerification() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                HttpMethod.POST.name(),
+                "/slack/interactivity"
+        );
+        request.setServletPath("/slack/interactivity");
+        request.addHeader("X-Slack-Request-Timestamp", TIMESTAMP);
+        request.addHeader("X-Slack-Signature", SIGNATURE);
+        request.setContent(RAW_BODY);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+        when(verifier.verify(TIMESTAMP, SIGNATURE, RAW_BODY)).thenReturn(true);
+
+        filter.doFilter(request, response, chain);
+
+        verify(verifier).verify(TIMESTAMP, SIGNATURE, RAW_BODY);
+        verify(chain).doFilter(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(response));
+    }
+
+    @Test
     void invalidSignatureReturnsUnauthorizedWithoutCallingChain() throws Exception {
         MockHttpServletRequest request = slackCommandRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();

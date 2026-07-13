@@ -1,6 +1,7 @@
 package com.globaltechblogarchive.slack.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.slack.domain.SlackChannel;
@@ -8,10 +9,12 @@ import com.globaltechblogarchive.slack.domain.SlackChannelSubscription;
 import com.globaltechblogarchive.slack.domain.SlackWorkspace;
 import com.globaltechblogarchive.support.MySqlIntegrationTest;
 import java.time.LocalDateTime;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @DataJpaTest
 class SlackChannelSubscriptionRepositoryTest extends MySqlIntegrationTest {
@@ -36,6 +39,20 @@ class SlackChannelSubscriptionRepositoryTest extends MySqlIntegrationTest {
 
         assertThat(repository.findCompanyKeysByTeamIdAndChannelId("T123", "C123"))
                 .containsExactly("test-netflix");
+    }
+
+    @Test
+    void uniqueConstraintRejectsDuplicateChannelCompanySubscription() {
+        SlackWorkspace workspace = persistWorkspace();
+        SlackChannel channel = persistChannel(workspace, "C-DUPLICATE", "duplicate-test");
+        Company company = persistCompany("test-duplicate", "Duplicate Test");
+        entityManager.persist(SlackChannelSubscription.create(channel, company));
+        entityManager.flush();
+
+        assertThatThrownBy(() -> {
+            entityManager.persist(SlackChannelSubscription.create(channel, company));
+            entityManager.flush();
+        }).isInstanceOfAny(DataIntegrityViolationException.class, ConstraintViolationException.class);
     }
 
     private SlackWorkspace persistWorkspace() {

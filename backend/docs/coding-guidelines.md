@@ -6,7 +6,8 @@
 - Prefer clear, direct code over clever abstractions.
 - Keep methods small enough to read without hiding simple behavior behind unnecessary helpers.
 - Use names that describe domain behavior, not implementation mechanics.
-- Avoid ternary expressions for meaningful control flow; prefer explicit `if` statements.
+- Do not use ternary expressions in production Java code. Use explicit `if` statements so branches remain visible and extensible.
+- Write code comments in Korean. Keep technical identifiers and standard terms unchanged when translating them would reduce clarity.
 
 ## MVP First
 
