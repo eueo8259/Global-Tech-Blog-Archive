@@ -33,12 +33,12 @@ import lombok.NoArgsConstructor;
                 ),
                 @Index(
                         name = "idx_slack_deliveries_channel_sent_window",
-                        columnList = "slack_channel_id,delivery_type,status,window_ended_at"
+                        columnList = "slack_channel_id,status,window_ended_at"
                 )
         },
         uniqueConstraints = @UniqueConstraint(
-                name = "uq_slack_deliveries_channel_date_type",
-                columnNames = {"slack_channel_id", "delivery_date", "delivery_type"}
+                name = "uq_slack_deliveries_channel_date",
+                columnNames = {"slack_channel_id", "delivery_date"}
         )
 )
 public class SlackDelivery {
@@ -56,10 +56,6 @@ public class SlackDelivery {
 
     @Column(name = "delivery_date", nullable = false)
     private LocalDate deliveryDate;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "delivery_type", nullable = false, length = 30)
-    private SlackDeliveryType deliveryType;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
@@ -110,7 +106,6 @@ public class SlackDelivery {
         SlackDelivery delivery = new SlackDelivery();
         delivery.slackChannel = slackChannel;
         delivery.deliveryDate = deliveryDate;
-        delivery.deliveryType = SlackDeliveryType.DAILY_DIGEST;
         delivery.status = SlackDeliveryStatus.PENDING;
         delivery.windowStartedAt = windowStartedAt;
         delivery.windowEndedAt = windowEndedAt;

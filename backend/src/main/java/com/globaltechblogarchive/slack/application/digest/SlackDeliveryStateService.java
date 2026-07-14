@@ -22,7 +22,7 @@ public class SlackDeliveryStateService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Optional<ClaimedSlackDelivery> claim(Long deliveryId, LocalDateTime now) {
-        SlackDelivery delivery = deliveryRepository.findByIdForUpdate(deliveryId)
+        SlackDelivery delivery = deliveryRepository.findById(deliveryId)
                 .orElse(null);
         if (delivery == null || !delivery.canStart(now)) {
             return Optional.empty();
@@ -78,7 +78,7 @@ public class SlackDeliveryStateService {
     }
 
     private SlackDelivery processingDelivery(Long deliveryId) {
-        SlackDelivery delivery = deliveryRepository.findByIdForUpdate(deliveryId)
+        SlackDelivery delivery = deliveryRepository.findById(deliveryId)
                 .orElseThrow(() -> new IllegalArgumentException("Slack Delivery를 찾을 수 없습니다: " + deliveryId));
         if (delivery.getStatus() != SlackDeliveryStatus.PROCESSING) {
             throw new IllegalStateException("Slack Delivery가 PROCESSING 상태가 아닙니다: " + deliveryId);

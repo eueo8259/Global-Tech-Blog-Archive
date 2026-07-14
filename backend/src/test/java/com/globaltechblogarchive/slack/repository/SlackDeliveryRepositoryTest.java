@@ -30,7 +30,7 @@ class SlackDeliveryRepositoryTest extends MySqlIntegrationTest {
     private TestEntityManager entityManager;
 
     @Test
-    void uniqueConstraintRejectsSameChannelDateAndType() {
+    void uniqueConstraintRejectsSameChannelAndDate() {
         SlackChannel channel = persistChannel();
         entityManager.persist(SlackDelivery.pending(channel, WINDOW_END.toLocalDate(), WINDOW_START, WINDOW_END));
         entityManager.flush();

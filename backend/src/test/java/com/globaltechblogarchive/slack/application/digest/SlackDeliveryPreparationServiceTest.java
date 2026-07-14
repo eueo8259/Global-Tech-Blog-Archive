@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 
 import com.globaltechblogarchive.slack.domain.SlackChannel;
 import com.globaltechblogarchive.slack.domain.SlackDelivery;
-import com.globaltechblogarchive.slack.domain.SlackDeliveryType;
 import com.globaltechblogarchive.slack.repository.SlackChannelRepository;
 import com.globaltechblogarchive.slack.repository.SlackDeliveryRepository;
 import java.time.LocalDate;
@@ -71,10 +70,9 @@ class SlackDeliveryPreparationServiceTest {
 
     @Test
     void prepareDoesNotCreateDuplicateDeliveryForSameDate() {
-        when(deliveryRepository.existsBySlackChannelAndDeliveryDateAndDeliveryType(
+        when(deliveryRepository.existsBySlackChannelAndDeliveryDate(
                 channel,
-                deliveryDate,
-                SlackDeliveryType.DAILY_DIGEST
+                deliveryDate
         )).thenReturn(true);
 
         int createdCount = service.prepare(deliveryDate, windowEndedAt);

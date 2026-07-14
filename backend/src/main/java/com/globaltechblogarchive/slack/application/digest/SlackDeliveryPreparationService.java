@@ -3,7 +3,6 @@ package com.globaltechblogarchive.slack.application.digest;
 import com.globaltechblogarchive.slack.domain.SlackChannel;
 import com.globaltechblogarchive.slack.domain.SlackDelivery;
 import com.globaltechblogarchive.slack.domain.SlackDeliveryStatus;
-import com.globaltechblogarchive.slack.domain.SlackDeliveryType;
 import com.globaltechblogarchive.slack.repository.SlackChannelRepository;
 import com.globaltechblogarchive.slack.repository.SlackDeliveryRepository;
 import java.time.LocalDate;
@@ -33,10 +32,9 @@ public class SlackDeliveryPreparationService {
         List<SlackChannel> channels = channelRepository.findAllSubscribedChannelsWithWorkspace();
         int createdCount = 0;
         for (SlackChannel channel : channels) {
-            if (deliveryRepository.existsBySlackChannelAndDeliveryDateAndDeliveryType(
+            if (deliveryRepository.existsBySlackChannelAndDeliveryDate(
                     channel,
-                    deliveryDate,
-                    SlackDeliveryType.DAILY_DIGEST
+                    deliveryDate
             )) {
                 continue;
             }
@@ -64,10 +62,8 @@ public class SlackDeliveryPreparationService {
     }
 
     private LocalDateTime previousWindowEnd(SlackChannel channel) {
-        return deliveryRepository
-                .findTopBySlackChannelAndDeliveryTypeAndStatusOrderByWindowEndedAtDesc(
+        return deliveryRepository.findTopBySlackChannelAndStatusOrderByWindowEndedAtDesc(
                         channel,
-                        SlackDeliveryType.DAILY_DIGEST,
                         SlackDeliveryStatus.SENT
                 )
                 .map(SlackDelivery::getWindowEndedAt)

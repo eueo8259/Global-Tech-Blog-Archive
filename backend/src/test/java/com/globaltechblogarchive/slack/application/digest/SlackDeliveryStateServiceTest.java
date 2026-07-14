@@ -33,9 +33,9 @@ class SlackDeliveryStateServiceTest {
     );
 
     @Test
-    void claimLocksAndTransitionsPendingDeliveryToProcessing() {
+    void claimTransitionsPendingDeliveryToProcessing() {
         SlackDelivery delivery = delivery();
-        when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(delivery));
+        when(repository.findById(1L)).thenReturn(Optional.of(delivery));
         LocalDateTime now = LocalDateTime.of(2026, 7, 14, 9, 0);
 
         Optional<ClaimedSlackDelivery> claimed = service.claim(1L, now);
@@ -51,7 +51,7 @@ class SlackDeliveryStateServiceTest {
         SlackDelivery delivery = delivery();
         LocalDateTime now = LocalDateTime.of(2026, 7, 14, 9, 0);
         delivery.startProcessing(now);
-        when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(delivery));
+        when(repository.findById(1L)).thenReturn(Optional.of(delivery));
 
         service.markFailure(1L, now, true, null, "HTTP_503", "server error");
 
@@ -68,7 +68,7 @@ class SlackDeliveryStateServiceTest {
         delivery.startProcessing(now);
         delivery.markRetryWaiting(now, "HTTP_503", "server error");
         delivery.startProcessing(now);
-        when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(delivery));
+        when(repository.findById(1L)).thenReturn(Optional.of(delivery));
 
         service.markFailure(1L, now, true, null, "HTTP_503", "server error");
 

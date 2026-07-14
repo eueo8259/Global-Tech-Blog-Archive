@@ -295,7 +295,6 @@ Database table: `slack_deliveries`
 | id | BIGINT | yes | Primary key |
 | slack_channel_id | BIGINT | yes | Target channel foreign key |
 | delivery_date | DATE | yes | Delivery date in the configured digest time zone |
-| delivery_type | VARCHAR(30) | yes | Currently `DAILY_DIGEST` |
 | status | VARCHAR(30) | yes | `PENDING`, `PROCESSING`, `RETRY_WAITING`, `SENT`, or `FAILED` |
 | attempt_count | INT | yes | Number of claimed send attempts |
 | window_started_at | DATETIME | yes | Exclusive article creation lower bound |
@@ -312,8 +311,8 @@ Database table: `slack_deliveries`
 Required constraint:
 
 ```sql
-UNIQUE KEY uq_slack_deliveries_channel_date_type
-    (slack_channel_id, delivery_date, delivery_type);
+UNIQUE KEY uq_slack_deliveries_channel_date
+    (slack_channel_id, delivery_date);
 ```
 
 Delivery rules:
