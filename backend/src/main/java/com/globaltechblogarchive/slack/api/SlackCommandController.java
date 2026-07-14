@@ -21,7 +21,7 @@ public class SlackCommandController {
     private final SlackCommandService slackCommandService;
 
     @PostMapping(
-            value = "/slack/commands",
+            value = "/api/slack/commands",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
     )
     public ResponseEntity<SlackCommandResponse> command(

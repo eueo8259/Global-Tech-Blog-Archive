@@ -97,6 +97,7 @@ jobs:
               "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.image.outputs.ecr-registry }}",
               "BACKEND_IMAGE=${{ steps.image.outputs.image-uri }}:${{ steps.image.outputs.image-tag }} docker compose --env-file .env.dev -f docker-compose.dev.yml pull backend",
               "BACKEND_IMAGE=${{ steps.image.outputs.image-uri }}:${{ steps.image.outputs.image-tag }} docker compose --env-file .env.dev -f docker-compose.dev.yml up -d",
+              "docker compose --env-file .env.dev -f docker-compose.dev.yml up -d --force-recreate --no-deps nginx",
               "docker compose --env-file .env.dev -f docker-compose.dev.yml ps",
               "curl --fail --silent --show-error --resolve dev-api.techport.dev:443:127.0.0.1 https://dev-api.techport.dev/health"
             ]

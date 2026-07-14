@@ -28,7 +28,7 @@ public class SlackInteractivityController {
     private final ObjectMapper objectMapper;
 
     @PostMapping(
-            value = "/slack/interactivity",
+            value = "/api/slack/interactivity",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
     )
     public ResponseEntity<SlackInteractivityResponse> interactivity(

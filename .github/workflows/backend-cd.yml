@@ -119,6 +119,7 @@ jobs:
               "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.image.outputs.ecr-registry }}",
               "BACKEND_IMAGE=${{ steps.image.outputs.image-uri }}:${{ steps.image.outputs.image-tag }} docker compose --env-file .env -f docker-compose.prod.yml pull backend",
               "BACKEND_IMAGE=${{ steps.image.outputs.image-uri }}:${{ steps.image.outputs.image-tag }} docker compose --env-file .env -f docker-compose.prod.yml up -d",
+              "docker compose --env-file .env -f docker-compose.prod.yml up -d --force-recreate --no-deps nginx",
               "docker compose --env-file .env -f docker-compose.prod.yml ps",
               "curl -fsS http://localhost/health"
             ]

@@ -46,9 +46,9 @@ class SlackRequestSignatureFilterTest {
     void interactivityRequestRequiresSignatureVerification() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest(
                 HttpMethod.POST.name(),
-                "/slack/interactivity"
+                "/api/slack/interactivity"
         );
-        request.setServletPath("/slack/interactivity");
+        request.setServletPath("/api/slack/interactivity");
         request.addHeader("X-Slack-Request-Timestamp", TIMESTAMP);
         request.addHeader("X-Slack-Signature", SIGNATURE);
         request.setContent(RAW_BODY);
@@ -77,8 +77,8 @@ class SlackRequestSignatureFilterTest {
 
     @Test
     void oauthCallbackBypassesSignatureVerification() throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest(HttpMethod.GET.name(), "/slack/oauth/callback");
-        request.setServletPath("/slack/oauth/callback");
+        MockHttpServletRequest request = new MockHttpServletRequest(HttpMethod.GET.name(), "/api/slack/oauth/callback");
+        request.setServletPath("/api/slack/oauth/callback");
         MockHttpServletResponse response = new MockHttpServletResponse();
         FilterChain chain = mock(FilterChain.class);
 
@@ -94,8 +94,8 @@ class SlackRequestSignatureFilterTest {
 
     @Test
     void getRequestToCommandPathBypassesSignatureVerification() throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest(HttpMethod.GET.name(), "/slack/commands");
-        request.setServletPath("/slack/commands");
+        MockHttpServletRequest request = new MockHttpServletRequest(HttpMethod.GET.name(), "/api/slack/commands");
+        request.setServletPath("/api/slack/commands");
         MockHttpServletResponse response = new MockHttpServletResponse();
         FilterChain chain = mock(FilterChain.class);
 
@@ -110,8 +110,8 @@ class SlackRequestSignatureFilterTest {
     }
 
     private MockHttpServletRequest slackCommandRequest() {
-        MockHttpServletRequest request = new MockHttpServletRequest(HttpMethod.POST.name(), "/slack/commands");
-        request.setServletPath("/slack/commands");
+        MockHttpServletRequest request = new MockHttpServletRequest(HttpMethod.POST.name(), "/api/slack/commands");
+        request.setServletPath("/api/slack/commands");
         request.addHeader("X-Slack-Request-Timestamp", TIMESTAMP);
         request.addHeader("X-Slack-Signature", SIGNATURE);
         request.setContent(RAW_BODY);

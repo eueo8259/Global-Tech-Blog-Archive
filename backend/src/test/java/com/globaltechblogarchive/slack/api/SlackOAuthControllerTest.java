@@ -41,7 +41,7 @@ class SlackOAuthControllerTest {
         when(slackOAuthService.createAuthorizeUrl("state-123"))
                 .thenReturn("https://slack.com/oauth/v2/authorize?state=state-123");
 
-        mockMvc.perform(get("/slack/oauth/authorize").session(session))
+        mockMvc.perform(get("/api/slack/oauth/authorize").session(session))
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", "https://slack.com/oauth/v2/authorize?state=state-123"));
 
@@ -53,7 +53,7 @@ class SlackOAuthControllerTest {
         MockHttpSession session = new MockHttpSession();
         when(stateStore.validateAndConsume(session, "state-123")).thenReturn(true);
 
-        mockMvc.perform(get("/slack/oauth/callback")
+        mockMvc.perform(get("/api/slack/oauth/callback")
                         .session(session)
                         .param("code", "code-123")
                         .param("state", "state-123"))
@@ -68,7 +68,7 @@ class SlackOAuthControllerTest {
         MockHttpSession session = new MockHttpSession();
         when(stateStore.validateAndConsume(session, "bad-state")).thenReturn(false);
 
-        mockMvc.perform(get("/slack/oauth/callback")
+        mockMvc.perform(get("/api/slack/oauth/callback")
                         .session(session)
                         .param("code", "code-123")
                         .param("state", "bad-state"))
@@ -81,7 +81,7 @@ class SlackOAuthControllerTest {
 
     @Test
     void callbackRejectsSlackAuthorizationError() throws Exception {
-        mockMvc.perform(get("/slack/oauth/callback")
+        mockMvc.perform(get("/api/slack/oauth/callback")
                         .param("error", "access_denied"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("C001"))

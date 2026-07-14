@@ -22,13 +22,13 @@ public class SlackOAuthController {
     private final SlackOAuthService slackOAuthService;
     private final SlackOAuthStateStore stateStore;
 
-    @GetMapping("/slack/oauth/authorize")
+    @GetMapping("/api/slack/oauth/authorize")
     public RedirectView authorize(HttpSession session) {
         String state = stateStore.createState(session);
         return new RedirectView(slackOAuthService.createAuthorizeUrl(state));
     }
 
-    @GetMapping("/slack/oauth/callback")
+    @GetMapping("/api/slack/oauth/callback")
     public ResponseEntity<String> callback(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String state,

@@ -25,7 +25,7 @@ class SlackPropertiesTest {
                 "SLACK_CLIENT_ID", "client-id",
                 "SLACK_CLIENT_SECRET", "client-secret",
                 "SLACK_SIGNING_SECRET", "signing-secret",
-                "SLACK_REDIRECT_URI", "http://localhost:8080/slack/oauth/callback",
+                "SLACK_REDIRECT_URI", "http://localhost:8080/api/slack/oauth/callback",
                 "SLACK_BOT_SCOPES", "commands,chat:write,channels:read",
                 "SLACK_SETTINGS_BASE_URL", "https://techport.example.com/slack/settings"
         ));
@@ -35,7 +35,7 @@ class SlackPropertiesTest {
         assertThat(properties.clientId()).isEqualTo("client-id");
         assertThat(properties.clientSecret()).isEqualTo("client-secret");
         assertThat(properties.signingSecret()).isEqualTo("signing-secret");
-        assertThat(properties.redirectUri()).isEqualTo("http://localhost:8080/slack/oauth/callback");
+        assertThat(properties.redirectUri()).isEqualTo("http://localhost:8080/api/slack/oauth/callback");
         assertThat(properties.botScopes()).isEqualTo("commands,chat:write,channels:read");
         assertThat(properties.settingsBaseUrl()).isEqualTo("https://techport.example.com/slack/settings");
     }

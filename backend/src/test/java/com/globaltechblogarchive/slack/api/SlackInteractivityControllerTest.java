@@ -44,7 +44,7 @@ class SlackInteractivityControllerTest {
         objectMapper = new ObjectMapper();
         SlackProperties properties = new SlackProperties(
                 "client-id", "client-secret", SIGNING_SECRET,
-                "http://localhost/slack/oauth/callback", "commands", "http://localhost"
+                "http://localhost/api/slack/oauth/callback", "commands", "http://localhost"
         );
         SlackRequestSignatureFilter filter = new SlackRequestSignatureFilter(
                 new SlackRequestSignatureVerifier(properties)
@@ -106,8 +106,8 @@ class SlackInteractivityControllerTest {
             String timestamp,
             MediaType contentType
     ) throws Exception {
-        return post("/slack/interactivity")
-                .servletPath("/slack/interactivity")
+        return post("/api/slack/interactivity")
+                .servletPath("/api/slack/interactivity")
                 .contentType(contentType)
                 .header("X-Slack-Request-Timestamp", timestamp)
                 .header("X-Slack-Signature", signature(timestamp, body))
