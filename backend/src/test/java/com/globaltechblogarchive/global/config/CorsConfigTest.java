@@ -12,7 +12,11 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 class CorsConfigTest {
 
-    private final Filter corsFilter = new CorsConfig().corsFilter();
+    private final Filter productionCorsFilter = corsFilter(
+            "https://techport.dev",
+            "https://www.techport.dev",
+            "http://localhost:5173"
+    );
 
     @Test
     void corsAllowsProductionFrontendOriginForApiRequests() throws Exception {
@@ -20,7 +24,7 @@ class CorsConfigTest {
         request.addHeader("Origin", "https://techport.dev");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        corsFilter.doFilter(request, response, new MockFilterChain());
+        productionCorsFilter.doFilter(request, response, new MockFilterChain());
 
         assertThat(response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))
                 .isEqualTo("https://techport.dev");
@@ -32,9 +36,22 @@ class CorsConfigTest {
         request.addHeader("Origin", "https://example.com");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        corsFilter.doFilter(request, response, new MockFilterChain());
+        productionCorsFilter.doFilter(request, response, new MockFilterChain());
 
         assertThat(response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN)).isNull();
+    }
+
+    @Test
+    void corsAllowsDevelopmentFrontendOnlyWhenConfigured() throws Exception {
+        Filter developmentCorsFilter = corsFilter("https://techport-frontend-dev.vercel.app");
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/articles");
+        request.addHeader("Origin", "https://techport-frontend-dev.vercel.app");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        developmentCorsFilter.doFilter(request, response, new MockFilterChain());
+
+        assertThat(response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))
+                .isEqualTo("https://techport-frontend-dev.vercel.app");
     }
 
     @Test
@@ -44,7 +61,7 @@ class CorsConfigTest {
         request.addHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        corsFilter.doFilter(request, response, new MockFilterChain());
+        productionCorsFilter.doFilter(request, response, new MockFilterChain());
 
         assertThat(response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))
                 .isEqualTo("https://www.techport.dev");
@@ -58,11 +75,15 @@ class CorsConfigTest {
         request.addHeader("Origin", "https://techport.dev");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        corsFilter.doFilter(request, response, new MockFilterChain());
+        productionCorsFilter.doFilter(request, response, new MockFilterChain());
 
         assertThat(response.getHeaderNames()).doesNotContainAnyElementsOf(List.of(
                 HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN,
                 HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS
         ));
+    }
+
+    private Filter corsFilter(String... allowedOrigins) {
+        return new CorsConfig(new CorsProperties(List.of(allowedOrigins))).corsFilter();
     }
 }
