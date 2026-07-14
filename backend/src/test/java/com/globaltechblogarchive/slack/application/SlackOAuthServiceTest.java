@@ -25,7 +25,7 @@ class SlackOAuthServiceTest {
                     "client-id",
                     "client-secret",
                     "signing-secret",
-                    "http://localhost:8080/slack/oauth/callback",
+                    "http://localhost:8080/api/slack/oauth/callback",
                     "commands,chat:write",
                     "http://localhost:5173"
             ),
@@ -42,7 +42,7 @@ class SlackOAuthServiceTest {
                 .startsWith("https://slack.com/oauth/v2/authorize")
                 .contains("client_id=client-id")
                 .contains("scope=commands,chat:write")
-                .contains("redirect_uri=http://localhost:8080/slack/oauth/callback")
+                .contains("redirect_uri=http://localhost:8080/api/slack/oauth/callback")
                 .contains("state=state-123");
     }
 

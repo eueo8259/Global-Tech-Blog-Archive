@@ -42,7 +42,7 @@ class SlackCommandControllerTest {
                 "client-id",
                 "client-secret",
                 SIGNING_SECRET,
-                "http://localhost/slack/oauth/callback",
+                "http://localhost/api/slack/oauth/callback",
                 "commands",
                 "http://localhost"
         );
@@ -61,8 +61,8 @@ class SlackCommandControllerTest {
                 .thenReturn(SlackCommandResult.success());
         String timestamp = Long.toString(Instant.now().getEpochSecond());
 
-        mockMvc.perform(post("/slack/commands")
-                        .servletPath("/slack/commands")
+        mockMvc.perform(post("/api/slack/commands")
+                        .servletPath("/api/slack/commands")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .header("X-Slack-Request-Timestamp", timestamp)
                         .header("X-Slack-Signature", signature(timestamp, BODY))
@@ -81,8 +81,8 @@ class SlackCommandControllerTest {
                 .thenReturn(SlackCommandResult.failure("구독 설정 화면을 열지 못했습니다."));
         String timestamp = Long.toString(Instant.now().getEpochSecond());
 
-        mockMvc.perform(post("/slack/commands")
-                        .servletPath("/slack/commands")
+        mockMvc.perform(post("/api/slack/commands")
+                        .servletPath("/api/slack/commands")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .header("X-Slack-Request-Timestamp", timestamp)
                         .header("X-Slack-Signature", signature(timestamp, BODY))
@@ -97,8 +97,8 @@ class SlackCommandControllerTest {
         String body = BODY.replace("%2Fsubscribe", "%2Funknown");
         String timestamp = Long.toString(Instant.now().getEpochSecond());
 
-        mockMvc.perform(post("/slack/commands")
-                        .servletPath("/slack/commands")
+        mockMvc.perform(post("/api/slack/commands")
+                        .servletPath("/api/slack/commands")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .header("X-Slack-Request-Timestamp", timestamp)
                         .header("X-Slack-Signature", signature(timestamp, body))
@@ -112,8 +112,8 @@ class SlackCommandControllerTest {
         String body = "{}";
         String timestamp = Long.toString(Instant.now().getEpochSecond());
 
-        mockMvc.perform(post("/slack/commands")
-                        .servletPath("/slack/commands")
+        mockMvc.perform(post("/api/slack/commands")
+                        .servletPath("/api/slack/commands")
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("X-Slack-Request-Timestamp", timestamp)
                         .header("X-Slack-Signature", signature(timestamp, body))
