@@ -9,6 +9,7 @@ build/
 .env.*
 !.env.example
 !.env.prod.example
+!.env.dev.example
 artifacts/bootstrap/
 backend/app.jar
 
