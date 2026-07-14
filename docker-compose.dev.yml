@@ -25,6 +25,7 @@ services:
       DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-global_tech_blog_archive_dev}
       DB_USERNAME: ${DB_USERNAME:-archive_user}
       DB_PASSWORD: ${DB_PASSWORD}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://techport-frontend-dev.vercel.app}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
       SLACK_CLIENT_ID: ${SLACK_CLIENT_ID}
