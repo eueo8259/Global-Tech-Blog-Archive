@@ -274,12 +274,58 @@ INDEX idx_slack_channel_subscriptions_company (company_id);
 Delivery lookup direction:
 
 ```text
-new article for company A
--> find slack_channel_subscriptions where company_id = A
--> load slack channel and parent workspace
--> decrypt workspace bot token
--> send message to channel
+09:00 Daily Digest batch
+-> find subscribed Slack channels
+-> find articles created in each channel's delivery window for subscribed companies
+-> group articles by company
+-> decrypt the parent workspace bot token
+-> send one message per channel and delivery date
 ```
+
+### Slack Delivery
+
+`SlackDelivery` records the business result of one channel's Daily Digest. Spring
+Batch metadata records Job and Step execution only and does not replace this
+delivery state.
+
+Database table: `slack_deliveries`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | yes | Primary key |
+| slack_channel_id | BIGINT | yes | Target channel foreign key |
+| delivery_date | DATE | yes | Delivery date in the configured digest time zone |
+| status | VARCHAR(30) | yes | `PENDING`, `PROCESSING`, `RETRY_WAITING`, `SENT`, or `FAILED` |
+| attempt_count | INT | yes | Number of claimed send attempts |
+| window_started_at | DATETIME | yes | Exclusive article creation lower bound |
+| window_ended_at | DATETIME | yes | Inclusive article creation upper bound |
+| processing_started_at | DATETIME | no | Used to recover stale processing claims |
+| sent_at | DATETIME | no | Successful completion time |
+| next_retry_at | DATETIME | no | Earliest time a retry may claim the delivery |
+| last_error_code | VARCHAR(100) | no | Last Slack or internal error code |
+| last_error_message | VARCHAR(500) | no | Truncated diagnostic message |
+| slack_message_ts | VARCHAR(50) | no | Slack message timestamp returned by `chat.postMessage` |
+| created_at | DATETIME | yes | Row creation time |
+| updated_at | DATETIME | yes | Row update time |
+
+Required constraint:
+
+```sql
+UNIQUE KEY uq_slack_deliveries_channel_date
+    (slack_channel_id, delivery_date);
+```
+
+Delivery rules:
+
+- The first window starts at the Slack channel creation time.
+- Later windows start at the previous `SENT` delivery's `window_ended_at`.
+- Article lookup uses `(window_started_at, window_ended_at]` and includes only
+  companies subscribed at or before the article was stored.
+- A channel receives at most one Slack API call for one Daily Digest attempt.
+- `SENT` deliveries are never selected for retry.
+- A stale `PROCESSING` delivery becomes `RETRY_WAITING`.
+- Delivery items are not snapshotted in the MVP; retry re-queries the fixed
+  delivery window using current subscription data.
 
 Database schema and company/source reference data are managed by immutable
 Flyway migrations. Locally collected articles and AI decisions may be promoted

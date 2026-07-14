@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.util.HexFormat;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -21,6 +22,7 @@ public class SlackRequestSignatureVerifier {
     private final String signingSecret;
     private final Clock clock;
 
+    @Autowired
     public SlackRequestSignatureVerifier(SlackProperties properties) {
         this(properties.signingSecret(), Clock.systemUTC());
     }

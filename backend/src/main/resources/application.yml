@@ -1,6 +1,11 @@
 spring:
   application:
     name: global-tech-blog-archive
+  batch:
+    jdbc:
+      initialize-schema: never
+    job:
+      enabled: false
   profiles:
     default: local
   datasource:
@@ -34,3 +39,12 @@ slack:
     # Local test dummy key only. Do not use this value in production.
     # Example: SLACK_BOT_TOKEN_ENCRYPTION_KEY_BASE64=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
     key-base64: ${SLACK_BOT_TOKEN_ENCRYPTION_KEY_BASE64:}
+  daily-digest:
+    enabled: ${SLACK_DAILY_DIGEST_ENABLED:false}
+    cron: "${SLACK_DAILY_DIGEST_CRON:0 0 9 * * *}"
+    retry-cron: "${SLACK_DAILY_DIGEST_RETRY_CRON:0 */5 * * * *}"
+    zone: ${SLACK_DAILY_DIGEST_ZONE:Asia/Seoul}
+    cutoff-time: ${SLACK_DAILY_DIGEST_CUTOFF_TIME:09:00}
+    max-attempts: ${SLACK_DAILY_DIGEST_MAX_ATTEMPTS:3}
+    retry-delay: ${SLACK_DAILY_DIGEST_RETRY_DELAY:5m}
+    stale-timeout: ${SLACK_DAILY_DIGEST_STALE_TIMEOUT:15m}
