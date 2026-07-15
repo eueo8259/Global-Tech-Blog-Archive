@@ -3,15 +3,10 @@ package com.globaltechblogarchive.crawl.application;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataDecision;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataInput;
-import com.globaltechblogarchive.article.application.ArticleService;
-import com.globaltechblogarchive.article.domain.Article;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
-import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
-import com.globaltechblogarchive.crawl.repository.ArticleAiDecisionRepository;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
 import com.globaltechblogarchive.source.domain.BlogSource;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,17 +23,16 @@ public class ArticleDecisionProcessor {
 
     private static final int AI_BATCH_SIZE = 10;
 
-    private final ArticleAiDecisionRepository decisionRepository;
     private final ArticleMetadataAiClient aiClient;
-    private final ArticleService articleService;
 
     public ProcessedCandidates process(
             BlogSource source,
             List<ArticleCandidate> sourceCandidates,
-            Map<String, ArticleAiDecision> decisionsByHash,
+            Map<String, PreparedArticleDecision> decisionsByHash,
             String promptVersion
     ) {
         List<ArticleCandidate> candidates = new ArrayList<>(sourceCandidates);
+        List<PreparedArticleDecision> newDecisions = new ArrayList<>();
         List<ArticleCandidate> newCandidates = aiTargetCandidates(candidates);
 
         for (int start = 0; start < newCandidates.size(); start += AI_BATCH_SIZE) {
@@ -59,37 +53,17 @@ public class ArticleDecisionProcessor {
                 markBatchFailed(candidates, batch);
                 continue;
             }
-            applyAiDecisions(source, candidates, batch, decisionsByHash, aiDecisions, promptVersion);
+            applyAiDecisions(
+                    candidates,
+                    batch,
+                    decisionsByHash,
+                    newDecisions,
+                    aiDecisions,
+                    promptVersion
+            );
         }
 
-        int storedArticleCount = writeApproved(source, candidates, decisionsByHash);
-        return new ProcessedCandidates(candidates, storedArticleCount);
-    }
-
-    private int writeApproved(
-            BlogSource source,
-            List<ArticleCandidate> candidates,
-            Map<String, ArticleAiDecision> decisionsByHash
-    ) {
-        int storedArticleCount = 0;
-        for (ArticleCandidate candidate : candidates) {
-            ArticleAiDecision decision = decisionsByHash.get(candidate.articleUrlHash());
-            if (candidate.duplicate()
-                    || decision == null
-                    || !isSaveTarget(decision.isSaveTarget(), decision.getCategory())) {
-                continue;
-            }
-            articleService.save(Article.create(
-                    source.getCompany(),
-                    decision.getTranslatedTitle(),
-                    candidate.articleUrl(),
-                    candidate.articleUrlHash(),
-                    decision.getCategory(),
-                    publishedAt(candidate)
-            ));
-            storedArticleCount++;
-        }
-        return storedArticleCount;
+        return new ProcessedCandidates(candidates, decisionsByHash, newDecisions);
     }
 
     private List<ArticleCandidate> aiTargetCandidates(List<ArticleCandidate> candidates) {
@@ -114,10 +88,10 @@ public class ArticleDecisionProcessor {
     }
 
     private void applyAiDecisions(
-            BlogSource source,
             List<ArticleCandidate> candidates,
             List<ArticleCandidate> batch,
-            Map<String, ArticleAiDecision> decisionsByHash,
+            Map<String, PreparedArticleDecision> decisionsByHash,
+            List<PreparedArticleDecision> newDecisions,
             List<ArticleMetadataDecision> aiDecisions,
             String promptVersion
     ) {
@@ -137,8 +111,7 @@ public class ArticleDecisionProcessor {
             }
 
             boolean saveTarget = isSaveTarget(metadataDecision.save(), metadataDecision.category());
-            ArticleAiDecision decision = ArticleAiDecision.create(
-                    source.getCompany(),
+            PreparedArticleDecision decision = new PreparedArticleDecision(
                     candidate.articleUrlHash(),
                     candidate.articleUrl(),
                     candidate.originalTitle(),
@@ -148,8 +121,8 @@ public class ArticleDecisionProcessor {
                     aiClient.model(),
                     promptVersion
             );
-            decisionRepository.save(decision);
             decisionsByHash.put(candidate.articleUrlHash(), decision);
+            newDecisions.add(decision);
             if (saveTarget) {
                 candidates.set(candidateIndex, candidate.withDecisionStatus(ArticleCandidateDecisionStatus.AI_APPROVED));
             } else {
@@ -169,16 +142,10 @@ public class ArticleDecisionProcessor {
         return save && category != ArticleCategory.ELSE;
     }
 
-    private LocalDateTime publishedAt(ArticleCandidate candidate) {
-        if (candidate.publishedAt() != null) {
-            return candidate.publishedAt();
-        }
-        return LocalDateTime.now();
-    }
-
     public record ProcessedCandidates(
             List<ArticleCandidate> candidates,
-            int storedArticleCount
+            Map<String, PreparedArticleDecision> decisionsByHash,
+            List<PreparedArticleDecision> newDecisions
     ) {
     }
 }

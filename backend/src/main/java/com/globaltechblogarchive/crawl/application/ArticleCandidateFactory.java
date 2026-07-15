@@ -13,6 +13,7 @@ import com.globaltechblogarchive.source.domain.BlogSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -27,15 +28,26 @@ public class ArticleCandidateFactory {
             List<ParsedArticle> cards,
             Map<String, ArticleAiDecision> decisionsByHash
     ) {
+        if (cards.isEmpty()) {
+            return List.of();
+        }
+        List<String> hashes = cards.stream()
+                .map(ParsedArticle::originalUrl)
+                .map(UrlNormalizer::normalize)
+                .map(UrlHash::sha256)
+                .distinct()
+                .toList();
+        Set<String> existingHashes = articleRepository.findExistingHashes(
+                source.getCompany().getId(),
+                hashes
+        );
+
         List<ArticleCandidate> candidates = new ArrayList<>();
         for (ParsedArticle card : cards) {
             String articleUrl = UrlNormalizer.normalize(card.originalUrl());
             String articleUrlHash = UrlHash.sha256(articleUrl);
             ArticleAiDecision decision = decisionsByHash.get(articleUrlHash);
-            boolean duplicate = articleRepository.existsByCompanyIdAndArticleUrlHash(
-                    source.getCompany().getId(),
-                    articleUrlHash
-            );
+            boolean duplicate = existingHashes.contains(articleUrlHash);
             candidates.add(new ArticleCandidate(
                     source.getCompany().getCompanyKey(),
                     source.getCompany().getCompanyName(),

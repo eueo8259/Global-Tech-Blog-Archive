@@ -1,5 +1,7 @@
 package com.globaltechblogarchive.crawl.support;
 
+import com.globaltechblogarchive.crawl.exception.SourceCollectionException;
+import com.globaltechblogarchive.global.error.ErrorCode;
 import java.io.StringReader;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Element;
@@ -21,7 +23,10 @@ public final class XmlDocumentSupport {
                     .parse(new InputSource(new StringReader(xml)))
                     .getDocumentElement();
         } catch (Exception exception) {
-            throw new IllegalArgumentException(failureMessage, exception);
+            throw new SourceCollectionException(
+                    ErrorCode.SOURCE_CONTENT_PARSE_ERROR,
+                    failureMessage
+            );
         }
     }
 

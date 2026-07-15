@@ -5,14 +5,20 @@ on:
     branches: [develop]
     paths:
       - "backend/**"
+      - "deploy/**"
       - ".github/workflows/backend-ci.yml"
+      - ".github/workflows/backend-dev-cd.yml"
       - "docker-compose.yml"
+      - "docker-compose.dev.yml"
   push:
     branches: [develop]
     paths:
       - "backend/**"
+      - "deploy/**"
       - ".github/workflows/backend-ci.yml"
+      - ".github/workflows/backend-dev-cd.yml"
       - "docker-compose.yml"
+      - "docker-compose.dev.yml"
   workflow_dispatch:
 
 permissions:

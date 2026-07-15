@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataInput;
+import com.globaltechblogarchive.article.exception.ArticleMetadataAiClientException;
+import com.globaltechblogarchive.global.error.ErrorCode;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,25 +41,29 @@ class OpenAiArticleMetadataRequestFactory {
     private String readSystemPrompt() {
         try (InputStream inputStream = getClass().getResourceAsStream(SYSTEM_PROMPT_PATH)) {
             if (inputStream == null) {
-                throw new IllegalStateException("OpenAI system prompt file not found: " + SYSTEM_PROMPT_PATH);
+                throw aiClientException("OpenAI system prompt file not found: " + SYSTEM_PROMPT_PATH);
             }
             return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to read OpenAI system prompt: " + SYSTEM_PROMPT_PATH, e);
+            throw aiClientException("Failed to read OpenAI system prompt: " + SYSTEM_PROMPT_PATH);
         }
     }
 
     private JsonNode readResponseFormatSchema() {
         try (InputStream inputStream = getClass().getResourceAsStream(RESPONSE_FORMAT_SCHEMA_PATH)) {
             if (inputStream == null) {
-                throw new IllegalStateException(
+                throw aiClientException(
                         "OpenAI response format schema file not found: " + RESPONSE_FORMAT_SCHEMA_PATH
                 );
             }
             return objectMapper.readTree(inputStream);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to read OpenAI response format schema", e);
+            throw aiClientException("Failed to read OpenAI response format schema");
         }
+    }
+
+    private ArticleMetadataAiClientException aiClientException(String message) {
+        return new ArticleMetadataAiClientException(ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR, message);
     }
 
     private ArrayNode inputMessages(List<ArticleMetadataInput> inputs) {

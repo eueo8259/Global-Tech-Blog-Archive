@@ -1,24 +1,34 @@
 package com.globaltechblogarchive.crawl.client;
 
+import com.globaltechblogarchive.crawl.exception.SourceFetchException;
+import com.globaltechblogarchive.global.error.ErrorCode;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
+import java.net.http.HttpTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.SSLHandshakeException;
 import org.springframework.stereotype.Component;
 
 @Component
 public class SourceDocumentClient {
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .sslContext(trustAllSslContext())
-            .build();
+    private final HttpClient httpClient;
+
+    public SourceDocumentClient() {
+        this(HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build());
+    }
+
+    SourceDocumentClient(HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
 
     public String fetch(String url) {
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
@@ -34,40 +44,50 @@ public class SourceDocumentClient {
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() >= 400) {
-                throw new IllegalStateException("Fetch failed with status " + response.statusCode());
+                throw new SourceFetchException(
+                        ErrorCode.SOURCE_FETCH_HTTP_STATUS_ERROR,
+                        "Fetch failed with status " + response.statusCode()
+                );
             }
             return response.body();
         } catch (IOException exception) {
-            throw new IllegalStateException("Fetch failed: " + exception.getMessage(), exception);
+            throw new SourceFetchException(
+                    errorCode(exception),
+                    "Fetch failed: " + exception.getMessage()
+            );
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Fetch interrupted", exception);
+            throw new SourceFetchException(ErrorCode.SOURCE_FETCH_INTERRUPTED_ERROR, "Fetch interrupted");
         }
     }
 
-    private SSLContext trustAllSslContext() {
-        try {
-            TrustManager[] trustManagers = new TrustManager[]{
-                    new X509TrustManager() {
-                        @Override
-                        public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
-                        }
-
-                        @Override
-                        public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {
-                        }
-
-                        @Override
-                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                            return new java.security.cert.X509Certificate[0];
-                        }
-                    }
-            };
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, trustManagers, new java.security.SecureRandom());
-            return sslContext;
-        } catch (Exception exception) {
-            throw new IllegalStateException("SSL context initialization failed", exception);
+    private ErrorCode errorCode(IOException exception) {
+        if (hasCause(exception, SSLHandshakeException.class)) {
+            return ErrorCode.SOURCE_FETCH_TLS_ERROR;
         }
+        if (hasCause(exception, HttpTimeoutException.class)) {
+            return ErrorCode.SOURCE_FETCH_TIMEOUT_ERROR;
+        }
+        if (hasCause(exception, UnknownHostException.class)) {
+            return ErrorCode.SOURCE_FETCH_DNS_ERROR;
+        }
+        if (hasCause(exception, ConnectException.class)) {
+            return ErrorCode.SOURCE_FETCH_CONNECTION_ERROR;
+        }
+        return ErrorCode.SOURCE_FETCH_NETWORK_ERROR;
+    }
+
+    private boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (type.isInstance(current)) {
+                return true;
+            }
+            if (current == current.getCause()) {
+                return false;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

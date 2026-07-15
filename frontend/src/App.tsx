@@ -7,6 +7,8 @@ import { useArticles } from './features/article/useArticles';
 import { CompanyFilter } from './features/company/CompanyFilter';
 import type { CompanyFilterValue } from './features/company/types';
 import { useCompanies } from './features/company/useCompanies';
+import { SlackInstallPage } from './pages/SlackInstallPage';
+import { SlackInstallSuccessPage } from './pages/SlackInstallSuccessPage';
 
 function formatArticleCount(totalElements: number) {
   const articleLabel = totalElements === 1 ? 'article' : 'articles';
@@ -14,7 +16,7 @@ function formatArticleCount(totalElements: number) {
   return `${totalElements} ${articleLabel}`;
 }
 
-function App() {
+function ArticleArchivePage() {
   const [selectedCategory, setSelectedCategory] = useState<ArticleCategoryFilter>('ALL');
   const [selectedCompanyKey, setSelectedCompanyKey] = useState<CompanyFilterValue>(null);
   const [selectedPage, setSelectedPage] = useState(0);
@@ -39,16 +41,24 @@ function App() {
     <div className="app-shell">
       <header className="site-header">
         <div className="header-content">
-          <a className="site-logo" href="/" aria-label="TechPort 홈">
-            <img
-              className="site-logo-icon"
-              src="/techport-icon.png"
-              alt=""
-              width="40"
-              height="40"
-            />
-            TechPort
-          </a>
+          <div className="site-navigation">
+            <a className="site-logo" href="/" aria-label="TechPort 홈">
+              <img
+                className="site-logo-icon"
+                src="/techport-icon.png"
+                alt=""
+                width="40"
+                height="40"
+              />
+              TechPort
+            </a>
+            <a className="slack-navigation-link" href="/slack">
+              <span className="slack-navigation-mark" aria-hidden="true">
+                #
+              </span>
+              Slack Bot
+            </a>
+          </div>
           <p className="site-description">
             세계적인 기술 기업의 엔지니어링 블로그를 한곳에서 만나보세요.
           </p>
@@ -90,6 +100,18 @@ function App() {
       </main>
     </div>
   );
+}
+
+function App() {
+  if (window.location.pathname === '/slack/success') {
+    return <SlackInstallSuccessPage />;
+  }
+
+  if (window.location.pathname === '/slack') {
+    return <SlackInstallPage />;
+  }
+
+  return <ArticleArchivePage />;
 }
 
 export default App;

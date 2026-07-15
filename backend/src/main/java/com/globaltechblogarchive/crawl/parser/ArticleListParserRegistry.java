@@ -1,5 +1,7 @@
 package com.globaltechblogarchive.crawl.parser;
 
+import com.globaltechblogarchive.crawl.exception.SourceCollectionException;
+import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +17,10 @@ public class ArticleListParserRegistry {
         return parsers.stream()
                 .filter(parser -> parser.supports(source))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("No article list parser for source: "
-                        + source.getSourceKey()));
+                .orElseThrow(() -> new SourceCollectionException(
+                        ErrorCode.SOURCE_COLLECTION_CONFIGURATION_ERROR,
+                        "No article list parser for source: " + source.getSourceKey()
+                ));
     }
 }
 

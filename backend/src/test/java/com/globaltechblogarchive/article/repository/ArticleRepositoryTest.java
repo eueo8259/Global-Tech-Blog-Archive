@@ -9,6 +9,7 @@ import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import com.globaltechblogarchive.support.MySqlIntegrationTest;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -58,14 +59,39 @@ class ArticleRepositoryTest extends MySqlIntegrationTest {
     }
 
     @Test
-    void existsByCompanyIdAndArticleUrlHashReturnsWhetherArticleWasStored() {
+    void findExistingHashesReturnsOnlyStoredHashesForCompany() {
         BlogSource source = persistSource();
         persistArticle(source, "existing", ArticleCategory.AI, LocalDateTime.of(2026, 6, 1, 10, 0));
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(articleRepository.existsByCompanyIdAndArticleUrlHash(source.getCompany().getId(), "hash-existing")).isTrue();
-        assertThat(articleRepository.existsByCompanyIdAndArticleUrlHash(source.getCompany().getId(), "hash-missing")).isFalse();
+        assertThat(articleRepository.findExistingHashes(
+                source.getCompany().getId(),
+                List.of("hash-existing", "hash-missing")
+        )).containsExactly("hash-existing");
+    }
+
+    @Test
+    void findAllByOrderByIdAscLoadsCompanyForBootstrapExport() {
+        BlogSource source = persistSource();
+        Article article = persistArticle(
+                source,
+                "bootstrap",
+                ArticleCategory.BACKEND,
+                LocalDateTime.of(2026, 6, 1, 10, 0)
+        );
+        entityManager.flush();
+        entityManager.clear();
+
+        List<Article> articles = articleRepository.findAllByOrderByIdAsc();
+
+        Article found = articles.stream()
+                .filter(item -> item.getId().equals(article.getId()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(entityManager.getEntityManager().getEntityManagerFactory()
+                .getPersistenceUnitUtil().isLoaded(found.getCompany()))
+                .isTrue();
     }
 
     private BlogSource persistSource() {

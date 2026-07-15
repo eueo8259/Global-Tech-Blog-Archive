@@ -1,31 +1,25 @@
 package com.globaltechblogarchive.crawl.application;
 
 import com.globaltechblogarchive.crawl.application.ArticleDecisionProcessor.ProcessedCandidates;
-import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
-import com.globaltechblogarchive.crawl.domain.ArticleCollectionRun;
 import com.globaltechblogarchive.crawl.domain.ArticleDiscoveryLog;
 import com.globaltechblogarchive.crawl.domain.CrawlMode;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.crawl.repository.ArticleAiDecisionRepository;
-import com.globaltechblogarchive.crawl.repository.ArticleCollectionRunRepository;
 import com.globaltechblogarchive.crawl.repository.ArticleDiscoveryLogRepository;
 import com.globaltechblogarchive.crawl.support.UrlHash;
 import com.globaltechblogarchive.crawl.support.UrlNormalizer;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -38,36 +32,32 @@ public class SourceCrawlProcessor {
     private final ArticleCandidateCollectorRegistry collectorRegistry;
     private final ArticleCandidateFactory candidateFactory;
     private final ArticleDecisionProcessor decisionProcessor;
+    private final CrawlPersistenceService persistenceService;
     private final BlogSourceRepository blogSourceRepository;
-    private final ArticleCollectionRunRepository collectionRunRepository;
 
-    @Transactional
     public SourceCrawlResult process(Long runId, Long sourceId, CrawlMode mode) {
-        ArticleCollectionRun run = collectionRunRepository.findById(runId)
-                .orElseThrow(() -> new IllegalArgumentException("Collection run not found: " + runId));
         BlogSource source = blogSourceRepository.findWithCompanyById(sourceId)
                 .orElseThrow(() -> new IllegalArgumentException("Blog source not found: " + sourceId));
         ArticleCandidateCollector collector = collectorRegistry.find(source.getCollectionMethod());
         List<ParsedArticle> cards = collector.collect(source, mode);
         Map<String, ArticleAiDecision> decisionsByHash = findDecisionsByHash(source, cards);
         List<ArticleCandidate> candidates = candidateFactory.create(source, cards, decisionsByHash);
+        Map<String, PreparedArticleDecision> preparedDecisions = decisionsByHash.values().stream()
+                .map(PreparedArticleDecision::from)
+                .collect(Collectors.toMap(
+                        PreparedArticleDecision::articleUrlHash,
+                        Function.identity()
+                ));
         ProcessedCandidates processed = decisionProcessor.process(
                 source,
                 candidates,
-                decisionsByHash,
+                preparedDecisions,
                 PROMPT_VERSION
         );
-        storeCandidates(run, source, processed.candidates());
-        source.markCollected(LocalDateTime.now());
-
-        CrawlRunSummary summary = CrawlRunSummary.from(processed);
-        return SourceCrawlResult.success(source, processed.candidates(), summary);
+        return persistenceService.persistCollection(runId, sourceId, processed);
     }
 
-    @Transactional
     public SourceCrawlResult retryAiFailures(Long runId, Long sourceId, List<Long> failureLogIds) {
-        ArticleCollectionRun run = collectionRunRepository.findById(runId)
-                .orElseThrow(() -> new IllegalArgumentException("Collection run not found: " + runId));
         BlogSource source = blogSourceRepository.findWithCompanyById(sourceId)
                 .orElseThrow(() -> new IllegalArgumentException("Blog source not found: " + sourceId));
         List<ArticleCandidate> candidates = collectionItemRepository.findAllById(failureLogIds).stream()
@@ -76,13 +66,10 @@ public class SourceCrawlProcessor {
         ProcessedCandidates processed = decisionProcessor.process(
                 source,
                 candidates,
-                new HashMap<>(),
+                new java.util.HashMap<>(),
                 PROMPT_VERSION
         );
-        storeCandidates(run, source, processed.candidates());
-
-        CrawlRunSummary summary = CrawlRunSummary.from(processed);
-        return SourceCrawlResult.success(source, processed.candidates(), summary);
+        return persistenceService.persistRetry(runId, sourceId, processed);
     }
 
     private Map<String, ArticleAiDecision> findDecisionsByHash(
@@ -111,10 +98,4 @@ public class SourceCrawlProcessor {
                 ));
     }
 
-    private void storeCandidates(ArticleCollectionRun run, BlogSource source, List<ArticleCandidate> candidates) {
-        List<ArticleDiscoveryLog> items = candidates.stream()
-                .map(candidate -> ArticleDiscoveryLog.create(run, source, candidate))
-                .toList();
-        collectionItemRepository.saveAll(items);
-    }
 }

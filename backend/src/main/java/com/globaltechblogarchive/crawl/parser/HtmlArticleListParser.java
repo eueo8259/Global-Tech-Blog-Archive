@@ -2,6 +2,8 @@ package com.globaltechblogarchive.crawl.parser;
 
 import com.globaltechblogarchive.crawl.parser.config.ArticleListParserProperties;
 import com.globaltechblogarchive.crawl.parser.config.ArticleListParserProperties.ParserConfig;
+import com.globaltechblogarchive.crawl.exception.SourceCollectionException;
+import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.crawl.support.ArticleDateParser;
 import com.globaltechblogarchive.crawl.support.TextCleaner;
 import com.globaltechblogarchive.crawl.support.UrlNormalizer;
@@ -70,7 +72,10 @@ public class HtmlArticleListParser implements ArticleListParser {
     public List<ParsedArticle> parse(BlogSource source, String html) {
         ParserConfig config = properties.configs().get(source.getSourceKey());
         if (config == null) {
-            throw new IllegalArgumentException("No parser config for source: " + source.getSourceKey());
+            throw new SourceCollectionException(
+                    ErrorCode.SOURCE_COLLECTION_CONFIGURATION_ERROR,
+                    "No parser config for source: " + source.getSourceKey()
+            );
         }
 
         Map<String, ParsedArticle> cards = new LinkedHashMap<>();
