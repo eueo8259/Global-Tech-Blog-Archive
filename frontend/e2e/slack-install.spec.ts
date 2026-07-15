@@ -41,3 +41,21 @@ test('keeps the Slack guide usable on a mobile viewport', async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByRole('link', { name: 'Add to Slack' }).first()).toBeVisible();
 });
+
+test('shows the next step after Slack installation completes', async ({ page }) => {
+  const consoleErrors = failOnConsoleError(page);
+
+  await page.goto('/slack/success');
+
+  await expect(
+    page.getByRole('heading', { name: 'TechPort 설치가 완료되었습니다.' }),
+  ).toBeVisible();
+  await expect(page.getByText('/subscribe', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'TechPort 홈으로' })).toHaveAttribute('href', '/');
+  await expect(page.getByRole('link', { name: '설치 안내 다시 보기' })).toHaveAttribute(
+    'href',
+    '/slack',
+  );
+
+  consoleErrors.assertNoErrors();
+});
