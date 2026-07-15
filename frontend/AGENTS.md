@@ -32,6 +32,8 @@ When doing frontend work:
 - keep Playwright coverage aligned with the user-facing workflow being changed
 - report verification commands, results, and remaining UI risk clearly
 - do not rely on visual inspection alone when Playwright can verify the behavior
+- do not open an interactive browser or perform automated visual inspection unless the user explicitly requests it
+- when manual confirmation is useful, run the required services and report the URL so the user can inspect it directly
 
 Treat the frontend test harness as part of the feature surface. If a UI change cannot be confidently verified through the existing harness, improve the harness or explain the gap before calling the work complete.
 
@@ -124,8 +126,8 @@ Before completing frontend code changes, run `npm run verify` from `frontend/` u
 When the change affects runtime behavior:
 
 1. Run the frontend locally.
-2. Verify the affected page or flow manually.
-3. Confirm loading, empty, and error states behave correctly.
+2. Report the local URL for user verification.
+3. Verify behavior with non-interactive checks such as build, lint, and headless Playwright tests.
 
 ## Harness Evolution
 

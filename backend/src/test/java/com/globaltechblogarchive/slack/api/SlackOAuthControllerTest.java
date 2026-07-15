@@ -5,13 +5,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.globaltechblogarchive.global.error.GlobalExceptionHandler;
 import com.globaltechblogarchive.slack.application.SlackOAuthService;
+import com.globaltechblogarchive.slack.config.SlackProperties;
 import com.globaltechblogarchive.slack.support.SlackOAuthStateStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +29,17 @@ class SlackOAuthControllerTest {
     void setUp() {
         slackOAuthService = mock(SlackOAuthService.class);
         stateStore = mock(SlackOAuthStateStore.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new SlackOAuthController(slackOAuthService, stateStore))
+        SlackProperties properties = new SlackProperties(
+                "client-id",
+                "client-secret",
+                "signing-secret",
+                "http://localhost:8080/api/slack/oauth/callback",
+                "commands,chat:write",
+                "http://localhost:5173"
+        );
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new SlackOAuthController(slackOAuthService, stateStore, properties)
+                )
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -57,8 +67,8 @@ class SlackOAuthControllerTest {
                         .session(session)
                         .param("code", "code-123")
                         .param("state", "state-123"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Slack installation completed."));
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", "http://localhost:5173/slack/success"));
 
         verify(slackOAuthService).install("code-123");
     }

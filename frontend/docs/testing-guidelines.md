@@ -22,7 +22,7 @@ Frontend tests should answer:
 - Does the UI show the correct state?
 - Does user interaction work?
 - Does the page behave correctly in a real browser?
-- Can an AI agent verify the result by running and interacting with the app?
+- Can an AI agent verify the result through repeatable, non-interactive checks?
 
 ## Test Stack
 
@@ -204,7 +204,9 @@ npm run test:e2e:install
 
 ## Manual Verification
 
-When runtime UI behavior changes, manually verify the affected page or flow.
+Do not open an interactive browser or perform automated visual inspection unless the user explicitly requests it.
+
+When runtime UI behavior changes, run the required services and report the URL so the user can verify the affected page or flow directly.
 
 Check:
 
@@ -217,7 +219,7 @@ Check:
 - article link behavior
 - browser console errors
 
-Manual verification is still useful when Playwright coverage exists, especially for new UI behavior.
+Headless Playwright coverage remains useful and does not require opening a visible browser window.
 
 ## Completion Rule
 
@@ -227,7 +229,7 @@ Do not consider frontend work complete if:
 - lint fails
 - relevant Playwright tests are missing or failing
 - the UI only handles the success state
-- runtime behavior changed but the affected flow was not manually verified
+- runtime behavior changed but the affected flow has no automated verification or user-verifiable URL
 
 `npm run verify` includes `format:check` before lint, build, and Playwright tests.
 

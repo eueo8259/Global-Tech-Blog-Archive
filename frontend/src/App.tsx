@@ -8,6 +8,7 @@ import { CompanyFilter } from './features/company/CompanyFilter';
 import type { CompanyFilterValue } from './features/company/types';
 import { useCompanies } from './features/company/useCompanies';
 import { SlackInstallPage } from './pages/SlackInstallPage';
+import { SlackInstallSuccessPage } from './pages/SlackInstallSuccessPage';
 
 function formatArticleCount(totalElements: number) {
   const articleLabel = totalElements === 1 ? 'article' : 'articles';
@@ -102,6 +103,10 @@ function ArticleArchivePage() {
 }
 
 function App() {
+  if (window.location.pathname === '/slack/success') {
+    return <SlackInstallSuccessPage />;
+  }
+
   if (window.location.pathname === '/slack') {
     return <SlackInstallPage />;
   }

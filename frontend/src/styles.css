@@ -948,6 +948,108 @@ a {
   font-size: 0.8rem;
 }
 
+.slack-success-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 48px 24px;
+  background: #fbf8f3;
+  color: #1d1c1d;
+}
+
+.slack-success-card {
+  width: min(620px, 100%);
+  border: 1px solid rgba(74, 21, 75, 0.12);
+  border-radius: 24px;
+  padding: 52px;
+  background: #ffffff;
+  box-shadow: 0 28px 70px rgba(58, 28, 58, 0.12);
+  text-align: center;
+}
+
+.slack-success-logo {
+  justify-content: center;
+  margin-bottom: 38px;
+  font-size: 1.45rem;
+}
+
+.slack-success-check {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: #2eb67d;
+  color: #ffffff;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.slack-success-card h1 {
+  margin: 18px 0 16px;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.18;
+  letter-spacing: -0.045em;
+}
+
+.slack-success-description {
+  margin: 0 auto 30px;
+  color: #686168;
+  line-height: 1.75;
+  word-break: keep-all;
+}
+
+.slack-success-command {
+  display: grid;
+  gap: 10px;
+  border-radius: 14px;
+  padding: 24px;
+  background: #f7f2f7;
+}
+
+.slack-success-command span {
+  color: #686168;
+  font-size: 0.85rem;
+}
+
+.slack-success-command code {
+  color: #4a154b;
+  font-family: inherit;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.slack-success-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.slack-success-primary,
+.slack-success-secondary {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #4a154b;
+  border-radius: 8px;
+  padding: 0 20px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.slack-success-primary {
+  background: #4a154b;
+  color: #ffffff;
+}
+
+.slack-success-secondary {
+  background: #ffffff;
+  color: #4a154b;
+}
+
 @media (max-width: 900px) {
   .article-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1090,5 +1192,17 @@ a {
     align-items: flex-start;
     flex-direction: column;
     gap: 12px;
+  }
+
+  .slack-success-page {
+    padding: 20px 14px;
+  }
+
+  .slack-success-card {
+    padding: 36px 22px;
+  }
+
+  .slack-success-actions {
+    flex-direction: column;
   }
 }

@@ -3,15 +3,16 @@ package com.globaltechblogarchive.slack.api;
 import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import com.globaltechblogarchive.slack.application.SlackOAuthService;
+import com.globaltechblogarchive.slack.config.SlackProperties;
 import com.globaltechblogarchive.slack.support.SlackOAuthStateStore;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.servlet.view.RedirectView;
 
 @RestController
@@ -21,6 +22,7 @@ public class SlackOAuthController {
 
     private final SlackOAuthService slackOAuthService;
     private final SlackOAuthStateStore stateStore;
+    private final SlackProperties properties;
 
     @GetMapping("/api/slack/oauth/authorize")
     public RedirectView authorize(HttpSession session) {
@@ -29,7 +31,7 @@ public class SlackOAuthController {
     }
 
     @GetMapping("/api/slack/oauth/callback")
-    public ResponseEntity<String> callback(
+    public RedirectView callback(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String state,
             @RequestParam(required = false) String error,
@@ -46,6 +48,10 @@ public class SlackOAuthController {
         }
 
         slackOAuthService.install(code);
-        return ResponseEntity.ok("Slack installation completed.");
+        String successUrl = UriComponentsBuilder.fromUriString(properties.settingsBaseUrl())
+                .pathSegment("slack", "success")
+                .build()
+                .toUriString();
+        return new RedirectView(successUrl);
     }
 }
