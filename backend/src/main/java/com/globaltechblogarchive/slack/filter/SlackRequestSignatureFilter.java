@@ -17,6 +17,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class SlackRequestSignatureFilter extends OncePerRequestFilter {
 
+    public static final String RAW_BODY_ATTRIBUTE = "SLACK_RAW_BODY";
+
     private static final String SLACK_COMMAND_PATH = "/api/slack/commands";
     private static final String SLACK_INTERACTIVITY_PATH = "/api/slack/interactivity";
     private static final String SIGNATURE_HEADER = "X-Slack-Signature";
@@ -47,6 +49,8 @@ public class SlackRequestSignatureFilter extends OncePerRequestFilter {
             return;
         }
 
-        filterChain.doFilter(new CachedBodyHttpServletRequest(request, rawBody), response);
+        CachedBodyHttpServletRequest cachedRequest = new CachedBodyHttpServletRequest(request, rawBody);
+        cachedRequest.setAttribute(RAW_BODY_ATTRIBUTE, rawBody);
+        filterChain.doFilter(cachedRequest, response);
     }
 }

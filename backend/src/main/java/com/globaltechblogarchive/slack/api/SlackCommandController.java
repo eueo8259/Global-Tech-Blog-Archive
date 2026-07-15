@@ -4,13 +4,14 @@ import com.globaltechblogarchive.slack.api.dto.SlackCommandResponse;
 import com.globaltechblogarchive.slack.api.dto.SlackSlashCommand;
 import com.globaltechblogarchive.slack.application.SlackCommandResult;
 import com.globaltechblogarchive.slack.application.SlackCommandService;
+import com.globaltechblogarchive.slack.filter.SlackRequestSignatureFilter;
+import com.globaltechblogarchive.slack.support.SlackFormPayloadParser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -19,15 +20,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class SlackCommandController {
 
     private final SlackCommandService slackCommandService;
+    private final SlackFormPayloadParser formPayloadParser;
 
     @PostMapping(
             value = "/api/slack/commands",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE
     )
     public ResponseEntity<SlackCommandResponse> command(
-            @RequestBody(required = false) MultiValueMap<String, String> payload
+            @RequestAttribute(name = SlackRequestSignatureFilter.RAW_BODY_ATTRIBUTE) byte[] rawBody
     ) {
-        SlackSlashCommand command = SlackSlashCommand.from(payload);
+        SlackSlashCommand command = SlackSlashCommand.from(formPayloadParser.parse(rawBody));
         SlackCommandResult result = slackCommandService.openSubscriptionModal(command);
         if (result.succeeded()) {
             return ResponseEntity.ok().build();

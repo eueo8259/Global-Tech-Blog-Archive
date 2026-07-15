@@ -14,6 +14,7 @@ import com.globaltechblogarchive.slack.application.SlackCommandResult;
 import com.globaltechblogarchive.slack.application.SlackCommandService;
 import com.globaltechblogarchive.slack.config.SlackProperties;
 import com.globaltechblogarchive.slack.filter.SlackRequestSignatureFilter;
+import com.globaltechblogarchive.slack.support.SlackFormPayloadParser;
 import com.globaltechblogarchive.slack.support.SlackRequestSignatureVerifier;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -49,7 +50,9 @@ class SlackCommandControllerTest {
         SlackRequestSignatureFilter filter = new SlackRequestSignatureFilter(
                 new SlackRequestSignatureVerifier(properties)
         );
-        mockMvc = MockMvcBuilders.standaloneSetup(new SlackCommandController(commandService))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new SlackCommandController(commandService, new SlackFormPayloadParser())
+                )
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .addFilters(filter)
                 .build();
