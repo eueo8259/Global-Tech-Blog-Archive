@@ -11,7 +11,7 @@ AI로 기술 아티클을 선별·번역·분류해 웹과 Slack으로 제공하
   <a href="https://www.techport.dev/slack"><strong>Slack Bot 추가하기 →</strong></a>
 </p>
 
-![TechPort 메인 화면](docs/images/techport-main-v2.png)
+![TechPort 메인 화면](docs/images/techport-main-v3.png)
 
 ## 왜 만들었나요?
 
@@ -59,6 +59,8 @@ TechPort는 이 탐색 비용을 줄이는 데 집중했습니다.
 - 구독 모달에서 관심 기업을 선택하면 워크스페이스와 채널별로 구독 설정을 저장합니다.
 - 새로 저장된 아티클 중 채널이 구독한 기업의 글만 모아 회사별 Daily Digest로 발송합니다.
 - Slack 요청 서명을 검증하고 Bot Token을 암호화해 보관하며, 일시적인 발송 실패는 재시도합니다.
+
+![TechPort Slack Bot 설치 안내](docs/images/techport-slack-install.png)
 
 ## 처리 흐름
 
