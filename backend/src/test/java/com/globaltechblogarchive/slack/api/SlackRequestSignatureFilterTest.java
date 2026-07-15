@@ -32,13 +32,20 @@ class SlackRequestSignatureFilterTest {
         MockHttpServletRequest request = slackCommandRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         AtomicReference<byte[]> downstreamBody = new AtomicReference<>();
+        AtomicReference<byte[]> rawBodyAttribute = new AtomicReference<>();
         FilterChain chain = (ServletRequest downstreamRequest, ServletResponse downstreamResponse) ->
-                downstreamBody.set(downstreamRequest.getInputStream().readAllBytes());
+        {
+            downstreamBody.set(downstreamRequest.getInputStream().readAllBytes());
+            rawBodyAttribute.set((byte[]) downstreamRequest.getAttribute(
+                    SlackRequestSignatureFilter.RAW_BODY_ATTRIBUTE
+            ));
+        };
         when(verifier.verify(TIMESTAMP, SIGNATURE, RAW_BODY)).thenReturn(true);
 
         filter.doFilter(request, response, chain);
 
         assertThat(downstreamBody.get()).isEqualTo(RAW_BODY);
+        assertThat(rawBodyAttribute.get()).isEqualTo(RAW_BODY);
         assertThat(response.getStatus()).isEqualTo(200);
     }
 

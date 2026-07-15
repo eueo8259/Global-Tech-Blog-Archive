@@ -17,6 +17,7 @@ import com.globaltechblogarchive.slack.application.SlackSubscriptionCommandServi
 import com.globaltechblogarchive.slack.config.SlackProperties;
 import com.globaltechblogarchive.slack.exception.InvalidSlackCompanySelectionException;
 import com.globaltechblogarchive.slack.filter.SlackRequestSignatureFilter;
+import com.globaltechblogarchive.slack.support.SlackFormPayloadParser;
 import com.globaltechblogarchive.slack.support.SlackRequestSignatureVerifier;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -50,7 +51,11 @@ class SlackInteractivityControllerTest {
                 new SlackRequestSignatureVerifier(properties)
         );
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new SlackInteractivityController(commandService, objectMapper)
+                        new SlackInteractivityController(
+                                commandService,
+                                objectMapper,
+                                new SlackFormPayloadParser()
+                        )
                 )
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .addFilters(filter)
