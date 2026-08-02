@@ -30,6 +30,15 @@ crawl:
     enabled: ${CRAWL_SCHEDULER_ENABLED:false}
     cron: "${CRAWL_SCHEDULER_CRON:0 0 3 * * *}"
     zone: ${CRAWL_SCHEDULER_ZONE:Asia/Seoul}
+  ai-review:
+    enabled: ${CRAWL_AI_REVIEW_ENABLED:${CRAWL_SCHEDULER_ENABLED:false}}
+    cron: "${CRAWL_AI_REVIEW_CRON:0 */5 * * * *}"
+    zone: ${CRAWL_AI_REVIEW_ZONE:Asia/Seoul}
+    claim-limit: ${CRAWL_AI_REVIEW_CLAIM_LIMIT:50}
+    batch-size: ${CRAWL_AI_REVIEW_BATCH_SIZE:10}
+    max-attempts: ${CRAWL_AI_REVIEW_MAX_ATTEMPTS:3}
+    retry-delay: ${CRAWL_AI_REVIEW_RETRY_DELAY:5m}
+    stale-timeout: ${CRAWL_AI_REVIEW_STALE_TIMEOUT:15m}
 
 slack:
   client-id: ${SLACK_CLIENT_ID:}

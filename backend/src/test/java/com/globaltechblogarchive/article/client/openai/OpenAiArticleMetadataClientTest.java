@@ -7,9 +7,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataInput;
-import com.globaltechblogarchive.article.exception.ArticleMetadataAiClientException;
+import com.globaltechblogarchive.article.exception.ArticleMetadataAiRequestException;
 import com.globaltechblogarchive.global.config.OpenAiProperties;
-import com.globaltechblogarchive.global.error.ErrorCode;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -18,7 +17,7 @@ import org.springframework.web.client.RestClient;
 class OpenAiArticleMetadataClientTest {
 
     @Test
-    void decideMapsRestClientFailureToAiClientErrorCode() {
+    void decideClassifiesServerErrorAsRetryable() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo("https://api.openai.com/v1/responses")).andRespond(withServerError());
@@ -30,8 +29,9 @@ class OpenAiArticleMetadataClientTest {
         );
 
         assertThatThrownBy(() -> client.decide(List.of(new ArticleMetadataInput(0, "Title", "Context"))))
-                .isInstanceOfSatisfying(ArticleMetadataAiClientException.class, exception -> {
-                    assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR);
+                .isInstanceOfSatisfying(ArticleMetadataAiRequestException.class, exception -> {
+                    assertThat(exception.getFailureCode()).isEqualTo("OPENAI_HTTP_500");
+                    assertThat(exception.isRetryable()).isTrue();
                 });
 
         server.verify();

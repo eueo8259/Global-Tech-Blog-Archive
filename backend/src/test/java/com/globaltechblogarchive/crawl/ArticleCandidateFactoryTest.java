@@ -7,7 +7,10 @@ import static org.mockito.Mockito.when;
 import com.globaltechblogarchive.article.repository.ArticleRepository;
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.application.ArticleCandidateFactory;
+import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
+import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
+import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.crawl.support.UrlHash;
 import com.globaltechblogarchive.crawl.support.UrlNormalizer;
@@ -47,6 +50,32 @@ class ArticleCandidateFactoryTest {
         verify(articleRepository).findExistingHashes(1L, List.of(existingHash, newHash));
     }
 
+    @Test
+    void createPreservesPreviousApprovalAndRejectionDecisions() {
+        BlogSource source = source();
+        ParsedArticle approved = article("approved");
+        ParsedArticle rejected = article("rejected");
+        String approvedHash = hash(approved);
+        String rejectedHash = hash(rejected);
+        when(articleRepository.findExistingHashes(1L, List.of(approvedHash, rejectedHash)))
+                .thenReturn(Set.of());
+
+        List<ArticleCandidate> candidates = new ArticleCandidateFactory(articleRepository).create(
+                source,
+                List.of(approved, rejected),
+                Map.of(
+                        approvedHash, decision(source, approvedHash, true, ArticleCategory.AI),
+                        rejectedHash, decision(source, rejectedHash, false, ArticleCategory.ELSE)
+                )
+        );
+
+        assertThat(candidates).extracting(ArticleCandidate::decisionStatus)
+                .containsExactly(
+                        ArticleCandidateDecisionStatus.PREVIOUSLY_APPROVED,
+                        ArticleCandidateDecisionStatus.PREVIOUSLY_REJECTED
+                );
+    }
+
     private BlogSource source() {
         Company company = Company.create("test-company", "Test Company");
         ReflectionTestUtils.setField(company, "id", 1L);
@@ -71,5 +100,24 @@ class ArticleCandidateFactoryTest {
 
     private String hash(ParsedArticle article) {
         return UrlHash.sha256(UrlNormalizer.normalize(article.originalUrl()));
+    }
+
+    private ArticleAiDecision decision(
+            BlogSource source,
+            String hash,
+            boolean saveTarget,
+            ArticleCategory category
+    ) {
+        return ArticleAiDecision.create(
+                source.getCompany(),
+                hash,
+                "https://example.com/" + hash,
+                "Original",
+                "Translated",
+                category,
+                saveTarget,
+                "gpt-test",
+                "v1"
+        );
     }
 }

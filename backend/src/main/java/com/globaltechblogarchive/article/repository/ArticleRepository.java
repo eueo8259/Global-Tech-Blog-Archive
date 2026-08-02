@@ -14,6 +14,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface ArticleRepository extends JpaRepository<Article, Long> {
 
+    boolean existsByCompanyIdAndArticleUrlHash(Long companyId, String articleUrlHash);
+
     @EntityGraph(attributePaths = "company")
     Page<Article> findAllByOrderByPublishedAtDescIdDesc(Pageable pageable);
 
