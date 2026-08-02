@@ -120,7 +120,7 @@ public class ArticleAiReviewResultService {
         }
         LocalDateTime publishedAt = claimed.publishedAt();
         if (publishedAt == null) {
-            publishedAt = LocalDateTime.now();
+            publishedAt = candidate.getCreatedAt();
         }
         articleRepository.save(Article.create(
                 candidate.getCompany(),

@@ -240,7 +240,7 @@ The aggregate does not include:
 - OpenAI calls run without an active database transaction.
 - AI decisions, approved Articles, and final candidate status are committed in one short transaction.
 - Timeout, HTTP 429, and temporary 5xx failures move candidates to `AI_RETRY_WAITING` until the maximum attempt count is reached.
-- Stale `AI_PROCESSING` candidates move to `AI_RETRY_WAITING`; a claim timestamp prevents an older worker result from overwriting a newer claim.
+- Stale `AI_PROCESSING` candidates move to `AI_RETRY_WAITING`; candidates that reached the maximum attempt count move to `AI_FAILED`. A claim timestamp prevents an older worker result from overwriting a newer claim.
 - AI failures remain in `article_candidates` as `AI_FAILED`; no decision row is created because no valid AI decision exists.
 - If the prompt changes, increment `prompt_version` to allow re-review.
 - If the source does not provide a publication time, set `published_at` to the collection time.

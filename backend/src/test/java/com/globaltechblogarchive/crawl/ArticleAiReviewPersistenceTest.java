@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataDecision;
+import com.globaltechblogarchive.article.domain.Article;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.article.repository.ArticleRepository;
 import com.globaltechblogarchive.company.domain.Company;
@@ -101,6 +102,25 @@ class ArticleAiReviewPersistenceTest extends MySqlIntegrationTest {
         )).isTrue();
         assertThat(articleRepository.existsByCompanyIdAndArticleUrlHash(ids.companyId(), ids.hash()))
                 .isTrue();
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void claimWithNanosecondsCanCompleteAfterDatabaseRoundTrip() {
+        CandidateIds ids = persistNewCandidate();
+        LocalDateTime claimTime = LocalDateTime.of(2026, 8, 2, 10, 0, 0, 123_456_789);
+        ClaimedArticleCandidate claimed = claim(ids.candidateId(), claimTime);
+
+        AiReviewCandidateResult result = resultService.complete(
+                claimed,
+                approvedDecision("Translated title"),
+                "gpt-test"
+        );
+
+        assertThat(claimed.claimedAt().getNano()).isEqualTo(123_456_000);
+        assertThat(result.approvedCount()).isEqualTo(1);
+        assertThat(candidate(ids.candidateId()).getStatus())
+                .isEqualTo(ArticleCandidateDecisionStatus.AI_APPROVED);
     }
 
     @Test
@@ -203,6 +223,46 @@ class ArticleAiReviewPersistenceTest extends MySqlIntegrationTest {
                 .isFalse();
     }
 
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void repeatedStaleRecoveryFailsCandidateAtMaximumAttempts() {
+        CandidateIds ids = persistNewCandidate();
+        LocalDateTime first = LocalDateTime.of(2026, 8, 6, 10, 0);
+        claim(ids.candidateId(), first);
+
+        stateService.recoverStale(first.plusMinutes(16));
+        claim(ids.candidateId(), first.plusMinutes(16));
+        stateService.recoverStale(first.plusMinutes(32));
+        claim(ids.candidateId(), first.plusMinutes(32));
+        stateService.recoverStale(first.plusMinutes(48));
+
+        ArticleCandidateTask candidate = candidate(ids.candidateId());
+        assertThat(candidate.getStatus()).isEqualTo(ArticleCandidateDecisionStatus.AI_FAILED);
+        assertThat(candidate.getAttemptCount()).isEqualTo(3);
+        assertThat(candidate.getLastErrorCode()).isEqualTo("STALE_PROCESSING_MAX_ATTEMPTS");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void missingPublishedAtUsesCandidateCollectionTimeAfterDelayedApproval() {
+        CandidateIds ids = persistNewCandidate(null);
+        LocalDateTime collectedAt = candidate(ids.candidateId()).getCreatedAt();
+        ClaimedArticleCandidate claimed = claim(
+                ids.candidateId(),
+                collectedAt.plusDays(3)
+        );
+
+        resultService.complete(claimed, approvedDecision("Translated title"), "gpt-test");
+
+        Article article = articleRepository.findAllByOrderByIdAsc()
+                .stream()
+                .filter(stored -> stored.getCompany().getId().equals(ids.companyId()))
+                .filter(stored -> stored.getArticleUrlHash().equals(ids.hash()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(article.getPublishedAt()).isEqualTo(collectedAt);
+    }
+
     private ClaimedArticleCandidate claim(Long candidateId, LocalDateTime now) {
         return stateService.claimAvailable(now, "v1", 100)
                 .stream()
@@ -212,6 +272,10 @@ class ArticleAiReviewPersistenceTest extends MySqlIntegrationTest {
     }
 
     private CandidateIds persistNewCandidate() {
+        return persistNewCandidate(LocalDateTime.of(2026, 8, 1, 9, 0));
+    }
+
+    private CandidateIds persistNewCandidate(LocalDateTime publishedAt) {
         return transaction().execute(status -> {
             String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
             Company company = Company.create("company-" + suffix, "Company " + suffix);
@@ -234,7 +298,7 @@ class ArticleAiReviewPersistenceTest extends MySqlIntegrationTest {
                             company.getCompanyName(),
                             "Original title",
                             "https://example.com/articles/" + suffix,
-                            LocalDateTime.of(2026, 8, 1, 9, 0),
+                            publishedAt,
                             "Short context",
                             hash,
                             false,

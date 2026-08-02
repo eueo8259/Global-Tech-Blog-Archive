@@ -6,6 +6,7 @@ import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateTask;
 import com.globaltechblogarchive.crawl.repository.ArticleCandidateTaskRepository;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -26,13 +27,14 @@ public class ArticleCandidateStateService {
             String promptVersion,
             int limit
     ) {
+        LocalDateTime claimTime = databaseTime(now);
         List<ArticleCandidateTask> candidates = candidateRepository.findClaimable(
                 ArticleCandidateDecisionStatus.NEW,
                 ArticleCandidateDecisionStatus.AI_RETRY_WAITING,
-                now,
+                claimTime,
                 PageRequest.of(0, limit)
         );
-        return claim(candidates, now, promptVersion);
+        return claim(candidates, claimTime, promptVersion);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -41,22 +43,35 @@ public class ArticleCandidateStateService {
             String promptVersion,
             int limit
     ) {
+        LocalDateTime claimTime = databaseTime(now);
         List<ArticleCandidateTask> candidates = candidateRepository.findByStatusOrderByUpdatedAtAscIdAsc(
                 ArticleCandidateDecisionStatus.AI_FAILED,
                 PageRequest.of(0, limit)
         );
-        return claim(candidates, now, promptVersion);
+        return claim(candidates, claimTime, promptVersion);
     }
 
     @Transactional
     public int recoverStale(LocalDateTime now) {
-        LocalDateTime threshold = now.minus(properties.staleTimeout());
+        LocalDateTime recoveryTime = databaseTime(now);
+        LocalDateTime threshold = recoveryTime.minus(properties.staleTimeout());
         List<ArticleCandidateTask> candidates = candidateRepository.findStaleProcessing(
                 ArticleCandidateDecisionStatus.AI_PROCESSING,
                 threshold
         );
-        candidates.forEach(candidate -> candidate.recover(now));
-        return candidates.size();
+        int recoveredCount = 0;
+        for (ArticleCandidateTask candidate : candidates) {
+            if (candidate.getAttemptCount() >= properties.maxAttempts()) {
+                candidate.fail(
+                        "STALE_PROCESSING_MAX_ATTEMPTS",
+                        "Stale AI processing candidate reached maximum attempts"
+                );
+            } else {
+                candidate.recover(recoveryTime);
+                recoveredCount++;
+            }
+        }
+        return recoveredCount;
     }
 
     private List<ClaimedArticleCandidate> claim(
@@ -91,5 +106,9 @@ public class ArticleCandidateStateService {
                 promptVersion,
                 claimedAt
         );
+    }
+
+    private LocalDateTime databaseTime(LocalDateTime value) {
+        return value.truncatedTo(ChronoUnit.MICROS);
     }
 }
