@@ -17,6 +17,7 @@ import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -47,7 +48,7 @@ public class CrawlPersistenceService {
         BlogSource source = blogSourceRepository.findWithCompanyById(sourceId)
                 .orElseThrow(() -> new IllegalArgumentException("Blog source not found: " + sourceId));
 
-        List<ArticleCandidate> observedCandidates = observedCandidates(candidates);
+        List<ArticleCandidate> observedCandidates = observedCandidates(uniqueCandidates(candidates));
         storeCandidateTasks(source, observedCandidates);
         int storedArticleCount = savePreviouslyApprovedArticles(source, observedCandidates, decisionsByHash);
         storeDiscoveryLogs(run, source, observedCandidates);
@@ -153,5 +154,13 @@ public class CrawlPersistenceService {
             }
         }
         return observed;
+    }
+
+    private List<ArticleCandidate> uniqueCandidates(List<ArticleCandidate> candidates) {
+        Map<String, ArticleCandidate> uniqueByHash = new LinkedHashMap<>();
+        for (ArticleCandidate candidate : candidates) {
+            uniqueByHash.putIfAbsent(candidate.articleUrlHash(), candidate);
+        }
+        return List.copyOf(uniqueByHash.values());
     }
 }

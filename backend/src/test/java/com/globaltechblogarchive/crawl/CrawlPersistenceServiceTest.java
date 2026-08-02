@@ -6,6 +6,7 @@ import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.article.domain.ArticleCategory;
 import com.globaltechblogarchive.article.repository.ArticleRepository;
 import com.globaltechblogarchive.crawl.application.CrawlPersistenceService;
+import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
 import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
@@ -104,6 +105,27 @@ class CrawlPersistenceServiceTest extends MySqlIntegrationTest {
                 .isEqualTo(firstCandidateId);
         assertThat(discoveryLogRepository.countBySourceIdAndArticleUrlHash(ids.sourceId(), "same-hash"))
                 .isEqualTo(2);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void duplicateHashInSameCollectionIsStoredOnce() {
+        PersistedIds ids = persistRunAndSource();
+        ArticleCandidate first = candidate("same-run-hash", ArticleCandidateDecisionStatus.NEW, false);
+        ArticleCandidate duplicate = candidate("same-run-hash", ArticleCandidateDecisionStatus.NEW, false);
+
+        SourceCrawlResult result = persistenceService.persistDiscoveredCandidates(
+                ids.runId(),
+                ids.sourceId(),
+                List.of(first, duplicate),
+                Map.of()
+        );
+
+        assertThat(result.candidates()).hasSize(1);
+        assertThat(candidateRepository.findByCompanyIdAndArticleUrlHash(ids.companyId(), "same-run-hash"))
+                .isPresent();
+        assertThat(discoveryLogRepository.countBySourceIdAndArticleUrlHash(ids.sourceId(), "same-run-hash"))
+                .isEqualTo(1);
     }
 
     @Test
