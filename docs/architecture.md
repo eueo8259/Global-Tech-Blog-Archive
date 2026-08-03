@@ -9,7 +9,7 @@ Global Tech Blog Archive collects engineering blog article metadata from selecte
 - Frontend: React, TypeScript, Vite
 - Backend API: Java 21, Spring Boot
 - Collector: RSS/Atom-first collection with explicitly limited HTML list-page parsing
-- Classifier: keyword-based single-category classification
+- AI reviewer: OpenAI-based selection, title translation, and single-category classification
 - Database: MySQL
 - Scheduled delivery: Spring Batch and Slack `chat.postMessage`
 - External Sources: company engineering blogs defined in `article-source-strategy.md`
@@ -82,10 +82,19 @@ External Blog Sources
 Collector
         |
         v
-Category Classifier
+Persist Candidate (`NEW`)
         |
         v
-MySQL
+AI Review Scheduler
+        |
+        v
+Claim Candidate (`AI_PROCESSING`)
+        |
+        v
+OpenAI API (outside transaction)
+        |
+        v
+Persist Decision + Approved Article + Final Candidate Status
         |
         v
 Spring Boot API
@@ -93,6 +102,14 @@ Spring Boot API
         v
 React Frontend
 ```
+
+Article collection and AI review are separate scheduler flows. Collection ends
+after the candidate and its immutable discovery history are committed. The AI
+review scheduler claims persisted candidates in a short transaction, releases
+the transaction before the external API call, and commits the decision, approved
+article, and final candidate status together afterward. Retryable failures are
+delayed in `AI_RETRY_WAITING`, while stale `AI_PROCESSING` claims are recovered
+from `processing_started_at`.
 
 Slack Daily Digest follows a separate scheduled read path:
 
@@ -124,6 +141,9 @@ claim work and record success or failure.
 - Each article has one primary category.
 - `ALL` is a UI/API filter option, not a stored article category.
 - Deduplicate articles by `company_id` and `article_url_hash`.
+- Deduplicate candidate work by `company_id` and `article_url_hash`.
+- Keep `article_collections` as immutable per-run discovery history; use
+  `article_candidates` as the mutable AI work queue.
 - Do not store a separate `collected_at`; `created_at` represents the first collection time.
 - Do not store full article bodies in the MVP.
 

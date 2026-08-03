@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface ArticleDiscoveryLogRepository extends JpaRepository<ArticleDiscoveryLog, Long> {
 
+    long countBySourceIdAndArticleUrlHash(Long sourceId, String articleUrlHash);
+
     @EntityGraph(attributePaths = {"source", "source.company"})
     @Query("""
             SELECT log

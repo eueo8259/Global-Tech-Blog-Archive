@@ -7,6 +7,8 @@ spring:
 openai:
   api-key: ${OPENAI_API_KEY}
   model: ${OPENAI_MODEL:gpt-5-mini}
+  connect-timeout: ${OPENAI_CONNECT_TIMEOUT:3s}
+  read-timeout: ${OPENAI_READ_TIMEOUT:2m}
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:https://techport-frontend-dev.vercel.app}

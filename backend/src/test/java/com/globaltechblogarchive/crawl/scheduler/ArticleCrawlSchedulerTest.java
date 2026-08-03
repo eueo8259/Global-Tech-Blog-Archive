@@ -68,6 +68,7 @@ class ArticleCrawlSchedulerTest {
                 2,
                 15,
                 0,
+                0,
                 1,
                 2,
                 List.of()

@@ -2,8 +2,7 @@ package com.globaltechblogarchive.article.client.openai;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.globaltechblogarchive.article.application.ArticleMetadataAiClient;
-import com.globaltechblogarchive.article.exception.ArticleMetadataAiClientException;
-import com.globaltechblogarchive.global.error.ErrorCode;
+import com.globaltechblogarchive.article.exception.ArticleMetadataAiRequestException;
 
 import java.util.List;
 
@@ -13,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 @Component
 @RequiredArgsConstructor
@@ -42,12 +42,27 @@ public class OpenAiArticleMetadataClient implements ArticleMetadataAiClient {
                     .body(request)
                     .retrieve()
                     .body(String.class);
+        } catch (RestClientResponseException exception) {
+            throw httpFailure(exception);
         } catch (RestClientException exception) {
-            throw new ArticleMetadataAiClientException(
-                    ErrorCode.ARTICLE_METADATA_AI_CLIENT_ERROR,
-                    "OpenAI request failed"
+            throw new ArticleMetadataAiRequestException(
+                    "OPENAI_NETWORK_ERROR",
+                    "OpenAI network request failed",
+                    true
             );
         }
         return responseParser.parse(responseBody);
+    }
+
+    private ArticleMetadataAiRequestException httpFailure(RestClientResponseException exception) {
+        int statusCode = exception.getStatusCode().value();
+        boolean retryable = statusCode == 408
+                || statusCode == 429
+                || exception.getStatusCode().is5xxServerError();
+        return new ArticleMetadataAiRequestException(
+                "OPENAI_HTTP_" + statusCode,
+                "OpenAI request failed with HTTP status " + statusCode,
+                retryable
+        );
     }
 }

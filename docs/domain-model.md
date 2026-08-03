@@ -107,6 +107,52 @@ Required constraints:
 UNIQUE KEY uq_article_ai_decision_company_url_hash_prompt (company_id, article_url_hash, prompt_version);
 ```
 
+### Article Candidate
+
+`ArticleCandidate` is the durable work item between source collection and AI review.
+
+Database table: `article_candidates`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | yes | Primary key |
+| company_id | BIGINT | yes | Foreign key to `companies.id` |
+| source_id | BIGINT | yes | Foreign key to `blog_sources.id` |
+| article_url | VARCHAR(2000) | yes | Normalized source URL |
+| article_url_hash | VARCHAR(64) | yes | Candidate business identity with company |
+| original_title | VARCHAR(500) | yes | Title collected from the source |
+| short_context | TEXT | no | Short AI review context |
+| category_hint | VARCHAR(100) | no | Optional source category hint |
+| published_at | DATETIME | no | Source publication time |
+| status | VARCHAR(30) | yes | Current candidate processing state |
+| attempt_count | INT | yes | Number of AI processing claims |
+| next_retry_at | DATETIME | no | Earliest retry claim time |
+| processing_started_at | DATETIME | no | Claim time and stale-work reference |
+| last_error_code | VARCHAR(100) | no | Last processing failure code |
+| last_error_message | VARCHAR(500) | no | Truncated diagnostic message |
+| processing_prompt_version | VARCHAR(50) | no | Prompt version used by the current/latest claim |
+| created_at | DATETIME | yes | First discovery time |
+| updated_at | DATETIME | yes | Last state change time |
+
+Required constraints and indexes:
+
+```sql
+UNIQUE KEY uq_article_candidates_company_url_hash (company_id, article_url_hash);
+INDEX idx_article_candidates_status_retry (status, next_retry_at);
+INDEX idx_article_candidates_status_processing (status, processing_started_at);
+```
+
+Candidate state transitions:
+
+```text
+NEW -> AI_PROCESSING -> AI_APPROVED | AI_REJECTED
+AI_PROCESSING -> AI_RETRY_WAITING -> AI_PROCESSING
+AI_PROCESSING -> AI_FAILED
+```
+
+`PREVIOUSLY_APPROVED`, `PREVIOUSLY_REJECTED`, and `DUPLICATE` preserve cached
+decision and existing-article behavior without another OpenAI call.
+
 ### Source
 
 `Source` is a configured company blog endpoint used by the collector.
@@ -177,7 +223,8 @@ The aggregate does not include:
 - RSS and Atom collection use `feed_url`.
 - Sitemap collection uses `feed_url`.
 - HTML scraping uses `site_url`.
-- Article category assignment is handled by AI decision before persistence.
+- Collected candidates are committed as durable work before an OpenAI call.
+- Article category assignment is handled by AI decision before Article persistence.
 - Each article has exactly one stored category.
 - The crawler stores the source-provided URL as `article_url`.
 - `article_url` is both the user-facing article link and the deduplication base.
@@ -190,7 +237,11 @@ The aggregate does not include:
 - `article_ai_decisions.save_target=false` or `category=ELSE` prevents saving to `articles`.
 - Previously approved decisions may save article rows without calling AI again.
 - Previously rejected decisions do not call AI again and do not save article rows.
-- AI failures are recorded in crawl logs as `AI_FAILED`; no decision row is created because no valid AI decision exists.
+- OpenAI calls run without an active database transaction.
+- AI decisions, approved Articles, and final candidate status are committed in one short transaction.
+- Timeout, HTTP 429, and temporary 5xx failures move candidates to `AI_RETRY_WAITING` until the maximum attempt count is reached.
+- Stale `AI_PROCESSING` candidates move to `AI_RETRY_WAITING`; candidates that reached the maximum attempt count move to `AI_FAILED`. A claim timestamp prevents an older worker result from overwriting a newer claim.
+- AI failures remain in `article_candidates` as `AI_FAILED`; no decision row is created because no valid AI decision exists.
 - If the prompt changes, increment `prompt_version` to allow re-review.
 - If the source does not provide a publication time, set `published_at` to the collection time.
 - `created_at` represents the first time the article row was stored.
@@ -332,13 +383,16 @@ Flyway migrations. Locally collected articles and AI decisions may be promoted
 once through the bootstrap archive process documented in
 `backend/docs/bootstrap-deployment.md`; collection run logs are not promoted.
 
-Candidate decision statuses used in crawl logs:
+Candidate processing and observed decision statuses:
 
 ```text
 NEW
+AI_PROCESSING
+AI_RETRY_WAITING
 PREVIOUSLY_APPROVED
 PREVIOUSLY_REJECTED
 AI_APPROVED
 AI_REJECTED
 AI_FAILED
+DUPLICATE
 ```
