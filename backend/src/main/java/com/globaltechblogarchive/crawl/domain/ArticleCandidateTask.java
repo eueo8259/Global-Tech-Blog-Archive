@@ -120,7 +120,9 @@ public class ArticleCandidateTask {
         this.originalTitle = candidate.originalTitle();
         this.shortContext = candidate.shortContext();
         this.categoryHint = candidate.categoryHint();
-        this.publishedAt = candidate.publishedAt();
+        if (candidate.publishedAt() != null) {
+            this.publishedAt = candidate.publishedAt();
+        }
     }
 
     public void observe(

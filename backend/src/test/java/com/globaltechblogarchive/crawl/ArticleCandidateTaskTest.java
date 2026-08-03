@@ -61,6 +61,21 @@ class ArticleCandidateTaskTest {
         assertThat(task.getProcessingPromptVersion()).isNull();
     }
 
+    @Test
+    void rediscoveryWithoutPublicationDatePreservesKnownDate() {
+        ArticleCandidateTask task = task();
+        LocalDateTime knownPublishedAt = task.getPublishedAt();
+
+        task.observe(
+                task.getSource(),
+                candidate(null),
+                ArticleCandidateDecisionStatus.NEW,
+                "v1"
+        );
+
+        assertThat(task.getPublishedAt()).isEqualTo(knownPublishedAt);
+    }
+
     private ArticleCandidateTask task() {
         Company company = Company.create("test", "Test");
         BlogSource source = BlogSource.create(
@@ -81,12 +96,16 @@ class ArticleCandidateTaskTest {
     }
 
     private ArticleCandidate candidate() {
+        return candidate(LocalDateTime.of(2026, 8, 1, 9, 0));
+    }
+
+    private ArticleCandidate candidate(LocalDateTime publishedAt) {
         return new ArticleCandidate(
                 "test",
                 "Test",
                 "Original",
                 "https://example.com/article",
-                LocalDateTime.of(2026, 8, 1, 9, 0),
+                publishedAt,
                 "Context",
                 "hash",
                 false,
