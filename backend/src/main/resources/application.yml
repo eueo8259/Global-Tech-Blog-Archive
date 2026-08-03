@@ -1,11 +1,6 @@
 spring:
   application:
     name: global-tech-blog-archive
-  batch:
-    jdbc:
-      initialize-schema: never
-    job:
-      enabled: false
   profiles:
     default: local
   datasource:

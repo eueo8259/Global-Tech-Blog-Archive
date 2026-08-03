@@ -325,7 +325,7 @@ INDEX idx_slack_channel_subscriptions_company (company_id);
 Delivery lookup direction:
 
 ```text
-09:00 Daily Digest batch
+09:00 Daily Digest scheduler
 -> find subscribed Slack channels
 -> find articles created in each channel's delivery window for subscribed companies
 -> group articles by company
@@ -333,11 +333,55 @@ Delivery lookup direction:
 -> send one message per channel and delivery date
 ```
 
+### Slack Daily Digest Run
+
+`SlackDailyDigestRun` records the technical execution state of the once-per-day
+Daily Digest orchestration. It replaces framework-owned Job and Step metadata
+with the smaller set of fields required by this service.
+
+Database table: `slack_daily_digest_runs`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | yes | Primary key |
+| delivery_date | DATE | yes | Business identity of the daily run |
+| window_ended_at | DATETIME | yes | Inclusive article window upper bound |
+| status | VARCHAR(30) | yes | `RUNNING`, `COMPLETED`, or `FAILED` |
+| attempt_count | INT | yes | Number of starts including stale or failed restarts |
+| recovered_delivery_count | INT | yes | Stale deliveries recovered during the run |
+| created_delivery_count | INT | yes | New delivery rows prepared during the run |
+| ready_delivery_count | INT | yes | Delivery rows selected for dispatch |
+| started_at | DATETIME | yes | Latest attempt start time |
+| ended_at | DATETIME | no | Completion or failure time |
+| last_error_code | VARCHAR(100) | no | Last orchestration error code |
+| last_error_message | VARCHAR(500) | no | Truncated diagnostic message |
+| created_at | DATETIME | yes | First attempt creation time |
+| updated_at | DATETIME | yes | Last state change time |
+
+Required constraint:
+
+```sql
+UNIQUE KEY uq_slack_daily_digest_runs_delivery_date (delivery_date);
+```
+
+Daily run rules:
+
+- A `COMPLETED` delivery date is never started again.
+- A `FAILED` run may restart and increments `attempt_count`.
+- A persisted `RUNNING` run may restart immediately after a later schedule
+  acquires the process-local execution guard.
+- After the daily cutoff, the five-minute retry schedule catches up a missing,
+  failed, or persisted `RUNNING` daily execution.
+- Five-minute delivery retries do not create daily run rows.
+- Run completion describes orchestration completion, not guaranteed success of
+  every channel delivery. Channel outcomes remain in `SlackDelivery`.
+- Legacy Spring Batch metadata tables are retained temporarily for release
+  rollback compatibility and are not part of the current runtime model.
+
 ### Slack Delivery
 
-`SlackDelivery` records the business result of one channel's Daily Digest. Spring
-Batch metadata records Job and Step execution only and does not replace this
-delivery state.
+`SlackDelivery` records the business result of one channel's Daily Digest. The
+daily run record does not replace this channel-level delivery state.
 
 Database table: `slack_deliveries`
 

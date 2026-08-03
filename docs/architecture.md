@@ -11,7 +11,7 @@ Global Tech Blog Archive collects engineering blog article metadata from selecte
 - Collector: RSS/Atom-first collection with explicitly limited HTML list-page parsing
 - AI reviewer: OpenAI-based selection, title translation, and single-category classification
 - Database: MySQL
-- Scheduled delivery: Spring Batch and Slack `chat.postMessage`
+- Scheduled delivery: Spring Scheduler, DB delivery state, and Slack `chat.postMessage`
 - External Sources: company engineering blogs defined in `article-source-strategy.md`
 
 ### Domain Ownership
@@ -117,7 +117,10 @@ Slack Daily Digest follows a separate scheduled read path:
 Stored Articles + Slack Subscriptions
         |
         v
-Spring Batch (09:00 Asia/Seoul)
+Daily Digest Scheduler (09:00 Asia/Seoul)
+        |
+        v
+Record Daily Run + Prepare `SlackDelivery`
         |
         v
 Channel-level Daily Digest
@@ -127,10 +130,26 @@ Slack chat.postMessage
 ```
 
 Article persistence does not create subscriber-specific delivery rows. The
-Daily Digest Job prepares `SlackDelivery` rows only for channels that have
-articles in their next delivery window, then sends each delivery independently.
+The Daily Digest service records one `SlackDailyDigestRun` per delivery date,
+prepares `SlackDelivery` rows only for channels that have articles in their
+next delivery window, then sends each delivery independently. A completed date
+is not executed again. After the cutoff time, the five-minute retry schedule
+also calls the daily flow so a failed run, a persisted `RUNNING` run from a
+terminated process, or a missed 09:00 schedule can catch up. If the daily run is
+already complete, the schedule processes retryable `SlackDelivery` rows directly
+without creating another daily run row.
 Slack API calls run outside the JPA transaction; short independent transactions
-claim work and record success or failure.
+claim work and record success or failure. The service currently runs as a single
+application instance, and a process-local guard prevents the daily and retry
+schedules from overlapping. Because a persisted `RUNNING` row can only outlive
+a terminated process under this deployment model, it can restart immediately
+when a later schedule acquires the guard.
+
+Legacy Spring Batch metadata tables remain in the database during the migration
+period even though the application no longer reads or writes them. Keeping the
+tables allows rollback to the previous Batch-based release. Their removal is a
+separate operational migration after the new delivery flow is stable and the
+rollback window has closed.
 
 ## 5. Storage Policy
 
