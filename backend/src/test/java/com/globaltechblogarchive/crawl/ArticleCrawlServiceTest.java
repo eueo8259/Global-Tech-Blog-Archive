@@ -15,12 +15,14 @@ import com.globaltechblogarchive.crawl.application.dto.AiReviewRunResult;
 import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
 import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
+import com.globaltechblogarchive.crawl.config.AiReviewProperties;
 import com.globaltechblogarchive.crawl.domain.CrawlMode;
 import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +55,15 @@ class ArticleCrawlServiceTest {
                 sourceRepository,
                 sourceProcessor,
                 transactionService,
-                aiReviewService
+                aiReviewService,
+                new AiReviewProperties(
+                        50,
+                        10,
+                        3,
+                        100,
+                        Duration.ofMinutes(5),
+                        Duration.ofMinutes(30)
+                )
         );
     }
 
@@ -104,21 +114,33 @@ class ArticleCrawlServiceTest {
     }
 
     @Test
-    void retryAiFailuresUsesCandidateQueueAndPreservesResponseShape() {
-        when(transactionService.startRun()).thenReturn(12L);
+    void retryAiFailuresReturnsAiResultWithoutCreatingCollectionRun() {
         when(aiReviewService.retryFailed(20)).thenReturn(
-                new AiReviewRunResult(3, 1, 1, 1, 0, 1, 0)
+                new AiReviewRunResult(3, 1, 0, 1, 1, 1, 0)
         );
 
         ArticleCrawlResult result = crawlService.retryAiFailures(20);
 
-        assertThat(result.runId()).isEqualTo(12L);
+        assertThat(result.runId()).isNull();
         assertThat(result.candidateCount()).isEqualTo(3);
         assertThat(result.aiApprovedCount()).isEqualTo(1);
-        assertThat(result.aiRejectedCount()).isEqualTo(1);
+        assertThat(result.aiRejectedCount()).isZero();
         assertThat(result.aiFailedCount()).isEqualTo(1);
+        assertThat(result.aiRetryWaitingCount()).isEqualTo(1);
         assertThat(result.storedCount()).isEqualTo(1);
         assertThat(result.sources()).isEmpty();
+        verify(transactionService, never()).startRun();
+    }
+
+    @Test
+    void retryAiFailuresDoesNotLeaveCollectionRunWhenReviewAborts() {
+        when(aiReviewService.retryFailed(20)).thenThrow(new IllegalStateException("claim failed"));
+
+        assertThatThrownBy(() -> crawlService.retryAiFailures(20))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("claim failed");
+
+        verify(transactionService, never()).startRun();
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
 import com.globaltechblogarchive.crawl.application.dto.AiReviewRunResult;
 import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
+import com.globaltechblogarchive.crawl.config.AiReviewProperties;
 import com.globaltechblogarchive.crawl.domain.CrawlMode;
 import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
@@ -18,12 +19,11 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ArticleCrawlService {
 
-    private static final int MAX_AI_FAILURE_RETRY_LIMIT = 100;
-
     private final BlogSourceRepository blogSourceRepository;
     private final SourceCrawlProcessor sourceCrawlProcessor;
     private final CrawlTransactionService transactionService;
     private final ArticleAiReviewService aiReviewService;
+    private final AiReviewProperties aiReviewProperties;
 
     public ArticleCrawlResult runScheduled() {
         return run(CrawlMode.RECENT);
@@ -35,20 +35,24 @@ public class ArticleCrawlService {
 
     public ArticleCrawlResult retryAiFailures(int limit) {
         validateRetryLimit(limit);
-        Long runId = transactionService.startRun();
         AiReviewRunResult reviewResult = aiReviewService.retryFailed(limit);
-        CrawlRunSummary summary = new CrawlRunSummary(
+        return new ArticleCrawlResult(
+                null,
+                0,
+                0,
+                0,
                 reviewResult.candidateCount(),
                 0,
                 reviewResult.storedCount(),
+                reviewResult.candidateCount(),
                 reviewResult.approvedCount(),
                 reviewResult.rejectedCount(),
                 reviewResult.failedCount(),
+                reviewResult.retryWaitingCount(),
                 0,
-                0
+                0,
+                List.of()
         );
-        transactionService.completeRun(runId, 0, 0, 0, summary);
-        return result(runId, List.of(), summary, 0, 0);
     }
 
     private ArticleCrawlResult run(CrawlMode mode) {
@@ -114,6 +118,7 @@ public class ArticleCrawlService {
                 summary.aiApprovedCount(),
                 summary.aiRejectedCount(),
                 summary.aiFailedCount(),
+                0,
                 summary.previouslyApprovedCount(),
                 summary.previouslyRejectedCount(),
                 sourceResults
@@ -121,10 +126,11 @@ public class ArticleCrawlService {
     }
 
     private void validateRetryLimit(int limit) {
-        if (limit < 1 || limit > MAX_AI_FAILURE_RETRY_LIMIT) {
+        if (limit < 1 || limit > aiReviewProperties.maxFailureRetryLimit()) {
             throw new InvalidInputException(
                     ErrorCode.INVALID_INPUT_VALUE,
-                    "AI failure retry limit must be between 1 and " + MAX_AI_FAILURE_RETRY_LIMIT
+                    "AI failure retry limit must be between 1 and "
+                            + aiReviewProperties.maxFailureRetryLimit()
             );
         }
     }

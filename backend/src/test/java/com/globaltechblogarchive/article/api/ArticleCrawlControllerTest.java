@@ -81,20 +81,31 @@ class ArticleCrawlControllerTest {
 
     @Test
     void retryAiFailuresUsesRequestedLimit() throws Exception {
-        ArticleCrawlResult result = result(
-                5L,
-                source("openai", "OpenAI News", "https://openai.com/news/", "https://openai.com/news/rss.xml",
-                        CollectionMethod.RSS),
-                new CrawlRunSummary(1, 0, 0, 0, 1, 0, 0, 0)
+        ArticleCrawlResult result = new ArticleCrawlResult(
+                null,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                List.of()
         );
         when(articleCrawlService.retryAiFailures(10)).thenReturn(result);
 
         mockMvc.perform(post("/api/admin/article-crawls/ai-failures/retry")
                         .param("limit", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.runId").value(5))
+                .andExpect(jsonPath("$.runId").isEmpty())
                 .andExpect(jsonPath("$.candidateCount").value(1))
-                .andExpect(jsonPath("$.aiRejectedCount").value(1));
+                .andExpect(jsonPath("$.aiRetryWaitingCount").value(1));
 
         verify(articleCrawlService).retryAiFailures(10);
     }
@@ -112,6 +123,7 @@ class ArticleCrawlControllerTest {
                 summary.aiApprovedCount(),
                 summary.aiRejectedCount(),
                 summary.aiFailedCount(),
+                0,
                 summary.previouslyApprovedCount(),
                 summary.previouslyRejectedCount(),
                 List.of(SourceCrawlResult.success(source, candidates(source, summary.candidateCount()), summary))
