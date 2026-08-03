@@ -56,7 +56,9 @@ public class OpenAiArticleMetadataClient implements ArticleMetadataAiClient {
 
     private ArticleMetadataAiRequestException httpFailure(RestClientResponseException exception) {
         int statusCode = exception.getStatusCode().value();
-        boolean retryable = statusCode == 429 || exception.getStatusCode().is5xxServerError();
+        boolean retryable = statusCode == 408
+                || statusCode == 429
+                || exception.getStatusCode().is5xxServerError();
         return new ArticleMetadataAiRequestException(
                 "OPENAI_HTTP_" + statusCode,
                 "OpenAI request failed with HTTP status " + statusCode,

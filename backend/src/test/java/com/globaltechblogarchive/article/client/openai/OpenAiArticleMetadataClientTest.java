@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.globaltechblogarchive.crawl.config.AiReviewProperties;
@@ -17,6 +18,7 @@ import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -50,6 +52,35 @@ class OpenAiArticleMetadataClientTest {
     }
 
     @Test
+    void decideClassifiesRequestTimeoutAsRetryable() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://api.openai.com/v1/responses"))
+                .andRespond(withStatus(HttpStatus.REQUEST_TIMEOUT));
+        OpenAiProperties properties = new OpenAiProperties(
+                "test-key",
+                "gpt-5-mini",
+                "https://api.openai.com",
+                Duration.ofSeconds(3),
+                Duration.ofMinutes(2)
+        );
+        OpenAiArticleMetadataClient client = new OpenAiArticleMetadataClient(
+                builder.baseUrl(properties.baseUrl()).build(),
+                properties,
+                new OpenAiArticleMetadataRequestFactory(new ObjectMapper()),
+                new OpenAiArticleMetadataResponseParser(new ObjectMapper())
+        );
+
+        assertThatThrownBy(() -> client.decide(List.of(new ArticleMetadataInput(0, "Title", "Context"))))
+                .isInstanceOfSatisfying(ArticleMetadataAiRequestException.class, exception -> {
+                    assertThat(exception.getFailureCode()).isEqualTo("OPENAI_HTTP_408");
+                    assertThat(exception.isRetryable()).isTrue();
+                });
+
+        server.verify();
+    }
+
+    @Test
     void decideClassifiesReadTimeoutAsRetryable() throws IOException {
         HttpServer server = delayedServer(Duration.ofMillis(500));
         server.start();
@@ -61,7 +92,7 @@ class OpenAiArticleMetadataClientTest {
                     Duration.ofMillis(100),
                     Duration.ofMillis(100)
             );
-            AiReviewProperties aiReviewProperties = aiReviewProperties(Duration.ofSeconds(1));
+            AiReviewProperties aiReviewProperties = aiReviewProperties(Duration.ofSeconds(3));
             RestClient restClient = new OpenAiRestClientConfig().openAiRestClient(
                     RestClient.builder(),
                     properties,
@@ -85,7 +116,7 @@ class OpenAiArticleMetadataClientTest {
     }
 
     @Test
-    void restClientRejectsTimeoutNotShorterThanStaleTimeout() {
+    void restClientRejectsClaimWorkloadLongerThanStaleTimeout() {
         OpenAiProperties properties = new OpenAiProperties(
                 "test-key",
                 "gpt-5-mini",
@@ -100,7 +131,7 @@ class OpenAiArticleMetadataClientTest {
                 aiReviewProperties(Duration.ofSeconds(2))
         ))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("openai.read-timeout must be shorter than crawl.ai-review.stale-timeout");
+                .hasMessage("maximum OpenAI claim workload must be shorter than crawl.ai-review.stale-timeout");
     }
 
     private HttpServer delayedServer(Duration delay) throws IOException {
@@ -123,6 +154,7 @@ class OpenAiArticleMetadataClientTest {
                 50,
                 10,
                 3,
+                100,
                 Duration.ofMinutes(5),
                 staleTimeout
         );

@@ -42,6 +42,7 @@ class ArticleCandidateStateServiceTest {
                         100,
                         10,
                         3,
+                        100,
                         Duration.ofMinutes(5),
                         Duration.ofMinutes(15)
                 )

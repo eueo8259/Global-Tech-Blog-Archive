@@ -49,6 +49,7 @@ class ArticleAiReviewServiceTest {
                 50,
                 10,
                 3,
+                100,
                 Duration.ofMinutes(5),
                 Duration.ofMinutes(15)
         );

@@ -346,6 +346,7 @@ class ArticleAiReviewPersistenceTest extends MySqlIntegrationTest {
                     100,
                     10,
                     3,
+                    100,
                     Duration.ofMinutes(5),
                     Duration.ofMinutes(15)
             );

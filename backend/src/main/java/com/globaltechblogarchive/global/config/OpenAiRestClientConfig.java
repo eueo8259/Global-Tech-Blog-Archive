@@ -2,6 +2,7 @@ package com.globaltechblogarchive.global.config;
 
 import com.globaltechblogarchive.crawl.config.AiReviewProperties;
 import java.net.http.HttpClient;
+import java.time.Duration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,11 +30,19 @@ public class OpenAiRestClientConfig {
     }
 
     private void validateTimeouts(OpenAiProperties properties, AiReviewProperties aiReviewProperties) {
-        if (properties.connectTimeout().compareTo(aiReviewProperties.staleTimeout()) >= 0) {
-            throw new IllegalArgumentException("openai.connect-timeout must be shorter than crawl.ai-review.stale-timeout");
-        }
-        if (properties.readTimeout().compareTo(aiReviewProperties.staleTimeout()) >= 0) {
-            throw new IllegalArgumentException("openai.read-timeout must be shorter than crawl.ai-review.stale-timeout");
+        int maximumClaimSize = Math.max(
+                aiReviewProperties.claimLimit(),
+                aiReviewProperties.maxFailureRetryLimit()
+        );
+        long batchCount = (maximumClaimSize + (long) aiReviewProperties.batchSize() - 1)
+                / aiReviewProperties.batchSize();
+        Duration maximumWorkloadDuration = properties.connectTimeout()
+                .plus(properties.readTimeout())
+                .multipliedBy(batchCount);
+        if (maximumWorkloadDuration.compareTo(aiReviewProperties.staleTimeout()) >= 0) {
+            throw new IllegalArgumentException(
+                    "maximum OpenAI claim workload must be shorter than crawl.ai-review.stale-timeout"
+            );
         }
     }
 }

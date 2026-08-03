@@ -8,6 +8,7 @@ public record AiReviewProperties(
         int claimLimit,
         int batchSize,
         int maxAttempts,
+        int maxFailureRetryLimit,
         Duration retryDelay,
         Duration staleTimeout
 ) {
@@ -21,6 +22,9 @@ public record AiReviewProperties(
         }
         if (maxAttempts < 1) {
             throw new IllegalArgumentException("crawl.ai-review.max-attempts must be greater than 0");
+        }
+        if (maxFailureRetryLimit < 1) {
+            throw new IllegalArgumentException("crawl.ai-review.max-failure-retry-limit must be greater than 0");
         }
         if (retryDelay == null || retryDelay.isNegative() || retryDelay.isZero()) {
             throw new IllegalArgumentException("crawl.ai-review.retry-delay must be positive");

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "crawl.ai-review.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "crawl.ai-review.enabled", havingValue = "true", matchIfMissing = true)
 public class ArticleAiReviewScheduler {
 
     private final ArticleAiReviewService reviewService;
