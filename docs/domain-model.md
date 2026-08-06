@@ -390,7 +390,7 @@ Database table: `slack_deliveries`
 | id | BIGINT | yes | Primary key |
 | slack_channel_id | BIGINT | yes | Target channel foreign key |
 | delivery_date | DATE | yes | Delivery date in the configured digest time zone |
-| status | VARCHAR(30) | yes | `PENDING`, `PROCESSING`, `RETRY_WAITING`, `SENT`, or `FAILED` |
+| status | VARCHAR(30) | yes | `PENDING`, `PROCESSING`, `RETRY_WAITING`, `SENT`, `SENT_UNCONFIRMED`, or `FAILED` |
 | attempt_count | INT | yes | Number of claimed send attempts |
 | window_started_at | DATETIME | yes | Exclusive article creation lower bound |
 | window_ended_at | DATETIME | yes | Inclusive article creation upper bound |
@@ -413,12 +413,16 @@ UNIQUE KEY uq_slack_deliveries_channel_date
 Delivery rules:
 
 - The first window starts at the Slack channel creation time.
-- Later windows start at the previous `SENT` delivery's `window_ended_at`.
+- Later windows start at the latest `SENT` or `SENT_UNCONFIRMED` delivery's
+  `window_ended_at`.
 - Article lookup uses `(window_started_at, window_ended_at]` and includes only
   companies subscribed at or before the article was stored.
 - A channel receives at most one Slack API call for one Daily Digest attempt.
-- `SENT` deliveries are never selected for retry.
-- A stale `PROCESSING` delivery becomes `RETRY_WAITING`.
+- `SENT` and `SENT_UNCONFIRMED` deliveries are never selected for retry.
+- If Slack returns success but saving `SENT` fails, a separate transaction
+  records `SENT_UNCONFIRMED` with the Slack message timestamp and failure cause.
+- A stale `PROCESSING` delivery becomes `RETRY_WAITING` before the maximum
+  attempt count and becomes `FAILED` after reaching it.
 - Delivery items are not snapshotted in the MVP; retry re-queries the fixed
   delivery window using current subscription data.
 

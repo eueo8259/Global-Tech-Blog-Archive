@@ -46,6 +46,17 @@ public class SlackDeliveryStateService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markSentUnconfirmed(
+            Long deliveryId,
+            LocalDateTime completedAt,
+            String messageTs,
+            String errorMessage
+    ) {
+        SlackDelivery delivery = processingDelivery(deliveryId);
+        delivery.markSentUnconfirmed(completedAt, messageTs, errorMessage);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailure(
             Long deliveryId,
             LocalDateTime failedAt,
@@ -73,7 +84,10 @@ public class SlackDeliveryStateService {
                 SlackDeliveryStatus.PROCESSING,
                 threshold
         );
-        staleDeliveries.forEach(delivery -> delivery.recoverStaleProcessing(now));
+        staleDeliveries.forEach(delivery -> delivery.recoverStaleProcessing(
+                now,
+                properties.maxAttempts()
+        ));
         return staleDeliveries.size();
     }
 

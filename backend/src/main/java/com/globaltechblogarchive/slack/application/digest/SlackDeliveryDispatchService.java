@@ -32,6 +32,7 @@ public class SlackDeliveryDispatchService {
         }
 
         ClaimedSlackDelivery delivery = claimed.get();
+        SlackMessageSendResult result;
         try {
             List<SlackDigestArticle> articles = digestQueryService.findArticles(
                     delivery.channelId(),
@@ -45,8 +46,7 @@ public class SlackDeliveryDispatchService {
 
             SlackChatMessage message = messageFactory.create(delivery.slackChannelId(), articles);
             String botToken = tokenEncryptor.decrypt(delivery.encryptedBotToken());
-            SlackMessageSendResult result = messageClient.send(botToken, message);
-            stateService.markSent(delivery.deliveryId(), now, result.messageTs());
+            result = messageClient.send(botToken, message);
         } catch (SlackMessageSendException exception) {
             stateService.markFailure(
                     delivery.deliveryId(),
@@ -63,6 +63,7 @@ public class SlackDeliveryDispatchService {
                     exception.getErrorCode(),
                     exception.isRetryable()
             );
+            return;
         } catch (SlackTokenDecryptionException exception) {
             stateService.markFailure(
                     delivery.deliveryId(),
@@ -78,6 +79,7 @@ public class SlackDeliveryDispatchService {
                     delivery.slackChannelId(),
                     exception
             );
+            return;
         } catch (RuntimeException exception) {
             stateService.markFailure(
                     delivery.deliveryId(),
@@ -92,6 +94,36 @@ public class SlackDeliveryDispatchService {
                     delivery.deliveryId(),
                     delivery.slackChannelId(),
                     exception
+            );
+            return;
+        }
+
+        try {
+            stateService.markSent(delivery.deliveryId(), now, result.messageTs());
+        } catch (RuntimeException sentStatusFailure) {
+            try {
+                stateService.markSentUnconfirmed(
+                        delivery.deliveryId(),
+                        now,
+                        result.messageTs(),
+                        sentStatusFailure.getMessage()
+                );
+            } catch (RuntimeException fallbackStatusFailure) {
+                sentStatusFailure.addSuppressed(fallbackStatusFailure);
+                log.error(
+                        "Slack message was sent but neither delivery status could be saved: "
+                                + "deliveryId={}, channelId={}",
+                        delivery.deliveryId(),
+                        delivery.slackChannelId(),
+                        sentStatusFailure
+                );
+                return;
+            }
+            log.error(
+                    "Slack message was sent but its SENT status could not be saved: deliveryId={}, channelId={}",
+                    delivery.deliveryId(),
+                    delivery.slackChannelId(),
+                    sentStatusFailure
             );
         }
     }

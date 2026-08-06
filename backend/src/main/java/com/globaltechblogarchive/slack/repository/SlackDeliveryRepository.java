@@ -24,9 +24,9 @@ public interface SlackDeliveryRepository extends JpaRepository<SlackDelivery, Lo
             Collection<SlackDeliveryStatus> statuses
     );
 
-    Optional<SlackDelivery> findTopBySlackChannelAndStatusOrderByWindowEndedAtDesc(
+    Optional<SlackDelivery> findTopBySlackChannelAndStatusInOrderByWindowEndedAtDesc(
             SlackChannel slackChannel,
-            SlackDeliveryStatus status
+            Collection<SlackDeliveryStatus> statuses
     );
 
     @Query("""

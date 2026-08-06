@@ -132,6 +132,20 @@ public class SlackDelivery {
         clearError();
     }
 
+    public void markSentUnconfirmed(
+            LocalDateTime completedAt,
+            String messageTs,
+            String errorMessage
+    ) {
+        requireProcessing();
+        status = SlackDeliveryStatus.SENT_UNCONFIRMED;
+        sentAt = completedAt;
+        slackMessageTs = messageTs;
+        processingStartedAt = null;
+        nextRetryAt = null;
+        setError("SENT_STATUS_SAVE_FAILED", errorMessage);
+    }
+
     public void markRetryWaiting(
             LocalDateTime nextRetryAt,
             String errorCode,
@@ -152,9 +166,19 @@ public class SlackDelivery {
         setError(errorCode, errorMessage);
     }
 
-    public void recoverStaleProcessing(LocalDateTime retryAt) {
+    public void recoverStaleProcessing(LocalDateTime retryAt, int maxAttempts) {
         if (status != SlackDeliveryStatus.PROCESSING) {
             throw new IllegalStateException("PROCESSING 상태만 복구할 수 있습니다.");
+        }
+        if (attemptCount >= maxAttempts) {
+            status = SlackDeliveryStatus.FAILED;
+            processingStartedAt = null;
+            nextRetryAt = null;
+            setError(
+                    "STALE_PROCESSING_MAX_ATTEMPTS",
+                    "Slack Delivery stale recovery reached the maximum attempt count."
+            );
+            return;
         }
         status = SlackDeliveryStatus.RETRY_WAITING;
         processingStartedAt = null;

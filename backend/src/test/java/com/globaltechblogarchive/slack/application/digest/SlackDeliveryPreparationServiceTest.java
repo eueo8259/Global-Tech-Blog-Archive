@@ -9,11 +9,14 @@ import static org.mockito.Mockito.when;
 
 import com.globaltechblogarchive.slack.domain.SlackChannel;
 import com.globaltechblogarchive.slack.domain.SlackDelivery;
+import com.globaltechblogarchive.slack.domain.SlackDeliveryStatus;
 import com.globaltechblogarchive.slack.repository.SlackChannelRepository;
 import com.globaltechblogarchive.slack.repository.SlackDeliveryRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -66,6 +69,25 @@ class SlackDeliveryPreparationServiceTest {
 
         assertThat(createdCount).isZero();
         verify(deliveryRepository, never()).save(any());
+    }
+
+    @Test
+    void prepareStartsAfterLatestUnconfirmedSendWindow() {
+        LocalDateTime previousWindowEnd = windowStartedAt.plusHours(2);
+        SlackDelivery previousDelivery = mock(SlackDelivery.class);
+        when(previousDelivery.getWindowEndedAt()).thenReturn(previousWindowEnd);
+        when(deliveryRepository.findTopBySlackChannelAndStatusInOrderByWindowEndedAtDesc(
+                channel,
+                EnumSet.of(SlackDeliveryStatus.SENT, SlackDeliveryStatus.SENT_UNCONFIRMED)
+        )).thenReturn(Optional.of(previousDelivery));
+        when(queryService.hasArticles(10L, previousWindowEnd, windowEndedAt)).thenReturn(true);
+
+        int createdCount = service.prepare(deliveryDate, windowEndedAt);
+
+        assertThat(createdCount).isEqualTo(1);
+        ArgumentCaptor<SlackDelivery> captor = ArgumentCaptor.forClass(SlackDelivery.class);
+        verify(deliveryRepository).save(captor.capture());
+        assertThat(captor.getValue().getWindowStartedAt()).isEqualTo(previousWindowEnd);
     }
 
     @Test

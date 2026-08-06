@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -74,6 +75,49 @@ class SlackDeliveryStateServiceTest {
 
         assertThat(delivery.getStatus()).isEqualTo(SlackDeliveryStatus.FAILED);
         assertThat(delivery.getAttemptCount()).isEqualTo(3);
+    }
+
+    @Test
+    void recoverStaleProcessingSchedulesRetryBeforeMaximumAttempts() {
+        SlackDelivery delivery = delivery();
+        LocalDateTime now = LocalDateTime.of(2026, 7, 14, 9, 20);
+        delivery.startProcessing(now.minusMinutes(20));
+        when(repository.findByStatusAndProcessingStartedAtBefore(
+                SlackDeliveryStatus.PROCESSING,
+                now.minusMinutes(15)
+        )).thenReturn(List.of(delivery));
+
+        int recoveredCount = service.recoverStaleProcessing(now);
+
+        assertThat(recoveredCount).isEqualTo(1);
+        assertThat(delivery.getStatus()).isEqualTo(SlackDeliveryStatus.RETRY_WAITING);
+        assertThat(delivery.getLastErrorCode()).isEqualTo("STALE_PROCESSING");
+    }
+
+    @Test
+    void recoverStaleProcessingStopsAtMaximumAttempts() {
+        SlackDelivery delivery = delivery();
+        LocalDateTime now = LocalDateTime.of(2026, 7, 14, 9, 20);
+        startThirdAttempt(delivery, now.minusMinutes(20));
+        when(repository.findByStatusAndProcessingStartedAtBefore(
+                SlackDeliveryStatus.PROCESSING,
+                now.minusMinutes(15)
+        )).thenReturn(List.of(delivery));
+
+        int recoveredCount = service.recoverStaleProcessing(now);
+
+        assertThat(recoveredCount).isEqualTo(1);
+        assertThat(delivery.getStatus()).isEqualTo(SlackDeliveryStatus.FAILED);
+        assertThat(delivery.getAttemptCount()).isEqualTo(3);
+        assertThat(delivery.getLastErrorCode()).isEqualTo("STALE_PROCESSING_MAX_ATTEMPTS");
+    }
+
+    private void startThirdAttempt(SlackDelivery delivery, LocalDateTime startedAt) {
+        delivery.startProcessing(startedAt.minusMinutes(10));
+        delivery.markRetryWaiting(startedAt.minusMinutes(9), "HTTP_503", "server error");
+        delivery.startProcessing(startedAt.minusMinutes(5));
+        delivery.markRetryWaiting(startedAt.minusMinutes(4), "HTTP_503", "server error");
+        delivery.startProcessing(startedAt);
     }
 
     private SlackDelivery delivery() {
