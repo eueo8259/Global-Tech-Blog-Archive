@@ -62,6 +62,26 @@ class SlackDailyDigestServiceTest {
     }
 
     @Test
+    void runDailyContinuesWithNextDeliveryWhenOneDispatchFails() {
+        when(runStateService.start(DELIVERY_DATE, NOW, NOW)).thenReturn(Optional.of(10L));
+        when(deliveryRepository.findReadyDeliveryIds(
+                SlackDeliveryStatus.PENDING,
+                SlackDeliveryStatus.RETRY_WAITING,
+                NOW
+        )).thenReturn(List.of(100L, 101L));
+        doThrow(new IllegalStateException("delivery state unavailable"))
+                .when(dispatchService)
+                .dispatch(100L, NOW);
+
+        SlackDailyDigestRunResult result = service.runDaily(DELIVERY_DATE, NOW, NOW);
+
+        assertThat(result).isEqualTo(new SlackDailyDigestRunResult(true, 0, 0, 2));
+        verify(dispatchService).dispatch(100L, NOW);
+        verify(dispatchService).dispatch(101L, NOW);
+        verify(runStateService).complete(10L, NOW.plusMinutes(1), 0, 0, 2);
+    }
+
+    @Test
     void runDailySkipsWhenDateRunCannotStart() {
         when(runStateService.start(DELIVERY_DATE, NOW, NOW)).thenReturn(Optional.empty());
 

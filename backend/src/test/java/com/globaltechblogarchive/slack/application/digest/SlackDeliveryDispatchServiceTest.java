@@ -1,7 +1,9 @@
 package com.globaltechblogarchive.slack.application.digest;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -74,6 +76,63 @@ class SlackDeliveryDispatchServiceTest {
 
         verify(messageClient).send("xoxb-token", message);
         verify(stateService).markSent(1L, now, "1720937160.000100");
+    }
+
+    @Test
+    void dispatchMarksSendUnconfirmedWhenSentStatusCannotBeSaved() {
+        when(messageClient.send("xoxb-token", message))
+                .thenReturn(new SlackMessageSendResult("1720937160.000100"));
+        doThrow(new IllegalStateException("database unavailable"))
+                .when(stateService)
+                .markSent(1L, now, "1720937160.000100");
+
+        service.dispatch(1L, now);
+
+        verify(stateService).markSentUnconfirmed(
+                1L,
+                now,
+                "1720937160.000100",
+                "database unavailable"
+        );
+        verify(stateService, never()).markFailure(
+                eq(1L),
+                any(),
+                any(Boolean.class),
+                any(),
+                any(),
+                any()
+        );
+    }
+
+    @Test
+    void dispatchDoesNotPropagateWhenBothSentStatusWritesFail() {
+        IllegalStateException sentStatusFailure = new IllegalStateException("sent status unavailable");
+        IllegalStateException fallbackStatusFailure = new IllegalStateException("fallback status unavailable");
+        when(messageClient.send("xoxb-token", message))
+                .thenReturn(new SlackMessageSendResult("1720937160.000100"));
+        doThrow(sentStatusFailure)
+                .when(stateService)
+                .markSent(1L, now, "1720937160.000100");
+        doThrow(fallbackStatusFailure)
+                .when(stateService)
+                .markSentUnconfirmed(
+                        1L,
+                        now,
+                        "1720937160.000100",
+                        "sent status unavailable"
+                );
+
+        service.dispatch(1L, now);
+
+        assertThat(sentStatusFailure.getSuppressed()).containsExactly(fallbackStatusFailure);
+        verify(stateService, never()).markFailure(
+                eq(1L),
+                any(),
+                any(Boolean.class),
+                any(),
+                any(),
+                any()
+        );
     }
 
     @Test

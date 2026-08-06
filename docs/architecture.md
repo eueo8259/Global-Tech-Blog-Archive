@@ -145,6 +145,17 @@ schedules from overlapping. Because a persisted `RUNNING` row can only outlive
 a terminated process under this deployment model, it can restart immediately
 when a later schedule acquires the guard.
 
+If Slack returns success but the normal `SENT` update fails, the dispatcher
+records `SENT_UNCONFIRMED` in a separate transaction. This terminal state is
+excluded from automatic retries and advances the next delivery window, avoiding
+a duplicate message from a known successful Slack response. If the database is
+unavailable for both state writes, the process cannot persist enough evidence to
+guarantee exactly-once delivery; this residual case is logged and remains an
+operational reconciliation concern. Stale `PROCESSING` recovery also respects
+the configured maximum attempt count instead of retrying indefinitely. A
+delivery-level runtime failure is logged and isolated so processing continues
+for the remaining channels.
+
 Legacy Spring Batch metadata tables remain in the database during the migration
 period even though the application no longer reads or writes them. Keeping the
 tables allows rollback to the previous Batch-based release. Their removal is a

@@ -5,5 +5,6 @@ public enum SlackDeliveryStatus {
     PROCESSING,
     RETRY_WAITING,
     SENT,
+    SENT_UNCONFIRMED,
     FAILED
 }
