@@ -42,6 +42,18 @@ public interface SlackDeliveryRepository extends JpaRepository<SlackDelivery, Lo
             @Param("now") LocalDateTime now
     );
 
+    @Query("""
+            select delivery.id
+            from SlackDelivery delivery
+            where delivery.status = :verifying
+              and delivery.nextVerificationAt <= :now
+            order by delivery.id
+            """)
+    List<Long> findReadyVerificationIds(
+            @Param("verifying") SlackDeliveryStatus verifying,
+            @Param("now") LocalDateTime now
+    );
+
     List<SlackDelivery> findByStatusAndProcessingStartedAtBefore(
             SlackDeliveryStatus status,
             LocalDateTime threshold

@@ -41,7 +41,7 @@ slack:
   client-secret: ${SLACK_CLIENT_SECRET:}
   signing-secret: ${SLACK_SIGNING_SECRET:}
   redirect-uri: ${SLACK_REDIRECT_URI:}
-  bot-scopes: ${SLACK_BOT_SCOPES:commands,chat:write}
+  bot-scopes: ${SLACK_BOT_SCOPES:commands,chat:write,channels:history,groups:history}
   settings-base-url: ${SLACK_SETTINGS_BASE_URL:http://localhost:5173}
   bot-token-encryption:
     # Local test dummy key only. Do not use this value in production.
@@ -56,3 +56,8 @@ slack:
     max-attempts: ${SLACK_DAILY_DIGEST_MAX_ATTEMPTS:3}
     retry-delay: ${SLACK_DAILY_DIGEST_RETRY_DELAY:5m}
     stale-timeout: ${SLACK_DAILY_DIGEST_STALE_TIMEOUT:15m}
+    verification-delay: ${SLACK_DAILY_DIGEST_VERIFICATION_DELAY:5m}
+    verification-permission-error-delay: ${SLACK_DAILY_DIGEST_VERIFICATION_PERMISSION_ERROR_DELAY:1h}
+    max-verification-checks: ${SLACK_DAILY_DIGEST_MAX_VERIFICATION_CHECKS:3}
+    history-lookback: ${SLACK_DAILY_DIGEST_HISTORY_LOOKBACK:1m}
+    history-page-size: ${SLACK_DAILY_DIGEST_HISTORY_PAGE_SIZE:15}

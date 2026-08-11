@@ -3,6 +3,7 @@ package com.globaltechblogarchive.slack.application.digest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -18,6 +19,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 class SlackDailyDigestServiceTest {
 
@@ -28,6 +30,7 @@ class SlackDailyDigestServiceTest {
     private final SlackDeliveryStateService deliveryStateService = mock(SlackDeliveryStateService.class);
     private final SlackDeliveryPreparationService preparationService = mock(SlackDeliveryPreparationService.class);
     private final SlackDeliveryDispatchService dispatchService = mock(SlackDeliveryDispatchService.class);
+    private final SlackDeliveryVerificationService verificationService = mock(SlackDeliveryVerificationService.class);
     private final SlackDeliveryRepository deliveryRepository = mock(SlackDeliveryRepository.class);
     private final Clock clock = Clock.fixed(
             Instant.parse("2026-08-03T00:01:00Z"),
@@ -38,6 +41,7 @@ class SlackDailyDigestServiceTest {
             deliveryStateService,
             preparationService,
             dispatchService,
+            verificationService,
             deliveryRepository,
             clock
     );
@@ -121,5 +125,28 @@ class SlackDailyDigestServiceTest {
         assertThat(result).isEqualTo(new SlackDeliveryRetryResult(1, 1));
         verify(dispatchService).dispatch(100L, NOW);
         verify(runStateService, never()).start(DELIVERY_DATE, NOW, NOW);
+    }
+
+    @Test
+    void runRetryVerifiesBeforeDispatchAndIsolatesVerificationFailure() {
+        when(deliveryRepository.findReadyVerificationIds(
+                SlackDeliveryStatus.VERIFYING,
+                NOW
+        )).thenReturn(List.of(90L, 91L));
+        when(deliveryRepository.findReadyDeliveryIds(
+                SlackDeliveryStatus.PENDING,
+                SlackDeliveryStatus.RETRY_WAITING,
+                NOW
+        )).thenReturn(List.of(100L));
+        doThrow(new IllegalStateException("history unavailable"))
+                .when(verificationService)
+                .verify(90L, NOW);
+
+        service.runRetry(NOW);
+
+        InOrder order = inOrder(verificationService, dispatchService);
+        order.verify(verificationService).verify(90L, NOW);
+        order.verify(verificationService).verify(91L, NOW);
+        order.verify(dispatchService).dispatch(100L, NOW);
     }
 }

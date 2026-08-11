@@ -21,6 +21,7 @@ public class SlackDailyDigestService {
     private final SlackDeliveryStateService deliveryStateService;
     private final SlackDeliveryPreparationService preparationService;
     private final SlackDeliveryDispatchService dispatchService;
+    private final SlackDeliveryVerificationService verificationService;
     private final SlackDeliveryRepository deliveryRepository;
     private final Clock clock;
 
@@ -29,6 +30,7 @@ public class SlackDailyDigestService {
             SlackDeliveryStateService deliveryStateService,
             SlackDeliveryPreparationService preparationService,
             SlackDeliveryDispatchService dispatchService,
+            SlackDeliveryVerificationService verificationService,
             SlackDeliveryRepository deliveryRepository,
             @Qualifier("slackDailyDigestClock") Clock clock
     ) {
@@ -36,6 +38,7 @@ public class SlackDailyDigestService {
         this.deliveryStateService = deliveryStateService;
         this.preparationService = preparationService;
         this.dispatchService = dispatchService;
+        this.verificationService = verificationService;
         this.deliveryRepository = deliveryRepository;
         this.clock = clock;
     }
@@ -55,6 +58,7 @@ public class SlackDailyDigestService {
         int readyCount = 0;
         try {
             recoveredCount = deliveryStateService.recoverStaleProcessing(executionNow);
+            verifyReadyDeliveries(executionNow);
             createdCount = preparationService.prepare(deliveryDate, windowEndedAt);
             List<Long> deliveryIds = readyDeliveryIds(executionNow);
             readyCount = deliveryIds.size();
@@ -75,6 +79,7 @@ public class SlackDailyDigestService {
 
     public SlackDeliveryRetryResult runRetry(LocalDateTime executionNow) {
         int recoveredCount = deliveryStateService.recoverStaleProcessing(executionNow);
+        verifyReadyDeliveries(executionNow);
         List<Long> deliveryIds = readyDeliveryIds(executionNow);
         dispatch(deliveryIds, executionNow);
         return new SlackDeliveryRetryResult(recoveredCount, deliveryIds.size());
@@ -95,6 +100,24 @@ public class SlackDailyDigestService {
             } catch (RuntimeException exception) {
                 log.error(
                         "Slack Daily Digest delivery processing failed: deliveryId={}",
+                        deliveryId,
+                        exception
+                );
+            }
+        }
+    }
+
+    private void verifyReadyDeliveries(LocalDateTime executionNow) {
+        List<Long> deliveryIds = deliveryRepository.findReadyVerificationIds(
+                SlackDeliveryStatus.VERIFYING,
+                executionNow
+        );
+        for (Long deliveryId : deliveryIds) {
+            try {
+                verificationService.verify(deliveryId, executionNow);
+            } catch (RuntimeException exception) {
+                log.error(
+                        "Slack Daily Digest verification processing failed: deliveryId={}",
                         deliveryId,
                         exception
                 );

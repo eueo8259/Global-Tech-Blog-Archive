@@ -127,6 +127,13 @@ Channel-level Daily Digest
         |
         v
 Slack chat.postMessage
+        |
+        v
+Definite result -> `SENT` / retry state
+Ambiguous result -> `VERIFYING`
+        |
+        v
+Slack conversations.history reconciliation
 ```
 
 Article persistence does not create subscriber-specific delivery rows. The
@@ -145,16 +152,27 @@ schedules from overlapping. Because a persisted `RUNNING` row can only outlive
 a terminated process under this deployment model, it can restart immediately
 when a later schedule acquires the guard.
 
-If Slack returns success but the normal `SENT` update fails, the dispatcher
-records `SENT_UNCONFIRMED` in a separate transaction. This terminal state is
-excluded from automatic retries and advances the next delivery window, avoiding
-a duplicate message from a known successful Slack response. If the database is
-unavailable for both state writes, the process cannot persist enough evidence to
-guarantee exactly-once delivery; this residual case is logged and remains an
-operational reconciliation concern. Stale `PROCESSING` recovery also respects
-the configured maximum attempt count instead of retrying indefinitely. A
-delivery-level runtime failure is logged and isolated so processing continues
-for the remaining channels.
+Each `SlackDelivery` owns a stable UUID `delivery_key`. The dispatcher includes
+it in Slack message metadata but never in visible message text. This metadata is
+a correlation key for reconciliation, not a Slack-side idempotency key.
+
+Definite failures such as rate limiting, authentication rejection, or channel
+rejection follow the normal retry/failure rules. Ambiguous outcomes such as a
+network timeout, HTTP 5xx, a failed success-response deserialization, or a failed
+`SENT` database write move to `VERIFYING`. Stale `PROCESSING` work also moves to
+`VERIFYING` while preserving the send-attempt timestamp.
+
+The retry scheduler first queries due `VERIFYING` deliveries through
+`conversations.history`, then dispatches ready `PENDING` and `RETRY_WAITING`
+deliveries. A matching delivery key confirms `SENT`. Only three complete,
+successful History scans that find no match allow resend; API failures never
+count as absence. Permission failures remain in `VERIFYING` with a longer delay.
+This provides recovery close to effectively-once delivery, not mathematical
+Exactly Once. Delivery-level verification and dispatch failures are isolated so
+remaining channels continue.
+
+Operational Slack scope, metadata schema, and reinstall steps are documented in
+[`slack-delivery-recovery.md`](slack-delivery-recovery.md).
 
 Legacy Spring Batch metadata tables remain in the database during the migration
 period even though the application no longer reads or writes them. Keeping the

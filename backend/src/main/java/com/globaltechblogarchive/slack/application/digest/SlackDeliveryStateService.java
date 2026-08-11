@@ -33,6 +33,7 @@ public class SlackDeliveryStateService {
                 delivery.getSlackChannel().getId(),
                 delivery.getSlackChannel().getSlackChannelId(),
                 delivery.getSlackChannel().getWorkspace().getEncryptedBotToken(),
+                delivery.getDeliveryKey(),
                 delivery.getWindowStartedAt(),
                 delivery.getWindowEndedAt(),
                 delivery.getAttemptCount()
@@ -40,20 +41,70 @@ public class SlackDeliveryStateService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markSent(Long deliveryId, LocalDateTime completedAt, String messageTs) {
+    public boolean startSendAttempt(Long deliveryId, LocalDateTime startedAt) {
         SlackDelivery delivery = processingDelivery(deliveryId);
+        return delivery.startSendAttempt(startedAt, properties.maxAttempts());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markSent(Long deliveryId, LocalDateTime completedAt, String messageTs) {
+        SlackDelivery delivery = processingOrVerifyingDelivery(deliveryId);
         delivery.markSent(completedAt, messageTs);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markSentUnconfirmed(
+    public void markVerifying(
             Long deliveryId,
-            LocalDateTime completedAt,
+            LocalDateTime verificationAt,
             String messageTs,
+            String errorCode,
             String errorMessage
     ) {
         SlackDelivery delivery = processingDelivery(deliveryId);
-        delivery.markSentUnconfirmed(completedAt, messageTs, errorMessage);
+        delivery.markVerifying(verificationAt, messageTs, errorCode, errorMessage);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<VerifyingSlackDelivery> findVerificationTarget(
+            Long deliveryId,
+            LocalDateTime now
+    ) {
+        SlackDelivery delivery = deliveryRepository.findById(deliveryId).orElse(null);
+        if (delivery == null
+                || delivery.getStatus() != SlackDeliveryStatus.VERIFYING
+                || delivery.getNextVerificationAt() == null
+                || delivery.getNextVerificationAt().isAfter(now)) {
+            return Optional.empty();
+        }
+        return Optional.of(new VerifyingSlackDelivery(
+                delivery.getId(),
+                delivery.getSlackChannel().getSlackChannelId(),
+                delivery.getSlackChannel().getWorkspace().getEncryptedBotToken(),
+                delivery.getDeliveryKey(),
+                delivery.getProcessingStartedAt(),
+                delivery.getSlackMessageTs()
+        ));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordVerificationNotFound(Long deliveryId, LocalDateTime nextAt) {
+        SlackDelivery delivery = verifyingDelivery(deliveryId);
+        delivery.recordVerificationNotFound(
+                nextAt,
+                properties.maxVerificationChecks(),
+                properties.maxAttempts()
+        );
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void scheduleNextVerification(
+            Long deliveryId,
+            LocalDateTime nextAt,
+            String errorCode,
+            String errorMessage
+    ) {
+        SlackDelivery delivery = verifyingDelivery(deliveryId);
+        delivery.scheduleNextVerification(nextAt, errorCode, errorMessage);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -77,6 +128,22 @@ public class SlackDeliveryStateService {
         delivery.markFailed(errorCode, errorMessage);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordPreparationFailure(
+            Long deliveryId,
+            LocalDateTime failedAt,
+            String errorCode,
+            String errorMessage
+    ) {
+        SlackDelivery delivery = processingDelivery(deliveryId);
+        delivery.recordPreparationFailure(
+                failedAt.plus(properties.retryDelay()),
+                properties.maxAttempts(),
+                errorCode,
+                errorMessage
+        );
+    }
+
     @Transactional
     public int recoverStaleProcessing(LocalDateTime now) {
         LocalDateTime threshold = now.minus(properties.staleTimeout());
@@ -84,10 +151,7 @@ public class SlackDeliveryStateService {
                 SlackDeliveryStatus.PROCESSING,
                 threshold
         );
-        staleDeliveries.forEach(delivery -> delivery.recoverStaleProcessing(
-                now,
-                properties.maxAttempts()
-        ));
+        staleDeliveries.forEach(delivery -> delivery.recoverStaleProcessing(now));
         return staleDeliveries.size();
     }
 
@@ -96,6 +160,27 @@ public class SlackDeliveryStateService {
                 .orElseThrow(() -> new IllegalArgumentException("Slack Delivery를 찾을 수 없습니다: " + deliveryId));
         if (delivery.getStatus() != SlackDeliveryStatus.PROCESSING) {
             throw new IllegalStateException("Slack Delivery가 PROCESSING 상태가 아닙니다: " + deliveryId);
+        }
+        return delivery;
+    }
+
+    private SlackDelivery processingOrVerifyingDelivery(Long deliveryId) {
+        SlackDelivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new IllegalArgumentException("Slack Delivery를 찾을 수 없습니다: " + deliveryId));
+        if (delivery.getStatus() != SlackDeliveryStatus.PROCESSING
+                && delivery.getStatus() != SlackDeliveryStatus.VERIFYING) {
+            throw new IllegalStateException(
+                    "Slack Delivery가 PROCESSING 또는 VERIFYING 상태가 아닙니다: " + deliveryId
+            );
+        }
+        return delivery;
+    }
+
+    private SlackDelivery verifyingDelivery(Long deliveryId) {
+        SlackDelivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new IllegalArgumentException("Slack Delivery를 찾을 수 없습니다: " + deliveryId));
+        if (delivery.getStatus() != SlackDeliveryStatus.VERIFYING) {
+            throw new IllegalStateException("Slack Delivery가 VERIFYING 상태가 아닙니다: " + deliveryId);
         }
         return delivery;
     }

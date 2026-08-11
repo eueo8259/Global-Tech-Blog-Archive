@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.globaltechblogarchive.slack.application.SlackMessageClient;
 import com.globaltechblogarchive.slack.application.SlackMessageSendResult;
+import com.globaltechblogarchive.slack.application.SlackSendCertainty;
 import com.globaltechblogarchive.slack.exception.SlackMessageSendException;
 import com.globaltechblogarchive.slack.support.SlackTokenEncryptor;
 import java.time.Duration;
@@ -48,6 +49,7 @@ class SlackDeliveryDispatchServiceTest {
                 10L,
                 "C123",
                 "encrypted-token",
+                "delivery-key",
                 now.minusDays(1),
                 now,
                 1
@@ -60,11 +62,17 @@ class SlackDeliveryDispatchServiceTest {
                 "https://example.com/scaling-java",
                 now.minusHours(2)
         ));
-        message = new SlackChatMessage("C123", "digest", List.of());
+        message = new SlackChatMessage(
+                "C123",
+                "digest",
+                List.of(),
+                SlackChatMessage.Metadata.digest("delivery-key")
+        );
         when(stateService.claim(1L, now)).thenReturn(Optional.of(claimed));
         when(queryService.findArticles(10L, now.minusDays(1), now)).thenReturn(articles);
-        when(messageFactory.create("C123", articles)).thenReturn(message);
+        when(messageFactory.create("C123", "delivery-key", articles)).thenReturn(message);
         when(tokenEncryptor.decrypt("encrypted-token")).thenReturn("xoxb-token");
+        when(stateService.startSendAttempt(1L, now)).thenReturn(true);
     }
 
     @Test
@@ -75,6 +83,7 @@ class SlackDeliveryDispatchServiceTest {
         service.dispatch(1L, now);
 
         verify(messageClient).send("xoxb-token", message);
+        verify(stateService).startSendAttempt(1L, now);
         verify(stateService).markSent(1L, now, "1720937160.000100");
     }
 
@@ -88,10 +97,11 @@ class SlackDeliveryDispatchServiceTest {
 
         service.dispatch(1L, now);
 
-        verify(stateService).markSentUnconfirmed(
+        verify(stateService).markVerifying(
                 1L,
                 now,
                 "1720937160.000100",
+                "SENT_STATUS_SAVE_FAILED",
                 "database unavailable"
         );
         verify(stateService, never()).markFailure(
@@ -115,10 +125,11 @@ class SlackDeliveryDispatchServiceTest {
                 .markSent(1L, now, "1720937160.000100");
         doThrow(fallbackStatusFailure)
                 .when(stateService)
-                .markSentUnconfirmed(
+                .markVerifying(
                         1L,
                         now,
                         "1720937160.000100",
+                        "SENT_STATUS_SAVE_FAILED",
                         "sent status unavailable"
                 );
 
@@ -141,7 +152,8 @@ class SlackDeliveryDispatchServiceTest {
                 "HTTP_429",
                 "rate limited",
                 true,
-                Duration.ofSeconds(30)
+                Duration.ofSeconds(30),
+                SlackSendCertainty.DEFINITELY_NOT_SENT
         );
         when(messageClient.send("xoxb-token", message)).thenThrow(exception);
 
@@ -158,12 +170,43 @@ class SlackDeliveryDispatchServiceTest {
     }
 
     @Test
+    void dispatchSchedulesVerificationForUnknownSendResult() {
+        SlackMessageSendException exception = new SlackMessageSendException(
+                "NETWORK_ERROR",
+                "timeout",
+                true,
+                null,
+                SlackSendCertainty.UNKNOWN
+        );
+        when(messageClient.send("xoxb-token", message)).thenThrow(exception);
+
+        service.dispatch(1L, now);
+
+        verify(stateService).markVerifying(
+                1L,
+                now,
+                null,
+                "NETWORK_ERROR",
+                "timeout"
+        );
+        verify(stateService, never()).markFailure(
+                eq(1L),
+                any(),
+                any(Boolean.class),
+                any(),
+                any(),
+                any()
+        );
+    }
+
+    @Test
     void dispatchMarksPermanentSlackErrorFailed() {
         SlackMessageSendException exception = new SlackMessageSendException(
                 "channel_not_found",
                 "channel missing",
                 false,
-                null
+                null,
+                SlackSendCertainty.DEFINITELY_NOT_SENT
         );
         when(messageClient.send("xoxb-token", message)).thenThrow(exception);
 
@@ -186,7 +229,25 @@ class SlackDeliveryDispatchServiceTest {
         service.dispatch(1L, now);
 
         verify(messageClient, never()).send(any(), any());
+        verify(stateService, never()).startSendAttempt(any(), any());
         verify(stateService).markSent(1L, now, null);
+    }
+
+    @Test
+    void dispatchRecordsPreparationFailureWhenArticleQueryFails() {
+        when(queryService.findArticles(10L, now.minusDays(1), now))
+                .thenThrow(new IllegalStateException("database unavailable"));
+
+        service.dispatch(1L, now);
+
+        verify(stateService).recordPreparationFailure(
+                1L,
+                now,
+                "UNEXPECTED_ERROR",
+                "database unavailable"
+        );
+        verify(stateService, never()).startSendAttempt(any(), any());
+        verify(messageClient, never()).send(any(), any());
     }
 
     @Test
@@ -198,5 +259,23 @@ class SlackDeliveryDispatchServiceTest {
         verify(queryService, never()).findArticles(any(), any(), any());
         verify(messageClient, never()).send(any(), any());
         verify(stateService, never()).markSent(eq(1L), any(), any());
+    }
+
+    @Test
+    void dispatchDoesNotCallSlackWhenMaximumAttemptsAreExhausted() {
+        when(stateService.startSendAttempt(1L, now)).thenReturn(false);
+
+        service.dispatch(1L, now);
+
+        verify(messageClient, never()).send(any(), any());
+        verify(stateService, never()).markSent(eq(1L), any(), any());
+        verify(stateService, never()).markFailure(
+                eq(1L),
+                any(),
+                any(Boolean.class),
+                any(),
+                any(),
+                any()
+        );
     }
 }

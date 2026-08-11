@@ -2,6 +2,7 @@ package com.globaltechblogarchive.slack.application.digest;
 
 import com.globaltechblogarchive.slack.application.SlackMessageClient;
 import com.globaltechblogarchive.slack.application.SlackMessageSendResult;
+import com.globaltechblogarchive.slack.application.SlackSendCertainty;
 import com.globaltechblogarchive.slack.exception.SlackMessageSendException;
 import com.globaltechblogarchive.slack.exception.SlackTokenDecryptionException;
 import com.globaltechblogarchive.slack.support.SlackTokenEncryptor;
@@ -32,7 +33,8 @@ public class SlackDeliveryDispatchService {
         }
 
         ClaimedSlackDelivery delivery = claimed.get();
-        SlackMessageSendResult result;
+        SlackChatMessage message;
+        String botToken;
         try {
             List<SlackDigestArticle> articles = digestQueryService.findArticles(
                     delivery.channelId(),
@@ -44,26 +46,12 @@ public class SlackDeliveryDispatchService {
                 return;
             }
 
-            SlackChatMessage message = messageFactory.create(delivery.slackChannelId(), articles);
-            String botToken = tokenEncryptor.decrypt(delivery.encryptedBotToken());
-            result = messageClient.send(botToken, message);
-        } catch (SlackMessageSendException exception) {
-            stateService.markFailure(
-                    delivery.deliveryId(),
-                    now,
-                    exception.isRetryable(),
-                    exception.getRetryAfter(),
-                    exception.getErrorCode(),
-                    exception.getMessage()
-            );
-            log.warn(
-                    "Slack Daily Digest 발송 실패: deliveryId={}, channelId={}, errorCode={}, retryable={}",
-                    delivery.deliveryId(),
+            message = messageFactory.create(
                     delivery.slackChannelId(),
-                    exception.getErrorCode(),
-                    exception.isRetryable()
+                    delivery.deliveryKey(),
+                    articles
             );
-            return;
+            botToken = tokenEncryptor.decrypt(delivery.encryptedBotToken());
         } catch (SlackTokenDecryptionException exception) {
             stateService.markFailure(
                     delivery.deliveryId(),
@@ -81,11 +69,9 @@ public class SlackDeliveryDispatchService {
             );
             return;
         } catch (RuntimeException exception) {
-            stateService.markFailure(
+            stateService.recordPreparationFailure(
                     delivery.deliveryId(),
                     now,
-                    true,
-                    null,
                     "UNEXPECTED_ERROR",
                     exception.getMessage()
             );
@@ -98,20 +84,61 @@ public class SlackDeliveryDispatchService {
             return;
         }
 
+        SlackMessageSendResult result;
+        try {
+            if (!stateService.startSendAttempt(delivery.deliveryId(), now)) {
+                log.warn(
+                        "Slack Daily Digest 최대 발송 시도 횟수 도달: deliveryId={}, channelId={}",
+                        delivery.deliveryId(),
+                        delivery.slackChannelId()
+                );
+                return;
+            }
+            result = messageClient.send(botToken, message);
+        } catch (SlackMessageSendException exception) {
+            if (exception.getCertainty() == SlackSendCertainty.UNKNOWN) {
+                markVerifying(
+                        delivery,
+                        now,
+                        null,
+                        exception.getErrorCode(),
+                        exception.getMessage()
+                );
+            } else {
+                stateService.markFailure(
+                        delivery.deliveryId(),
+                        now,
+                        exception.isRetryable(),
+                        exception.getRetryAfter(),
+                        exception.getErrorCode(),
+                        exception.getMessage()
+                );
+            }
+            log.warn(
+                    "Slack Daily Digest 발송 실패: deliveryId={}, channelId={}, errorCode={}, certainty={}",
+                    delivery.deliveryId(),
+                    delivery.slackChannelId(),
+                    exception.getErrorCode(),
+                    exception.getCertainty()
+            );
+            return;
+        }
+
         try {
             stateService.markSent(delivery.deliveryId(), now, result.messageTs());
         } catch (RuntimeException sentStatusFailure) {
             try {
-                stateService.markSentUnconfirmed(
+                stateService.markVerifying(
                         delivery.deliveryId(),
                         now,
                         result.messageTs(),
+                        "SENT_STATUS_SAVE_FAILED",
                         sentStatusFailure.getMessage()
                 );
             } catch (RuntimeException fallbackStatusFailure) {
                 sentStatusFailure.addSuppressed(fallbackStatusFailure);
                 log.error(
-                        "Slack message was sent but neither delivery status could be saved: "
+                        "Slack message was sent but neither SENT nor VERIFYING status could be saved: "
                                 + "deliveryId={}, channelId={}",
                         delivery.deliveryId(),
                         delivery.slackChannelId(),
@@ -120,10 +147,37 @@ public class SlackDeliveryDispatchService {
                 return;
             }
             log.error(
-                    "Slack message was sent but its SENT status could not be saved: deliveryId={}, channelId={}",
+                    "Slack message was sent but its SENT status could not be saved; verification scheduled: "
+                            + "deliveryId={}, channelId={}",
                     delivery.deliveryId(),
                     delivery.slackChannelId(),
                     sentStatusFailure
+            );
+        }
+    }
+
+    private void markVerifying(
+            ClaimedSlackDelivery delivery,
+            LocalDateTime now,
+            String messageTs,
+            String errorCode,
+            String errorMessage
+    ) {
+        try {
+            stateService.markVerifying(
+                    delivery.deliveryId(),
+                    now,
+                    messageTs,
+                    errorCode,
+                    errorMessage
+            );
+        } catch (RuntimeException stateFailure) {
+            log.error(
+                    "Slack 발송 결과가 불확실하지만 VERIFYING 상태를 저장하지 못했습니다: "
+                            + "deliveryId={}, channelId={}",
+                    delivery.deliveryId(),
+                    delivery.slackChannelId(),
+                    stateFailure
             );
         }
     }

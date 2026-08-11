@@ -10,6 +10,11 @@ public record SlackDailyDigestProperties(
         LocalTime cutoffTime,
         int maxAttempts,
         Duration retryDelay,
-        Duration staleTimeout
+        Duration staleTimeout,
+        Duration verificationDelay,
+        Duration verificationPermissionErrorDelay,
+        int maxVerificationChecks,
+        Duration historyLookback,
+        int historyPageSize
 ) {
 }

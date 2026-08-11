@@ -3,6 +3,7 @@ package com.globaltechblogarchive.slack.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -50,8 +51,24 @@ class SlackPropertiesTest {
         assertThat(properties.clientSecret()).isEmpty();
         assertThat(properties.signingSecret()).isEmpty();
         assertThat(properties.redirectUri()).isEmpty();
-        assertThat(properties.botScopes()).isEqualTo("commands,chat:write");
+        assertThat(properties.botScopes())
+                .isEqualTo("commands,chat:write,channels:history,groups:history");
         assertThat(properties.settingsBaseUrl()).isEqualTo("http://localhost:5173");
+    }
+
+    @Test
+    void bindsDailyDigestVerificationDefaults() throws IOException {
+        StandardEnvironment environment = environmentWithSlackVariables(Map.of());
+
+        SlackDailyDigestProperties properties = Binder.get(environment)
+                .bind("slack.daily-digest", SlackDailyDigestProperties.class)
+                .orElseThrow(() -> new IllegalStateException("daily digest properties must bind"));
+
+        assertThat(properties.verificationDelay()).isEqualTo(Duration.ofMinutes(5));
+        assertThat(properties.verificationPermissionErrorDelay()).isEqualTo(Duration.ofHours(1));
+        assertThat(properties.maxVerificationChecks()).isEqualTo(3);
+        assertThat(properties.historyLookback()).isEqualTo(Duration.ofMinutes(1));
+        assertThat(properties.historyPageSize()).isEqualTo(15);
     }
 
     private static SlackProperties bind(StandardEnvironment environment) {

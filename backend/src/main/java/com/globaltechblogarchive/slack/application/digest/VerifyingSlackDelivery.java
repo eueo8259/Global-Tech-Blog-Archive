@@ -2,14 +2,12 @@ package com.globaltechblogarchive.slack.application.digest;
 
 import java.time.LocalDateTime;
 
-public record ClaimedSlackDelivery(
+public record VerifyingSlackDelivery(
         Long deliveryId,
-        Long channelId,
         String slackChannelId,
         String encryptedBotToken,
         String deliveryKey,
-        LocalDateTime windowStartedAt,
-        LocalDateTime windowEndedAt,
-        int attemptCount
+        LocalDateTime attemptedAt,
+        String knownMessageTs
 ) {
 }

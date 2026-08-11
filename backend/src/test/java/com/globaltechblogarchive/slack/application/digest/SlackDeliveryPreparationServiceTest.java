@@ -72,13 +72,13 @@ class SlackDeliveryPreparationServiceTest {
     }
 
     @Test
-    void prepareStartsAfterLatestUnconfirmedSendWindow() {
+    void prepareStartsAfterLatestConfirmedSendWindow() {
         LocalDateTime previousWindowEnd = windowStartedAt.plusHours(2);
         SlackDelivery previousDelivery = mock(SlackDelivery.class);
         when(previousDelivery.getWindowEndedAt()).thenReturn(previousWindowEnd);
         when(deliveryRepository.findTopBySlackChannelAndStatusInOrderByWindowEndedAtDesc(
                 channel,
-                EnumSet.of(SlackDeliveryStatus.SENT, SlackDeliveryStatus.SENT_UNCONFIRMED)
+                EnumSet.of(SlackDeliveryStatus.SENT)
         )).thenReturn(Optional.of(previousDelivery));
         when(queryService.hasArticles(10L, previousWindowEnd, windowEndedAt)).thenReturn(true);
 
@@ -95,6 +95,25 @@ class SlackDeliveryPreparationServiceTest {
         when(deliveryRepository.existsBySlackChannelAndDeliveryDate(
                 channel,
                 deliveryDate
+        )).thenReturn(true);
+
+        int createdCount = service.prepare(deliveryDate, windowEndedAt);
+
+        assertThat(createdCount).isZero();
+        verify(queryService, never()).hasArticles(any(), any(), any());
+        verify(deliveryRepository, never()).save(any());
+    }
+
+    @Test
+    void prepareDoesNotCreateDeliveryWhilePreviousDeliveryIsVerifying() {
+        when(deliveryRepository.existsBySlackChannelAndStatusIn(
+                channel,
+                EnumSet.of(
+                        SlackDeliveryStatus.PENDING,
+                        SlackDeliveryStatus.PROCESSING,
+                        SlackDeliveryStatus.VERIFYING,
+                        SlackDeliveryStatus.RETRY_WAITING
+                )
         )).thenReturn(true);
 
         int createdCount = service.prepare(deliveryDate, windowEndedAt);
