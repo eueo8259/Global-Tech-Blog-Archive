@@ -52,7 +52,7 @@ class SlackPropertiesTest {
         assertThat(properties.signingSecret()).isEmpty();
         assertThat(properties.redirectUri()).isEmpty();
         assertThat(properties.botScopes())
-                .isEqualTo("commands,chat:write,channels:history,groups:history");
+                .isEqualTo("commands,chat:write,channels:history,groups:history,metadata.message:read");
         assertThat(properties.settingsBaseUrl()).isEqualTo("http://localhost:5173");
     }
 

@@ -8,6 +8,8 @@ public record VerifyingSlackDelivery(
         String encryptedBotToken,
         String deliveryKey,
         LocalDateTime attemptedAt,
-        String knownMessageTs
+        String knownMessageTs,
+        String historyCursor,
+        LocalDateTime historyLatestAt
 ) {
 }

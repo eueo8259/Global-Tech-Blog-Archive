@@ -1,7 +1,6 @@
 package com.globaltechblogarchive.slack.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
@@ -15,10 +14,7 @@ import com.globaltechblogarchive.slack.exception.SlackMessageLookupException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -49,16 +45,17 @@ class SlackHistoryRestClientTest {
                 ), MediaType.APPLICATION_JSON));
         SlackHistoryRestClient client = new SlackHistoryRestClient(builder.build(), properties());
 
-        Optional<SlackMessageLookupResult> result = client.findByDeliveryKey(
+        SlackMessageLookupResult result = client.findByDeliveryKey(
                 "xoxb-token",
                 "C123",
                 "delivery-key",
                 ATTEMPTED_AT,
                 VERIFICATION_NOW,
+                null,
                 null
         );
 
-        assertThat(result).contains(new SlackMessageLookupResult("1720937160.000100"));
+        assertThat(result).isEqualTo(SlackMessageLookupResult.found("1720937160.000100"));
         server.verify();
     }
 
@@ -76,16 +73,17 @@ class SlackHistoryRestClientTest {
                 ), MediaType.APPLICATION_JSON));
         SlackHistoryRestClient client = new SlackHistoryRestClient(builder.build(), properties());
 
-        Optional<SlackMessageLookupResult> result = client.findByDeliveryKey(
+        SlackMessageLookupResult result = client.findByDeliveryKey(
                 "xoxb-token",
                 "C123",
                 "delivery-key",
                 ATTEMPTED_AT,
                 VERIFICATION_NOW,
+                null,
                 null
         );
 
-        assertThat(result).isEmpty();
+        assertThat(result).isEqualTo(SlackMessageLookupResult.notFound(null));
         server.verify();
     }
 
@@ -103,21 +101,22 @@ class SlackHistoryRestClientTest {
                 ), MediaType.APPLICATION_JSON));
         SlackHistoryRestClient client = new SlackHistoryRestClient(builder.build(), properties());
 
-        Optional<SlackMessageLookupResult> result = client.findByDeliveryKey(
+        SlackMessageLookupResult result = client.findByDeliveryKey(
                 "xoxb-token",
                 "C123",
                 "delivery-key",
                 ATTEMPTED_AT,
                 VERIFICATION_NOW,
+                null,
                 null
         );
 
-        assertThat(result).isEmpty();
+        assertThat(result).isEqualTo(SlackMessageLookupResult.notFound(null));
         server.verify();
     }
 
     @Test
-    void findByDeliveryKeySearchesAllPages() {
+    void findByDeliveryKeyReturnsCursorWithoutCallingNextPage() {
         RestClient.Builder builder = RestClient.builder().baseUrl("https://slack.com");
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo(containsString("/api/conversations.history")))
@@ -126,6 +125,26 @@ class SlackHistoryRestClientTest {
                                 + "\"response_metadata\":{\"next_cursor\":\"cursor-2\"}}",
                         MediaType.APPLICATION_JSON
                 ));
+        SlackHistoryRestClient client = new SlackHistoryRestClient(builder.build(), properties());
+
+        SlackMessageLookupResult result = client.findByDeliveryKey(
+                "xoxb-token",
+                "C123",
+                "delivery-key",
+                ATTEMPTED_AT,
+                VERIFICATION_NOW,
+                null,
+                null
+        );
+
+        assertThat(result).isEqualTo(SlackMessageLookupResult.notFound("cursor-2"));
+        server.verify();
+    }
+
+    @Test
+    void findByDeliveryKeyResumesFromCursorOnLaterInvocation() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://slack.com");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo(containsString("/api/conversations.history")))
                 .andExpect(queryParam("cursor", "cursor-2"))
                 .andRespond(withSuccess(responseWithMessage(
@@ -137,45 +156,17 @@ class SlackHistoryRestClientTest {
                 ), MediaType.APPLICATION_JSON));
         SlackHistoryRestClient client = new SlackHistoryRestClient(builder.build(), properties());
 
-        Optional<SlackMessageLookupResult> result = client.findByDeliveryKey(
+        SlackMessageLookupResult result = client.findByDeliveryKey(
                 "xoxb-token",
                 "C123",
                 "delivery-key",
                 ATTEMPTED_AT,
                 VERIFICATION_NOW,
-                null
+                null,
+                "cursor-2"
         );
 
-        assertThat(result).contains(new SlackMessageLookupResult("1720937160.000200"));
-        server.verify();
-    }
-
-    @Test
-    void findByDeliveryKeyFailsWhenLaterPageFails() {
-        RestClient.Builder builder = RestClient.builder().baseUrl("https://slack.com");
-        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        server.expect(requestTo(containsString("/api/conversations.history")))
-                .andRespond(withSuccess(
-                        "{\"ok\":true,\"messages\":[],\"has_more\":true,"
-                                + "\"response_metadata\":{\"next_cursor\":\"cursor-2\"}}",
-                        MediaType.APPLICATION_JSON
-                ));
-        server.expect(requestTo(containsString("/api/conversations.history")))
-                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
-                        .header(HttpHeaders.RETRY_AFTER, "30"));
-        SlackHistoryRestClient client = new SlackHistoryRestClient(builder.build(), properties());
-
-        assertThatThrownBy(() -> client.findByDeliveryKey(
-                "xoxb-token",
-                "C123",
-                "delivery-key",
-                ATTEMPTED_AT,
-                VERIFICATION_NOW,
-                null
-        )).isInstanceOfSatisfying(SlackMessageLookupException.class, exception -> {
-            assertThat(exception.getErrorCode()).isEqualTo("HTTP_429");
-            assertThat(exception.getRetryAfter()).isEqualTo(Duration.ofSeconds(30));
-        });
+        assertThat(result).isEqualTo(SlackMessageLookupResult.found("1720937160.000200"));
         server.verify();
     }
 
@@ -194,16 +185,17 @@ class SlackHistoryRestClientTest {
                 ));
         SlackHistoryRestClient client = new SlackHistoryRestClient(builder.build(), properties());
 
-        Optional<SlackMessageLookupResult> result = client.findByDeliveryKey(
+        SlackMessageLookupResult result = client.findByDeliveryKey(
                 "xoxb-token",
                 "C123",
                 "delivery-key",
                 ATTEMPTED_AT,
                 VERIFICATION_NOW,
-                "1720937160.000100"
+                "1720937160.000100",
+                null
         );
 
-        assertThat(result).contains(new SlackMessageLookupResult("1720937160.000100"));
+        assertThat(result).isEqualTo(SlackMessageLookupResult.found("1720937160.000100"));
         server.verify();
     }
 

@@ -16,6 +16,7 @@ The Slack app requires all existing scopes plus:
 
 - `channels:history` for public channels
 - `groups:history` for private channels
+- `metadata.message:read` for reading the delivery key from message metadata
 
 The bot must be a member of every channel whose messages it verifies. Changing
 `SLACK_BOT_SCOPES` changes the next OAuth request only; it does not add scopes to
@@ -23,11 +24,11 @@ tokens already issued.
 
 After scope configuration changes:
 
-1. Add both history scopes in the Slack app configuration.
+1. Add both history scopes and `metadata.message:read` in the Slack app configuration.
 2. Add the metadata event schema shown below.
 3. Reinstall the app to each existing workspace.
 4. Confirm the bot is a member of each subscribed public or private channel.
-5. Confirm the newly stored workspace scope includes both history scopes.
+5. Confirm the newly stored workspace scope includes all three new scopes.
 
 Do not change the remote Slack app or reinstall it through automation without
 explicit operator approval.
@@ -74,6 +75,9 @@ Slack references:
 - A matching metadata delivery key, or an existing known message timestamp,
   confirms `SENT`.
 - Three complete History scans that find no message allow resend.
+- Each verification reads at most one History page. The cursor and original
+  upper time bound are stored so rate-limited apps resume on a later run
+  without restarting from the first page.
 - HTTP 429, network, Slack service, authentication, and permission failures do
   not count as message absence.
 - Permission failures use a one-hour recheck delay and never trigger automatic

@@ -41,6 +41,8 @@ class SlackDeliveryVerificationServiceTest {
                 "encrypted-token",
                 "delivery-key",
                 now.minusMinutes(5),
+                null,
+                null,
                 null
         );
         when(stateService.findVerificationTarget(1L, now)).thenReturn(Optional.of(delivery));
@@ -55,8 +57,9 @@ class SlackDeliveryVerificationServiceTest {
                 "delivery-key",
                 now.minusMinutes(5),
                 now,
+                null,
                 null
-        )).thenReturn(Optional.of(new SlackMessageLookupResult("1720937160.000100")));
+        )).thenReturn(SlackMessageLookupResult.found("1720937160.000100"));
 
         service.verify(1L, now);
 
@@ -72,12 +75,51 @@ class SlackDeliveryVerificationServiceTest {
                 "delivery-key",
                 now.minusMinutes(5),
                 now,
+                null,
                 null
-        )).thenReturn(Optional.empty());
+        )).thenReturn(SlackMessageLookupResult.notFound(null));
 
         service.verify(1L, now);
 
         verify(stateService).recordVerificationNotFound(1L, now.plusMinutes(5));
+    }
+
+    @Test
+    void verifySchedulesNextPageWithFixedLatestAt() {
+        LocalDateTime fixedLatestAt = now.minusMinutes(1);
+        delivery = new VerifyingSlackDelivery(
+                1L,
+                "C123",
+                "encrypted-token",
+                "delivery-key",
+                now.minusMinutes(5),
+                null,
+                "cursor-2",
+                fixedLatestAt
+        );
+        when(stateService.findVerificationTarget(1L, now)).thenReturn(Optional.of(delivery));
+        when(lookupClient.findByDeliveryKey(
+                "xoxb-token",
+                "C123",
+                "delivery-key",
+                now.minusMinutes(5),
+                fixedLatestAt,
+                null,
+                "cursor-2"
+        )).thenReturn(SlackMessageLookupResult.notFound("cursor-3"));
+
+        service.verify(1L, now);
+
+        verify(stateService).continueVerification(
+                1L,
+                now.plusMinutes(5),
+                "cursor-3",
+                fixedLatestAt
+        );
+        verify(stateService, never()).recordVerificationNotFound(
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.any()
+        );
     }
 
     @Test
@@ -88,6 +130,7 @@ class SlackDeliveryVerificationServiceTest {
                 "delivery-key",
                 now.minusMinutes(5),
                 now,
+                null,
                 null
         )).thenThrow(new SlackMessageLookupException(
                 "HTTP_429",
@@ -118,6 +161,7 @@ class SlackDeliveryVerificationServiceTest {
                 "delivery-key",
                 now.minusMinutes(5),
                 now,
+                null,
                 null
         )).thenThrow(new SlackMessageLookupException(
                 "missing_scope",
@@ -144,6 +188,7 @@ class SlackDeliveryVerificationServiceTest {
                 "delivery-key",
                 now.minusMinutes(5),
                 now,
+                null,
                 null
         )).thenThrow(new SlackMessageLookupException(
                 "token_revoked",

@@ -102,6 +102,12 @@ public class SlackDelivery {
     @Column(name = "next_verification_at")
     private LocalDateTime nextVerificationAt;
 
+    @Column(name = "history_cursor", length = 500)
+    private String historyCursor;
+
+    @Column(name = "history_latest_at")
+    private LocalDateTime historyLatestAt;
+
     @Column(name = "last_error_code", length = ERROR_CODE_MAX_LENGTH)
     private String lastErrorCode;
 
@@ -161,6 +167,8 @@ public class SlackDelivery {
         processingStartedAt = startedAt;
         verificationCount = 0;
         nextVerificationAt = null;
+        historyCursor = null;
+        historyLatestAt = null;
         attemptCount++;
         return true;
     }
@@ -174,6 +182,8 @@ public class SlackDelivery {
         nextRetryAt = null;
         verificationCount = 0;
         nextVerificationAt = null;
+        historyCursor = null;
+        historyLatestAt = null;
         clearError();
     }
 
@@ -188,7 +198,21 @@ public class SlackDelivery {
         slackMessageTs = messageTs;
         nextRetryAt = null;
         nextVerificationAt = verificationAt;
+        historyCursor = null;
+        historyLatestAt = null;
         setError(errorCode, errorMessage);
+    }
+
+    public void continueVerification(
+            LocalDateTime nextAt,
+            String nextCursor,
+            LocalDateTime latestAt
+    ) {
+        requireVerifying();
+        nextVerificationAt = nextAt;
+        historyCursor = nextCursor;
+        historyLatestAt = latestAt;
+        clearError();
     }
 
     public void scheduleNextVerification(
@@ -208,12 +232,16 @@ public class SlackDelivery {
     ) {
         requireVerifying();
         verificationCount++;
+        historyCursor = null;
+        historyLatestAt = null;
         if (verificationCount >= maxVerificationChecks) {
             if (attemptCount >= maxAttempts) {
                 status = SlackDeliveryStatus.FAILED;
                 processingStartedAt = null;
                 nextVerificationAt = null;
                 nextRetryAt = null;
+                historyCursor = null;
+                historyLatestAt = null;
                 setError(
                         "SLACK_MESSAGE_NOT_FOUND_MAX_ATTEMPTS",
                         "Slack 메시지를 찾지 못했고 최대 발송 시도 횟수에 도달했습니다."
@@ -224,6 +252,8 @@ public class SlackDelivery {
             processingStartedAt = null;
             nextVerificationAt = null;
             nextRetryAt = nextAt;
+            historyCursor = null;
+            historyLatestAt = null;
             setError("SLACK_MESSAGE_NOT_FOUND", "Slack History에서 발송 메시지를 찾지 못했습니다.");
             return;
         }
@@ -273,6 +303,8 @@ public class SlackDelivery {
         status = SlackDeliveryStatus.VERIFYING;
         nextRetryAt = null;
         nextVerificationAt = verificationAt;
+        historyCursor = null;
+        historyLatestAt = null;
         setError("STALE_PROCESSING", "처리 중 서버 종료로 Slack 발송 결과 검증 상태로 복구되었습니다.");
     }
 

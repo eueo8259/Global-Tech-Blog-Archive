@@ -12,7 +12,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -57,13 +56,14 @@ public class SlackHistoryRestClient implements SlackMessageLookupClient {
     }
 
     @Override
-    public Optional<SlackMessageLookupResult> findByDeliveryKey(
+    public SlackMessageLookupResult findByDeliveryKey(
             String botToken,
             String channelId,
             String deliveryKey,
             LocalDateTime attemptedAt,
-            LocalDateTime verificationNow,
-            String knownMessageTs
+            LocalDateTime latestAt,
+            String knownMessageTs,
+            String cursor
     ) {
         if (knownMessageTs != null && !knownMessageTs.isBlank()) {
             HistoryResponse exactResponse = requestPage(
@@ -74,13 +74,15 @@ public class SlackHistoryRestClient implements SlackMessageLookupClient {
                     1,
                     null
             );
-            Optional<SlackMessageLookupResult> exactMatch = messages(exactResponse).stream()
+            SlackMessageLookupResult exactMatch = messages(exactResponse).stream()
                     .filter(message -> knownMessageTs.equals(message.ts()))
-                    .map(message -> new SlackMessageLookupResult(message.ts()))
-                    .findFirst();
-            if (exactMatch.isPresent()) {
+                    .map(message -> SlackMessageLookupResult.found(message.ts()))
+                    .findFirst()
+                    .orElse(null);
+            if (exactMatch != null) {
                 return exactMatch;
             }
+            return SlackMessageLookupResult.notFound(null);
         }
 
         if (attemptedAt == null) {
@@ -93,37 +95,36 @@ public class SlackHistoryRestClient implements SlackMessageLookupClient {
         }
 
         String oldest = toSlackTimestamp(attemptedAt.minus(properties.historyLookback()));
-        String latest = toSlackTimestamp(verificationNow);
-        String cursor = null;
-        while (true) {
-            HistoryResponse response = requestPage(
-                    botToken,
-                    channelId,
-                    oldest,
-                    latest,
-                    properties.historyPageSize(),
-                    cursor
-            );
-            Optional<SlackMessageLookupResult> match = messages(response).stream()
-                    .filter(message -> hasDeliveryMetadata(message, deliveryKey))
-                    .map(message -> new SlackMessageLookupResult(message.ts()))
-                    .findFirst();
-            if (match.isPresent()) {
-                return match;
-            }
-            if (!response.hasMore()) {
-                return Optional.empty();
-            }
-            cursor = nextCursor(response);
-            if (cursor == null || cursor.isBlank()) {
-                throw new SlackMessageLookupException(
-                        "INVALID_PAGINATION_RESPONSE",
-                        "Slack conversations.history 다음 페이지 cursor가 없습니다.",
-                        true,
-                        null
-                );
-            }
+        String latest = toSlackTimestamp(latestAt);
+        HistoryResponse response = requestPage(
+                botToken,
+                channelId,
+                oldest,
+                latest,
+                properties.historyPageSize(),
+                cursor
+        );
+        SlackMessageLookupResult match = messages(response).stream()
+                .filter(message -> hasDeliveryMetadata(message, deliveryKey))
+                .map(message -> SlackMessageLookupResult.found(message.ts()))
+                .findFirst()
+                .orElse(null);
+        if (match != null) {
+            return match;
         }
+        if (!response.hasMore()) {
+            return SlackMessageLookupResult.notFound(null);
+        }
+        String nextCursor = nextCursor(response);
+        if (nextCursor == null || nextCursor.isBlank()) {
+            throw new SlackMessageLookupException(
+                    "INVALID_PAGINATION_RESPONSE",
+                    "Slack conversations.history 다음 페이지 cursor가 없습니다.",
+                    true,
+                    null
+            );
+        }
+        return SlackMessageLookupResult.notFound(nextCursor);
     }
 
     private HistoryResponse requestPage(

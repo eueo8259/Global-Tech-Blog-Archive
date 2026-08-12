@@ -73,16 +73,30 @@ public class SlackDeliveryVerificationService {
         }
 
         try {
-            Optional<SlackMessageLookupResult> result = messageLookupClient.findByDeliveryKey(
+            LocalDateTime latestAt = delivery.historyLatestAt();
+            if (latestAt == null) {
+                latestAt = now;
+            }
+            SlackMessageLookupResult result = messageLookupClient.findByDeliveryKey(
                     botToken,
                     delivery.slackChannelId(),
                     delivery.deliveryKey(),
                     delivery.attemptedAt(),
-                    now,
-                    delivery.knownMessageTs()
+                    latestAt,
+                    delivery.knownMessageTs(),
+                    delivery.historyCursor()
             );
-            if (result.isPresent()) {
-                stateService.markSent(deliveryId, now, result.get().messageTs());
+            if (result.found()) {
+                stateService.markSent(deliveryId, now, result.messageTs());
+                return;
+            }
+            if (result.hasNextPage()) {
+                stateService.continueVerification(
+                        deliveryId,
+                        now.plus(properties.verificationDelay()),
+                        result.nextCursor(),
+                        latestAt
+                );
                 return;
             }
             stateService.recordVerificationNotFound(

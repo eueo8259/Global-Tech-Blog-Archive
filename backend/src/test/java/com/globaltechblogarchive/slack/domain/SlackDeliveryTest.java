@@ -104,6 +104,30 @@ class SlackDeliveryTest {
     }
 
     @Test
+    void historyPaginationResumesWithFixedUpperBoundAndClearsAfterCompleteMiss() {
+        SlackDelivery delivery = delivery();
+        LocalDateTime now = LocalDateTime.of(2026, 7, 14, 9, 0);
+        startAttempt(delivery, now);
+        delivery.markVerifying(now, null, "NETWORK_ERROR", "timeout");
+
+        delivery.continueVerification(
+                now.plusMinutes(5),
+                "cursor-2",
+                now.plusMinutes(1)
+        );
+
+        assertThat(delivery.getHistoryCursor()).isEqualTo("cursor-2");
+        assertThat(delivery.getHistoryLatestAt()).isEqualTo(now.plusMinutes(1));
+        assertThat(delivery.getVerificationCount()).isZero();
+
+        delivery.recordVerificationNotFound(now.plusMinutes(10), 3, 3);
+
+        assertThat(delivery.getHistoryCursor()).isNull();
+        assertThat(delivery.getHistoryLatestAt()).isNull();
+        assertThat(delivery.getVerificationCount()).isEqualTo(1);
+    }
+
+    @Test
     void foundMessageTransitionsVerifyingDeliveryToSent() {
         SlackDelivery delivery = delivery();
         LocalDateTime now = LocalDateTime.of(2026, 7, 14, 9, 0);

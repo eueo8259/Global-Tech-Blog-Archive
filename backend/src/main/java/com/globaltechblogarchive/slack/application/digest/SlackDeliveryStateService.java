@@ -82,8 +82,21 @@ public class SlackDeliveryStateService {
                 delivery.getSlackChannel().getWorkspace().getEncryptedBotToken(),
                 delivery.getDeliveryKey(),
                 delivery.getProcessingStartedAt(),
-                delivery.getSlackMessageTs()
+                delivery.getSlackMessageTs(),
+                delivery.getHistoryCursor(),
+                delivery.getHistoryLatestAt()
         ));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void continueVerification(
+            Long deliveryId,
+            LocalDateTime nextAt,
+            String nextCursor,
+            LocalDateTime latestAt
+    ) {
+        SlackDelivery delivery = verifyingDelivery(deliveryId);
+        delivery.continueVerification(nextAt, nextCursor, latestAt);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

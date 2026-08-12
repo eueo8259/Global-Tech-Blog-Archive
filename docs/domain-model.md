@@ -401,6 +401,8 @@ Database table: `slack_deliveries`
 | sent_at | DATETIME | no | Successful completion time |
 | next_retry_at | DATETIME | no | Earliest time a retry may claim the delivery |
 | next_verification_at | DATETIME | no | Earliest time a `VERIFYING` delivery may query Slack History again |
+| history_cursor | VARCHAR(500) | no | Cursor used to resume a multi-page Slack History verification |
+| history_latest_at | DATETIME | no | Fixed upper bound for the current multi-page History scan |
 | last_error_code | VARCHAR(100) | no | Last Slack or internal error code |
 | last_error_message | VARCHAR(500) | no | Truncated diagnostic message |
 | slack_message_ts | VARCHAR(50) | no | Slack message timestamp returned by `chat.postMessage` |
@@ -437,6 +439,8 @@ Delivery rules:
 - A matching History message moves the delivery to `SENT`. A successful lookup
   that finds no matching message increments `verification_count`; only the third
   such result moves the delivery to `RETRY_WAITING`.
+- History pagination reads one page per verification run and persists its cursor
+  and fixed upper bound until the complete scan finishes.
 - A History request failure does not increment `verification_count`. Permission
   and authentication failures leave the delivery in `VERIFYING` and prevent
   automatic resend until lookup succeeds.
