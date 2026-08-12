@@ -19,11 +19,14 @@ class SlackDigestMessageFactoryTest {
                 article(3L, 2L, "Uber", "Uber 1")
         );
 
-        SlackChatMessage message = factory.create("C123", articles);
+        SlackChatMessage message = factory.create("C123", "delivery-key", articles);
 
         assertThat(message.channel()).isEqualTo("C123");
         assertThat(message.text()).contains("3개");
         assertThat(message.blocks()).hasSize(3);
+        assertThat(message.metadata().eventType()).isEqualTo("techport_digest_sent");
+        assertThat(message.metadata().eventPayload().deliveryKey()).isEqualTo("delivery-key");
+        assertThat(message.text()).doesNotContain("delivery-key");
         assertThat(message.blocks().get(1).text().text())
                 .contains("*Netflix*", "Netflix 1", "Netflix 2");
         assertThat(message.blocks().get(2).text().text())
@@ -37,7 +40,7 @@ class SlackDigestMessageFactoryTest {
             articles.add(article(id, 1L, "Netflix", "Article " + id));
         }
 
-        SlackChatMessage message = factory.create("C123", articles);
+        SlackChatMessage message = factory.create("C123", "delivery-key", articles);
 
         assertThat(message.text()).contains("30개");
         assertThat(message.blocks().getLast().elements().getFirst().text()).contains("1개");
@@ -47,6 +50,7 @@ class SlackDigestMessageFactoryTest {
     void createEscapesSlackMrkdwnControlCharacters() {
         SlackChatMessage message = factory.create(
                 "C123",
+                "delivery-key",
                 List.of(article(1L, 1L, "A&B", "Use <Java> & Spring"))
         );
 

@@ -14,7 +14,11 @@ public class SlackDigestMessageFactory {
     static final int MAX_TITLE_LENGTH = 300;
     static final int MAX_SECTION_LENGTH = 2800;
 
-    public SlackChatMessage create(String slackChannelId, List<SlackDigestArticle> articles) {
+    public SlackChatMessage create(
+            String slackChannelId,
+            String deliveryKey,
+            List<SlackDigestArticle> articles
+    ) {
         if (articles.isEmpty()) {
             throw new IllegalArgumentException("Daily Digest에 포함할 아티클이 필요합니다.");
         }
@@ -41,7 +45,12 @@ public class SlackDigestMessageFactory {
         }
 
         String fallbackText = "오늘의 새로운 기술 아티클 " + includedArticles.size() + "개";
-        return new SlackChatMessage(slackChannelId, fallbackText, List.copyOf(blocks));
+        return new SlackChatMessage(
+                slackChannelId,
+                fallbackText,
+                List.copyOf(blocks),
+                SlackChatMessage.Metadata.digest(deliveryKey)
+        );
     }
 
     private List<Block> companyBlocks(String companyName, List<SlackDigestArticle> articles) {

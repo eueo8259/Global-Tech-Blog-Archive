@@ -1,13 +1,28 @@
 package com.globaltechblogarchive.slack.application.digest;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 public record SlackChatMessage(
         String channel,
         String text,
-        List<Block> blocks
+        List<Block> blocks,
+        Metadata metadata
 ) {
+
+    public record Metadata(
+            @JsonProperty("event_type") String eventType,
+            @JsonProperty("event_payload") EventPayload eventPayload
+    ) {
+
+        public static Metadata digest(String deliveryKey) {
+            return new Metadata("techport_digest_sent", new EventPayload(deliveryKey));
+        }
+    }
+
+    public record EventPayload(@JsonProperty("delivery_key") String deliveryKey) {
+    }
 
     public record Block(
             String type,

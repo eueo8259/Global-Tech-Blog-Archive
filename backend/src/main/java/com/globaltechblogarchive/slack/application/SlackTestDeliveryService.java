@@ -12,6 +12,7 @@ import com.globaltechblogarchive.slack.repository.SlackChannelRepository;
 import com.globaltechblogarchive.slack.support.SlackTokenEncryptor;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Profile;
@@ -49,6 +50,7 @@ public class SlackTestDeliveryService {
         for (SlackChannel channel : channels) {
             SlackChatMessage message = messageFactory.create(
                     channel.getSlackChannelId(),
+                    UUID.randomUUID().toString(),
                     List.of(article)
             );
             String botToken = tokenEncryptor.decrypt(

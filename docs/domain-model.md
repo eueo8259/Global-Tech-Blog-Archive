@@ -390,13 +390,19 @@ Database table: `slack_deliveries`
 | id | BIGINT | yes | Primary key |
 | slack_channel_id | BIGINT | yes | Target channel foreign key |
 | delivery_date | DATE | yes | Delivery date in the configured digest time zone |
-| status | VARCHAR(30) | yes | `PENDING`, `PROCESSING`, `RETRY_WAITING`, `SENT`, `SENT_UNCONFIRMED`, or `FAILED` |
-| attempt_count | INT | yes | Number of claimed send attempts |
+| status | VARCHAR(30) | yes | `PENDING`, `PROCESSING`, `VERIFYING`, `RETRY_WAITING`, `SENT`, or `FAILED` |
+| attempt_count | INT | yes | Number of actual Slack send attempts |
+| preparation_failure_count | INT | yes | Number of failures before a Slack send attempt starts |
+| delivery_key | VARCHAR(36) | yes | Stable UUID correlation key stored in Slack message metadata |
+| verification_count | INT | yes | Successful History lookups that completed without finding the message |
 | window_started_at | DATETIME | yes | Exclusive article creation lower bound |
 | window_ended_at | DATETIME | yes | Inclusive article creation upper bound |
 | processing_started_at | DATETIME | no | Used to recover stale processing claims |
 | sent_at | DATETIME | no | Successful completion time |
 | next_retry_at | DATETIME | no | Earliest time a retry may claim the delivery |
+| next_verification_at | DATETIME | no | Earliest time a `VERIFYING` delivery may query Slack History again |
+| history_cursor | VARCHAR(500) | no | Cursor used to resume a multi-page Slack History verification |
+| history_latest_at | DATETIME | no | Fixed upper bound for the current multi-page History scan |
 | last_error_code | VARCHAR(100) | no | Last Slack or internal error code |
 | last_error_message | VARCHAR(500) | no | Truncated diagnostic message |
 | slack_message_ts | VARCHAR(50) | no | Slack message timestamp returned by `chat.postMessage` |
@@ -408,21 +414,36 @@ Required constraint:
 ```sql
 UNIQUE KEY uq_slack_deliveries_channel_date
     (slack_channel_id, delivery_date);
+UNIQUE KEY uq_slack_deliveries_delivery_key (delivery_key);
+INDEX idx_slack_deliveries_status_verification
+    (status, next_verification_at, id);
 ```
 
 Delivery rules:
 
 - The first window starts at the Slack channel creation time.
-- Later windows start at the latest `SENT` or `SENT_UNCONFIRMED` delivery's
-  `window_ended_at`.
+- Later windows start at the latest verified `SENT` delivery's `window_ended_at`.
 - Article lookup uses `(window_started_at, window_ended_at]` and includes only
   companies subscribed at or before the article was stored.
 - A channel receives at most one Slack API call for one Daily Digest attempt.
-- `SENT` and `SENT_UNCONFIRMED` deliveries are never selected for retry.
-- If Slack returns success but saving `SENT` fails, a separate transaction
-  records `SENT_UNCONFIRMED` with the Slack message timestamp and failure cause.
-- A stale `PROCESSING` delivery becomes `RETRY_WAITING` before the maximum
-  attempt count and becomes `FAILED` after reaching it.
+- Repeated failures while querying articles or building a message stop at the
+  configured maximum attempt count without increasing `attempt_count`.
+- `VERIFYING` is active work and blocks creation of a later delivery for the
+  same channel until the result becomes `SENT` or retryable.
+- Each send attempt reuses the delivery's original `delivery_key`. Slack message
+  metadata is a correlation key for later lookup, not Slack-side deduplication.
+- A network timeout, HTTP 5xx, ambiguous Slack error, failed `SENT` state write,
+  or stale `PROCESSING` claim moves to `VERIFYING` instead of immediate retry.
+- `processing_started_at` remains the actual send-attempt time while verifying
+  and defines the lower bound for Slack History lookup.
+- A matching History message moves the delivery to `SENT`. A successful lookup
+  that finds no matching message increments `verification_count`; only the third
+  such result moves the delivery to `RETRY_WAITING`.
+- History pagination reads one page per verification run and persists its cursor
+  and fixed upper bound until the complete scan finishes.
+- A History request failure does not increment `verification_count`. Permission
+  and authentication failures leave the delivery in `VERIFYING` and prevent
+  automatic resend until lookup succeeds.
 - Delivery items are not snapshotted in the MVP; retry re-queries the fixed
   delivery window using current subscription data.
 

@@ -29,7 +29,12 @@ class SlackDeliveryStateServiceTest {
                     LocalTime.of(9, 0),
                     3,
                     Duration.ofMinutes(5),
-                    Duration.ofMinutes(15)
+                    Duration.ofMinutes(15),
+                    Duration.ofMinutes(5),
+                    Duration.ofHours(1),
+                    3,
+                    Duration.ofMinutes(1),
+                    15
             )
     );
 
@@ -43,8 +48,23 @@ class SlackDeliveryStateServiceTest {
 
         assertThat(claimed).isPresent();
         assertThat(claimed.orElseThrow().slackChannelId()).isEqualTo("C123");
+        assertThat(claimed.orElseThrow().deliveryKey()).isEqualTo(delivery.getDeliveryKey());
         assertThat(delivery.getStatus()).isEqualTo(SlackDeliveryStatus.PROCESSING);
+        assertThat(delivery.getAttemptCount()).isZero();
+    }
+
+    @Test
+    void startSendAttemptIncreasesCountImmediatelyBeforeSlackCall() {
+        SlackDelivery delivery = delivery();
+        LocalDateTime now = LocalDateTime.of(2026, 7, 14, 9, 0);
+        delivery.startProcessing(now.minusSeconds(1));
+        when(repository.findById(1L)).thenReturn(Optional.of(delivery));
+
+        boolean started = service.startSendAttempt(1L, now);
+
+        assertThat(started).isTrue();
         assertThat(delivery.getAttemptCount()).isEqualTo(1);
+        assertThat(delivery.getProcessingStartedAt()).isEqualTo(now);
     }
 
     @Test
@@ -65,10 +85,13 @@ class SlackDeliveryStateServiceTest {
         SlackDelivery delivery = delivery();
         LocalDateTime now = LocalDateTime.of(2026, 7, 14, 9, 0);
         delivery.startProcessing(now);
+        delivery.startSendAttempt(now, 3);
         delivery.markRetryWaiting(now, "HTTP_503", "server error");
         delivery.startProcessing(now);
+        delivery.startSendAttempt(now, 3);
         delivery.markRetryWaiting(now, "HTTP_503", "server error");
         delivery.startProcessing(now);
+        delivery.startSendAttempt(now, 3);
         when(repository.findById(1L)).thenReturn(Optional.of(delivery));
 
         service.markFailure(1L, now, true, null, "HTTP_503", "server error");
@@ -78,7 +101,30 @@ class SlackDeliveryStateServiceTest {
     }
 
     @Test
-    void recoverStaleProcessingSchedulesRetryBeforeMaximumAttempts() {
+    void preparationFailureStopsRetryAtMaximumAttemptsWithoutSlackAttempts() {
+        SlackDelivery delivery = delivery();
+        LocalDateTime now = LocalDateTime.of(2026, 7, 14, 9, 0);
+        when(repository.findById(1L)).thenReturn(Optional.of(delivery));
+
+        for (int attempt = 0; attempt < 3; attempt++) {
+            delivery.startProcessing(now.plusMinutes(attempt * 5L));
+            service.recordPreparationFailure(
+                    1L,
+                    now.plusMinutes(attempt * 5L),
+                    "UNEXPECTED_ERROR",
+                    "database unavailable"
+            );
+        }
+
+        assertThat(delivery.getStatus()).isEqualTo(SlackDeliveryStatus.FAILED);
+        assertThat(delivery.getPreparationFailureCount()).isEqualTo(3);
+        assertThat(delivery.getAttemptCount()).isZero();
+        assertThat(delivery.getNextRetryAt()).isNull();
+        assertThat(delivery.getLastErrorCode()).isEqualTo("UNEXPECTED_ERROR");
+    }
+
+    @Test
+    void recoverStaleProcessingSchedulesVerification() {
         SlackDelivery delivery = delivery();
         LocalDateTime now = LocalDateTime.of(2026, 7, 14, 9, 20);
         delivery.startProcessing(now.minusMinutes(20));
@@ -90,12 +136,14 @@ class SlackDeliveryStateServiceTest {
         int recoveredCount = service.recoverStaleProcessing(now);
 
         assertThat(recoveredCount).isEqualTo(1);
-        assertThat(delivery.getStatus()).isEqualTo(SlackDeliveryStatus.RETRY_WAITING);
+        assertThat(delivery.getStatus()).isEqualTo(SlackDeliveryStatus.VERIFYING);
+        assertThat(delivery.getProcessingStartedAt()).isEqualTo(now.minusMinutes(20));
+        assertThat(delivery.getNextVerificationAt()).isEqualTo(now);
         assertThat(delivery.getLastErrorCode()).isEqualTo("STALE_PROCESSING");
     }
 
     @Test
-    void recoverStaleProcessingStopsAtMaximumAttempts() {
+    void recoverStaleProcessingVerifiesEvenAtMaximumAttempts() {
         SlackDelivery delivery = delivery();
         LocalDateTime now = LocalDateTime.of(2026, 7, 14, 9, 20);
         startThirdAttempt(delivery, now.minusMinutes(20));
@@ -107,17 +155,20 @@ class SlackDeliveryStateServiceTest {
         int recoveredCount = service.recoverStaleProcessing(now);
 
         assertThat(recoveredCount).isEqualTo(1);
-        assertThat(delivery.getStatus()).isEqualTo(SlackDeliveryStatus.FAILED);
+        assertThat(delivery.getStatus()).isEqualTo(SlackDeliveryStatus.VERIFYING);
         assertThat(delivery.getAttemptCount()).isEqualTo(3);
-        assertThat(delivery.getLastErrorCode()).isEqualTo("STALE_PROCESSING_MAX_ATTEMPTS");
+        assertThat(delivery.getLastErrorCode()).isEqualTo("STALE_PROCESSING");
     }
 
     private void startThirdAttempt(SlackDelivery delivery, LocalDateTime startedAt) {
         delivery.startProcessing(startedAt.minusMinutes(10));
+        delivery.startSendAttempt(startedAt.minusMinutes(10), 3);
         delivery.markRetryWaiting(startedAt.minusMinutes(9), "HTTP_503", "server error");
         delivery.startProcessing(startedAt.minusMinutes(5));
+        delivery.startSendAttempt(startedAt.minusMinutes(5), 3);
         delivery.markRetryWaiting(startedAt.minusMinutes(4), "HTTP_503", "server error");
         delivery.startProcessing(startedAt);
+        delivery.startSendAttempt(startedAt, 3);
     }
 
     private SlackDelivery delivery() {

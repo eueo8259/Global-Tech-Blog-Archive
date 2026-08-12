@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @DataJpaTest
 class SlackDeliveryRepositoryTest extends MySqlIntegrationTest {
@@ -69,6 +70,46 @@ class SlackDeliveryRepositoryTest extends MySqlIntegrationTest {
                 SlackDeliveryStatus.RETRY_WAITING,
                 WINDOW_END.plusMinutes(5)
         )).containsExactly(pending.getId(), readyRetry.getId());
+    }
+
+    @Test
+    void uniqueConstraintRejectsDuplicateDeliveryKey() {
+        SlackDelivery first = SlackDelivery.pending(
+                persistChannel("C-KEY-1"),
+                WINDOW_END.toLocalDate(),
+                WINDOW_START,
+                WINDOW_END
+        );
+        SlackDelivery second = SlackDelivery.pending(
+                persistChannel("C-KEY-2"),
+                WINDOW_END.toLocalDate(),
+                WINDOW_START,
+                WINDOW_END
+        );
+        ReflectionTestUtils.setField(second, "deliveryKey", first.getDeliveryKey());
+        entityManager.persist(first);
+        entityManager.flush();
+
+        assertThatThrownBy(() -> {
+            entityManager.persist(second);
+            entityManager.flush();
+        }).isInstanceOfAny(DataIntegrityViolationException.class, ConstraintViolationException.class);
+    }
+
+    @Test
+    void findReadyVerificationIdsUsesNextVerificationTime() {
+        SlackDelivery ready = persistDelivery(persistChannel("C-VERIFY-READY"));
+        ready.startProcessing(WINDOW_END);
+        ready.markVerifying(WINDOW_END.plusMinutes(1), null, "NETWORK_ERROR", "timeout");
+        SlackDelivery future = persistDelivery(persistChannel("C-VERIFY-FUTURE"));
+        future.startProcessing(WINDOW_END);
+        future.markVerifying(WINDOW_END.plusMinutes(10), null, "NETWORK_ERROR", "timeout");
+        entityManager.flush();
+
+        assertThat(repository.findReadyVerificationIds(
+                SlackDeliveryStatus.VERIFYING,
+                WINDOW_END.plusMinutes(5)
+        )).containsExactly(ready.getId());
     }
 
     private SlackDelivery persistDelivery(SlackChannel channel) {

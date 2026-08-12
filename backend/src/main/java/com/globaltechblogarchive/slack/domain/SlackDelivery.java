@@ -17,6 +17,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -32,14 +33,24 @@ import lombok.NoArgsConstructor;
                         columnList = "status,next_retry_at,id"
                 ),
                 @Index(
+                        name = "idx_slack_deliveries_status_verification",
+                        columnList = "status,next_verification_at,id"
+                ),
+                @Index(
                         name = "idx_slack_deliveries_channel_sent_window",
                         columnList = "slack_channel_id,status,window_ended_at"
                 )
         },
-        uniqueConstraints = @UniqueConstraint(
-                name = "uq_slack_deliveries_channel_date",
-                columnNames = {"slack_channel_id", "delivery_date"}
-        )
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uq_slack_deliveries_channel_date",
+                        columnNames = {"slack_channel_id", "delivery_date"}
+                ),
+                @UniqueConstraint(
+                        name = "uq_slack_deliveries_delivery_key",
+                        columnNames = "delivery_key"
+                )
+        }
 )
 public class SlackDelivery {
 
@@ -64,6 +75,15 @@ public class SlackDelivery {
     @Column(name = "attempt_count", nullable = false)
     private int attemptCount;
 
+    @Column(name = "preparation_failure_count", nullable = false)
+    private int preparationFailureCount;
+
+    @Column(name = "delivery_key", nullable = false, length = 36)
+    private String deliveryKey;
+
+    @Column(name = "verification_count", nullable = false)
+    private int verificationCount;
+
     @Column(name = "window_started_at", nullable = false)
     private LocalDateTime windowStartedAt;
 
@@ -78,6 +98,15 @@ public class SlackDelivery {
 
     @Column(name = "next_retry_at")
     private LocalDateTime nextRetryAt;
+
+    @Column(name = "next_verification_at")
+    private LocalDateTime nextVerificationAt;
+
+    @Column(name = "history_cursor", length = 500)
+    private String historyCursor;
+
+    @Column(name = "history_latest_at")
+    private LocalDateTime historyLatestAt;
 
     @Column(name = "last_error_code", length = ERROR_CODE_MAX_LENGTH)
     private String lastErrorCode;
@@ -107,6 +136,7 @@ public class SlackDelivery {
         delivery.slackChannel = slackChannel;
         delivery.deliveryDate = deliveryDate;
         delivery.status = SlackDeliveryStatus.PENDING;
+        delivery.deliveryKey = UUID.randomUUID().toString();
         delivery.windowStartedAt = windowStartedAt;
         delivery.windowEndedAt = windowEndedAt;
         return delivery;
@@ -119,31 +149,116 @@ public class SlackDelivery {
         status = SlackDeliveryStatus.PROCESSING;
         processingStartedAt = startedAt;
         nextRetryAt = null;
+    }
+
+    public boolean startSendAttempt(LocalDateTime startedAt, int maxAttempts) {
+        requireProcessing();
+        if (attemptCount >= maxAttempts) {
+            status = SlackDeliveryStatus.FAILED;
+            processingStartedAt = null;
+            nextRetryAt = null;
+            nextVerificationAt = null;
+            setError(
+                    "SLACK_SEND_MAX_ATTEMPTS",
+                    "Slack 발송 최대 시도 횟수에 도달했습니다."
+            );
+            return false;
+        }
+        processingStartedAt = startedAt;
+        verificationCount = 0;
+        nextVerificationAt = null;
+        historyCursor = null;
+        historyLatestAt = null;
         attemptCount++;
+        return true;
     }
 
     public void markSent(LocalDateTime completedAt, String messageTs) {
-        requireProcessing();
+        requireProcessingOrVerifying();
         status = SlackDeliveryStatus.SENT;
         sentAt = completedAt;
         slackMessageTs = messageTs;
         processingStartedAt = null;
         nextRetryAt = null;
+        verificationCount = 0;
+        nextVerificationAt = null;
+        historyCursor = null;
+        historyLatestAt = null;
         clearError();
     }
 
-    public void markSentUnconfirmed(
-            LocalDateTime completedAt,
+    public void markVerifying(
+            LocalDateTime verificationAt,
             String messageTs,
+            String errorCode,
             String errorMessage
     ) {
         requireProcessing();
-        status = SlackDeliveryStatus.SENT_UNCONFIRMED;
-        sentAt = completedAt;
+        status = SlackDeliveryStatus.VERIFYING;
         slackMessageTs = messageTs;
-        processingStartedAt = null;
         nextRetryAt = null;
-        setError("SENT_STATUS_SAVE_FAILED", errorMessage);
+        nextVerificationAt = verificationAt;
+        historyCursor = null;
+        historyLatestAt = null;
+        setError(errorCode, errorMessage);
+    }
+
+    public void continueVerification(
+            LocalDateTime nextAt,
+            String nextCursor,
+            LocalDateTime latestAt
+    ) {
+        requireVerifying();
+        nextVerificationAt = nextAt;
+        historyCursor = nextCursor;
+        historyLatestAt = latestAt;
+        clearError();
+    }
+
+    public void scheduleNextVerification(
+            LocalDateTime nextAt,
+            String errorCode,
+            String errorMessage
+    ) {
+        requireVerifying();
+        nextVerificationAt = nextAt;
+        setError(errorCode, errorMessage);
+    }
+
+    public void recordVerificationNotFound(
+            LocalDateTime nextAt,
+            int maxVerificationChecks,
+            int maxAttempts
+    ) {
+        requireVerifying();
+        verificationCount++;
+        historyCursor = null;
+        historyLatestAt = null;
+        if (verificationCount >= maxVerificationChecks) {
+            if (attemptCount >= maxAttempts) {
+                status = SlackDeliveryStatus.FAILED;
+                processingStartedAt = null;
+                nextVerificationAt = null;
+                nextRetryAt = null;
+                historyCursor = null;
+                historyLatestAt = null;
+                setError(
+                        "SLACK_MESSAGE_NOT_FOUND_MAX_ATTEMPTS",
+                        "Slack 메시지를 찾지 못했고 최대 발송 시도 횟수에 도달했습니다."
+                );
+                return;
+            }
+            status = SlackDeliveryStatus.RETRY_WAITING;
+            processingStartedAt = null;
+            nextVerificationAt = null;
+            nextRetryAt = nextAt;
+            historyCursor = null;
+            historyLatestAt = null;
+            setError("SLACK_MESSAGE_NOT_FOUND", "Slack History에서 발송 메시지를 찾지 못했습니다.");
+            return;
+        }
+        nextVerificationAt = nextAt;
+        setError("SLACK_MESSAGE_NOT_FOUND", "Slack History에서 발송 메시지를 찾지 못했습니다.");
     }
 
     public void markRetryWaiting(
@@ -158,6 +273,21 @@ public class SlackDelivery {
         setError(errorCode, errorMessage);
     }
 
+    public void recordPreparationFailure(
+            LocalDateTime nextRetryAt,
+            int maxAttempts,
+            String errorCode,
+            String errorMessage
+    ) {
+        requireProcessing();
+        preparationFailureCount++;
+        if (preparationFailureCount >= maxAttempts) {
+            markFailed(errorCode, errorMessage);
+            return;
+        }
+        markRetryWaiting(nextRetryAt, errorCode, errorMessage);
+    }
+
     public void markFailed(String errorCode, String errorMessage) {
         requireProcessing();
         status = SlackDeliveryStatus.FAILED;
@@ -166,24 +296,16 @@ public class SlackDelivery {
         setError(errorCode, errorMessage);
     }
 
-    public void recoverStaleProcessing(LocalDateTime retryAt, int maxAttempts) {
+    public void recoverStaleProcessing(LocalDateTime verificationAt) {
         if (status != SlackDeliveryStatus.PROCESSING) {
             throw new IllegalStateException("PROCESSING 상태만 복구할 수 있습니다.");
         }
-        if (attemptCount >= maxAttempts) {
-            status = SlackDeliveryStatus.FAILED;
-            processingStartedAt = null;
-            nextRetryAt = null;
-            setError(
-                    "STALE_PROCESSING_MAX_ATTEMPTS",
-                    "Slack Delivery stale recovery reached the maximum attempt count."
-            );
-            return;
-        }
-        status = SlackDeliveryStatus.RETRY_WAITING;
-        processingStartedAt = null;
-        nextRetryAt = retryAt;
-        setError("STALE_PROCESSING", "처리 중 서버 종료로 재시도 대기 상태로 복구되었습니다.");
+        status = SlackDeliveryStatus.VERIFYING;
+        nextRetryAt = null;
+        nextVerificationAt = verificationAt;
+        historyCursor = null;
+        historyLatestAt = null;
+        setError("STALE_PROCESSING", "처리 중 서버 종료로 Slack 발송 결과 검증 상태로 복구되었습니다.");
     }
 
     public boolean canStart(LocalDateTime now) {
@@ -198,6 +320,18 @@ public class SlackDelivery {
     private void requireProcessing() {
         if (status != SlackDeliveryStatus.PROCESSING) {
             throw new IllegalStateException("PROCESSING 상태에서만 결과를 기록할 수 있습니다.");
+        }
+    }
+
+    private void requireVerifying() {
+        if (status != SlackDeliveryStatus.VERIFYING) {
+            throw new IllegalStateException("VERIFYING 상태에서만 검증 결과를 기록할 수 있습니다.");
+        }
+    }
+
+    private void requireProcessingOrVerifying() {
+        if (status != SlackDeliveryStatus.PROCESSING && status != SlackDeliveryStatus.VERIFYING) {
+            throw new IllegalStateException("PROCESSING 또는 VERIFYING 상태에서만 성공을 기록할 수 있습니다.");
         }
     }
 

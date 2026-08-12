@@ -123,7 +123,12 @@ class SlackDailyDigestSchedulerTest {
                 LocalTime.of(9, 0),
                 3,
                 Duration.ofMinutes(5),
-                Duration.ofMinutes(15)
+                Duration.ofMinutes(15),
+                Duration.ofMinutes(5),
+                Duration.ofHours(1),
+                3,
+                Duration.ofMinutes(1),
+                15
         );
     }
 
