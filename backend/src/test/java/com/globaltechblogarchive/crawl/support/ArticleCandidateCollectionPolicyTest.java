@@ -3,7 +3,7 @@ package com.globaltechblogarchive.crawl.support;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +21,7 @@ class ArticleCandidateCollectionPolicyTest {
         cards.add(card("old", now.minusDays(3)));
         cards.add(new ParsedArticle("missing date", "https://example.com/missing-date", null, "missing date"));
 
-        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlMode.RECENT);
+        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlPolicy.recent());
 
         assertThat(filtered).hasSize(20);
         assertThat(filtered).extracting(ParsedArticle::originalTitle)
@@ -58,7 +58,7 @@ class ArticleCandidateCollectionPolicyTest {
                 card("missing", null)
         );
 
-        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlMode.RECENT);
+        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlPolicy.recent());
 
         assertThat(filtered).extracting(ParsedArticle::originalTitle)
                 .containsExactly("recent", "missing");
@@ -74,7 +74,7 @@ class ArticleCandidateCollectionPolicyTest {
                 card("missing-second", null)
         );
 
-        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlMode.BACKFILL);
+        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlPolicy.backfill(50));
 
         assertThat(filtered).extracting(ParsedArticle::originalTitle)
                 .containsExactly("newest", "older", "missing-first", "missing-second");
@@ -89,10 +89,28 @@ class ArticleCandidateCollectionPolicyTest {
             cards.add(card("dated-" + index, now.minusHours(index)));
         }
 
-        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlMode.BACKFILL);
+        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(cards, CrawlPolicy.backfill(50));
 
         assertThat(filtered).hasSize(50);
         assertThat(filtered).extracting(ParsedArticle::originalTitle).doesNotContain("missing");
+    }
+
+    @Test
+    void backfillModeUsesRequestedCandidateLimit() {
+        LocalDateTime now = LocalDateTime.now();
+        List<ParsedArticle> cards = List.of(
+                card("first", now),
+                card("second", now.minusHours(1)),
+                card("third", now.minusHours(2))
+        );
+
+        List<ParsedArticle> filtered = ArticleCandidateCollectionPolicy.apply(
+                cards,
+                CrawlPolicy.backfill(2)
+        );
+
+        assertThat(filtered).extracting(ParsedArticle::originalTitle)
+                .containsExactly("first", "second");
     }
 
     private ParsedArticle card(String title, LocalDateTime publishedAt) {

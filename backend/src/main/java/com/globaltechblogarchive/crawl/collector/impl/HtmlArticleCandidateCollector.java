@@ -6,6 +6,7 @@ import com.globaltechblogarchive.crawl.parser.ArticleListParser;
 import com.globaltechblogarchive.crawl.parser.ArticleListParserRegistry;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.crawl.support.ArticleCandidateCollectionPolicy;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
@@ -29,14 +30,14 @@ public class HtmlArticleCandidateCollector implements ArticleCandidateCollector 
     }
 
     @Override
-    public List<ParsedArticle> collect(BlogSource source, CrawlMode mode) {
+    public List<ParsedArticle> collect(BlogSource source, CrawlPolicy policy) {
         ArticleListParser parser = parserRegistry.find(source);
-        List<ParsedArticle> parsedArticles = collectListPages(source, parser, mode);
-        List<ParsedArticle> detailTargets = ArticleCandidateCollectionPolicy.apply(parsedArticles, mode);
+        List<ParsedArticle> parsedArticles = collectListPages(source, parser, policy.mode());
+        List<ParsedArticle> detailTargets = ArticleCandidateCollectionPolicy.apply(parsedArticles, policy);
         List<ParsedArticle> detailedArticles = detailTargets.stream()
                 .map(detailExtractor::extract)
                 .toList();
-        return ArticleCandidateCollectionPolicy.apply(detailedArticles, mode);
+        return ArticleCandidateCollectionPolicy.apply(detailedArticles, policy);
     }
 
     private List<ParsedArticle> collectListPages(BlogSource source, ArticleListParser parser, CrawlMode mode) {

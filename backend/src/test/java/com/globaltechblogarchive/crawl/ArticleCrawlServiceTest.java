@@ -16,7 +16,7 @@ import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
 import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.config.AiReviewProperties;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import com.globaltechblogarchive.source.domain.BlogSource;
@@ -73,9 +73,9 @@ class ArticleCrawlServiceTest {
         BlogSource succeeding = source(2L, "succeeding");
         when(transactionService.startRun()).thenReturn(10L);
         when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(failing, succeeding));
-        when(sourceProcessor.process(10L, 1L, CrawlMode.RECENT))
+        when(sourceProcessor.process(10L, 1L, CrawlPolicy.recent()))
                 .thenThrow(new IllegalStateException("network failed"));
-        when(sourceProcessor.process(10L, 2L, CrawlMode.RECENT))
+        when(sourceProcessor.process(10L, 2L, CrawlPolicy.recent()))
                 .thenReturn(SourceCrawlResult.success(succeeding, List.of(), CrawlRunSummary.empty()));
 
         ArticleCrawlResult result = crawlService.runScheduled();
@@ -92,24 +92,53 @@ class ArticleCrawlServiceTest {
         BlogSource source = source(3L, "uber");
         when(transactionService.startRun()).thenReturn(11L);
         when(sourceRepository.findBySourceKeyAndEnabledTrue("uber")).thenReturn(Optional.of(source));
-        when(sourceProcessor.process(11L, 3L, CrawlMode.BACKFILL))
+        when(sourceProcessor.process(11L, 3L, CrawlPolicy.backfill(30)))
                 .thenReturn(SourceCrawlResult.success(source, List.of(), CrawlRunSummary.empty()));
 
-        ArticleCrawlResult result = crawlService.runSourceBackfill("uber");
+        ArticleCrawlResult result = crawlService.runSourceBackfill("uber", 30);
 
         assertThat(result.runId()).isEqualTo(11L);
         verify(sourceRepository, never()).findByEnabledTrue();
-        verify(sourceProcessor).process(11L, 3L, CrawlMode.BACKFILL);
+        verify(sourceProcessor).process(11L, 3L, CrawlPolicy.backfill(30));
+    }
+
+    @Test
+    void allBackfillUsesEveryEnabledSourceAndRequestedLimit() {
+        BlogSource first = source(4L, "first");
+        BlogSource second = source(5L, "second");
+        when(transactionService.startRun()).thenReturn(12L);
+        when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(first, second));
+        when(sourceProcessor.process(12L, 4L, CrawlPolicy.backfill(40)))
+                .thenReturn(SourceCrawlResult.success(first, List.of(), CrawlRunSummary.empty()));
+        when(sourceProcessor.process(12L, 5L, CrawlPolicy.backfill(40)))
+                .thenReturn(SourceCrawlResult.success(second, List.of(), CrawlRunSummary.empty()));
+
+        ArticleCrawlResult result = crawlService.runAllBackfill(40);
+
+        assertThat(result.sourceCount()).isEqualTo(2);
+        assertThat(result.successCount()).isEqualTo(2);
+        verify(sourceProcessor).process(12L, 4L, CrawlPolicy.backfill(40));
+        verify(sourceProcessor).process(12L, 5L, CrawlPolicy.backfill(40));
     }
 
     @Test
     void sourceBackfillRejectsUnknownSource() {
         when(sourceRepository.findBySourceKeyAndEnabledTrue("missing")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> crawlService.runSourceBackfill("missing"))
+        assertThatThrownBy(() -> crawlService.runSourceBackfill("missing", 50))
                 .isInstanceOfSatisfying(InvalidInputException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE));
 
+        verify(transactionService, never()).startRun();
+    }
+
+    @Test
+    void backfillRejectsLimitOutsideAllowedRange() {
+        assertThatThrownBy(() -> crawlService.runAllBackfill(51))
+                .isInstanceOf(InvalidInputException.class)
+                .hasMessage("Backfill max candidates per source must be between 1 and 50");
+
+        verify(sourceRepository, never()).findByEnabledTrue();
         verify(transactionService, never()).startRun();
     }
 
