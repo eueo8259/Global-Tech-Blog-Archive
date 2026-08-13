@@ -9,7 +9,7 @@ import com.globaltechblogarchive.crawl.collector.impl.ArticleDetailExtractor;
 import com.globaltechblogarchive.crawl.collector.impl.FeedArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.collector.impl.HtmlArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.collector.impl.SitemapArticleCandidateCollector;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.crawl.helper.ArticleListParserPropertiesFixture;
 import com.globaltechblogarchive.crawl.parser.ArticleListParserRegistry;
 import com.globaltechblogarchive.crawl.parser.HtmlArticleListParser;
@@ -63,7 +63,7 @@ class RealArticleSourceCollectionCountTest {
                 .findFirst()
                 .orElseThrow();
         try {
-            int count = collector.collect(source, CrawlMode.RECENT).size();
+            int count = collector.collect(source, CrawlPolicy.recent()).size();
             return new SourceCount(
                     source.getCompany().getCompanyKey(),
                     source.getCompany().getCompanyName(),

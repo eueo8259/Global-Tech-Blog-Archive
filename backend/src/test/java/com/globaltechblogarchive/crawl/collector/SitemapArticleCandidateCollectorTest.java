@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import java.time.OffsetDateTime;
@@ -57,7 +57,7 @@ class SitemapArticleCandidateCollectorTest {
                 "https://www.anthropic.com/engineering/building-effective-agents", detail
         )));
 
-        var cards = collector.collect(source, CrawlMode.RECENT);
+        var cards = collector.collect(source, CrawlPolicy.recent());
 
         assertThat(cards).hasSize(1);
         assertThat(cards.getFirst().originalTitle()).isEqualTo("Building Effective AI Agents");
@@ -100,7 +100,7 @@ class SitemapArticleCandidateCollectorTest {
                 "https://www.anthropic.com/engineering/old-but-recently-modified", detail
         )));
 
-        var cards = collector.collect(source, CrawlMode.RECENT);
+        var cards = collector.collect(source, CrawlPolicy.recent());
 
         assertThat(cards).isEmpty();
     }
@@ -134,7 +134,7 @@ class SitemapArticleCandidateCollectorTest {
         RecordingClient client = new RecordingClient(documents);
         SitemapArticleCandidateCollector collector = new SitemapArticleCandidateCollector(client);
 
-        List<?> cards = collector.collect(source, CrawlMode.BACKFILL);
+        List<?> cards = collector.collect(source, CrawlPolicy.backfill(50));
 
         assertThat(cards).hasSize(29);
         assertThat(client.detailRequests()).containsExactlyElementsOf(expectedDetails);

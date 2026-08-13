@@ -5,7 +5,7 @@ import com.globaltechblogarchive.crawl.application.dto.AiReviewRunResult;
 import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.config.AiReviewProperties;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import com.globaltechblogarchive.source.domain.BlogSource;
@@ -26,11 +26,15 @@ public class ArticleCrawlService {
     private final AiReviewProperties aiReviewProperties;
 
     public ArticleCrawlResult runScheduled() {
-        return run(CrawlMode.RECENT);
+        return run(CrawlPolicy.recent());
     }
 
-    public ArticleCrawlResult runSourceBackfill(String sourceKey) {
-        return runSource(sourceKey, CrawlMode.BACKFILL);
+    public ArticleCrawlResult runSourceBackfill(String sourceKey, int maxCandidatesPerSource) {
+        return runSource(sourceKey, backfillPolicy(maxCandidatesPerSource));
+    }
+
+    public ArticleCrawlResult runAllBackfill(int maxCandidatesPerSource) {
+        return run(backfillPolicy(maxCandidatesPerSource));
     }
 
     public ArticleCrawlResult retryAiFailures(int limit) {
@@ -55,20 +59,20 @@ public class ArticleCrawlService {
         );
     }
 
-    private ArticleCrawlResult run(CrawlMode mode) {
-        return runSources(blogSourceRepository.findByEnabledTrue(), mode);
+    private ArticleCrawlResult run(CrawlPolicy policy) {
+        return runSources(blogSourceRepository.findByEnabledTrue(), policy);
     }
 
-    private ArticleCrawlResult runSource(String sourceKey, CrawlMode mode) {
+    private ArticleCrawlResult runSource(String sourceKey, CrawlPolicy policy) {
         BlogSource source = blogSourceRepository.findBySourceKeyAndEnabledTrue(sourceKey)
                 .orElseThrow(() -> new InvalidInputException(
                         ErrorCode.INVALID_INPUT_VALUE,
                         "Enabled source not found: " + sourceKey
                 ));
-        return runSources(List.of(source), mode);
+        return runSources(List.of(source), policy);
     }
 
-    private ArticleCrawlResult runSources(List<BlogSource> sources, CrawlMode mode) {
+    private ArticleCrawlResult runSources(List<BlogSource> sources, CrawlPolicy policy) {
         Long runId = transactionService.startRun();
         List<SourceCrawlResult> sourceResults = new ArrayList<>();
         CrawlRunSummary summary = CrawlRunSummary.empty();
@@ -76,7 +80,7 @@ public class ArticleCrawlService {
         for (BlogSource source : sources) {
             SourceCrawlResult sourceResult;
             try {
-                sourceResult = sourceCrawlProcessor.process(runId, source.getId(), mode);
+                sourceResult = sourceCrawlProcessor.process(runId, source.getId(), policy);
             } catch (RuntimeException exception) {
                 transactionService.markSourceFailed(source.getId(), exception.getMessage());
                 sourceResult = SourceCrawlResult.failure(source, exception.getMessage());
@@ -133,5 +137,17 @@ public class ArticleCrawlService {
                             + aiReviewProperties.maxFailureRetryLimit()
             );
         }
+    }
+
+    private CrawlPolicy backfillPolicy(int maxCandidatesPerSource) {
+        if (maxCandidatesPerSource < 1
+                || maxCandidatesPerSource > CrawlPolicy.BACKFILL_MAX_CANDIDATES) {
+            throw new InvalidInputException(
+                    ErrorCode.INVALID_INPUT_VALUE,
+                    "Backfill max candidates per source must be between 1 and "
+                            + CrawlPolicy.BACKFILL_MAX_CANDIDATES
+            );
+        }
+        return CrawlPolicy.backfill(maxCandidatesPerSource);
     }
 }

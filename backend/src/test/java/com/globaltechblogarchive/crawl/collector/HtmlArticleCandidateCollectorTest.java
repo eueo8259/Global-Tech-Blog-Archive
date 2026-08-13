@@ -6,7 +6,7 @@ import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.crawl.collector.impl.ArticleDetailExtractor;
 import com.globaltechblogarchive.crawl.collector.impl.HtmlArticleCandidateCollector;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.crawl.helper.ArticleListParserPropertiesFixture;
 import com.globaltechblogarchive.crawl.parser.ArticleListParserRegistry;
 import com.globaltechblogarchive.crawl.parser.HtmlArticleListParser;
@@ -58,7 +58,7 @@ class HtmlArticleCandidateCollectorTest {
         ));
         HtmlArticleCandidateCollector collector = collector(client);
 
-        var articles = collector.collect(source, CrawlMode.BACKFILL);
+        var articles = collector.collect(source, CrawlPolicy.backfill(50));
 
         assertThat(articles).hasSize(1);
         assertThat(articles.getFirst().originalTitle())
@@ -86,7 +86,7 @@ class HtmlArticleCandidateCollectorTest {
         documents.put(source.getSiteUrl(), list.toString());
         RecordingClient client = new RecordingClient(documents);
 
-        var articles = collector(client).collect(source, CrawlMode.BACKFILL);
+        var articles = collector(client).collect(source, CrawlPolicy.backfill(50));
 
         assertThat(articles).hasSize(30);
         assertThat(client.detailRequests()).containsExactlyElementsOf(expectedDetails);
@@ -125,7 +125,7 @@ class HtmlArticleCandidateCollectorTest {
                 detail("How Uber Executed A JUnit Migration at Massive Scale")
         ));
 
-        var articles = collector(client).collect(source, CrawlMode.BACKFILL);
+        var articles = collector(client).collect(source, CrawlPolicy.backfill(50));
 
         assertThat(articles).extracting(ParsedArticle::originalTitle)
                 .containsExactly(
@@ -154,7 +154,7 @@ class HtmlArticleCandidateCollectorTest {
                 detail("Scaling Real-Time Traffic Forecasting with a Graph-Aware Transformer")
         ));
 
-        collector(client).collect(source, CrawlMode.RECENT);
+        collector(client).collect(source, CrawlPolicy.recent());
 
         assertThat(client.listRequests()).containsExactly(source.getSiteUrl());
     }
@@ -189,7 +189,7 @@ class HtmlArticleCandidateCollectorTest {
                 """
         ));
 
-        var articles = collector(client).collect(source, CrawlMode.BACKFILL);
+        var articles = collector(client).collect(source, CrawlPolicy.backfill(50));
 
         assertThat(articles).hasSize(1);
         assertThat(articles.getFirst().originalTitle())

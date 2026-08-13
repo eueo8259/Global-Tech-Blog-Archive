@@ -7,7 +7,7 @@ import com.globaltechblogarchive.crawl.application.ArticleAiReviewService;
 import com.globaltechblogarchive.crawl.application.ArticleCandidateStateService;
 import com.globaltechblogarchive.crawl.application.SourceCrawlProcessor;
 import com.globaltechblogarchive.crawl.application.dto.ClaimedArticleCandidate;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +20,7 @@ class CrawlTransactionBoundaryTest {
                 "process",
                 Long.class,
                 Long.class,
-                CrawlMode.class
+                CrawlPolicy.class
         ).getAnnotation(Transactional.class)).isNull();
         assertThat(ArticleAiReviewService.class.getMethod("runScheduled")
                 .getAnnotation(Transactional.class)).isNull();

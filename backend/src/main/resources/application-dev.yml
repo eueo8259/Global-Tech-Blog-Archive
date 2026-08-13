@@ -16,3 +16,7 @@ cors:
 crawl:
   scheduler:
     enabled: false
+  ai-review:
+    enabled: ${CRAWL_AI_REVIEW_ENABLED:false}
+  admin-api:
+    key: ${CRAWL_ADMIN_API_KEY:}

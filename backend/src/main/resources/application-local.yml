@@ -11,3 +11,7 @@ openai:
   model: ${OPENAI_MODEL:gpt-5-mini}
   connect-timeout: ${OPENAI_CONNECT_TIMEOUT:3s}
   read-timeout: ${OPENAI_READ_TIMEOUT:2m}
+
+crawl:
+  ai-review:
+    enabled: ${CRAWL_AI_REVIEW_ENABLED:false}

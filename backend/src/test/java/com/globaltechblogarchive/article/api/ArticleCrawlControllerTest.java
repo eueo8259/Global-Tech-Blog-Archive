@@ -66,7 +66,7 @@ class ArticleCrawlControllerTest {
                         CollectionMethod.HTML_SCRAPING),
                 new CrawlRunSummary(2, 0, 2, 2, 0, 0, 0, 0)
         );
-        when(articleCrawlService.runSourceBackfill("uber")).thenReturn(result);
+        when(articleCrawlService.runSourceBackfill("uber", 50)).thenReturn(result);
 
         mockMvc.perform(post("/api/admin/article-crawls/sources/uber/backfill-run"))
                 .andExpect(status().isOk())
@@ -76,7 +76,26 @@ class ArticleCrawlControllerTest {
                 .andExpect(jsonPath("$.sources[0].candidateCount").value(2))
                 .andExpect(jsonPath("$.sources[0].candidates").doesNotExist());
 
-        verify(articleCrawlService).runSourceBackfill("uber");
+        verify(articleCrawlService).runSourceBackfill("uber", 50);
+    }
+
+    @Test
+    void runAllBackfillUsesRequestedLimit() throws Exception {
+        ArticleCrawlResult result = result(
+                5L,
+                source("uber", "Uber Engineering Blog", "https://www.uber.com/blog/engineering", null,
+                        CollectionMethod.HTML_SCRAPING),
+                new CrawlRunSummary(2, 0, 2, 2, 0, 0, 0, 0)
+        );
+        when(articleCrawlService.runAllBackfill(40)).thenReturn(result);
+
+        mockMvc.perform(post("/api/admin/article-crawls/backfill-run")
+                        .param("limit", "40"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.runId").value(5))
+                .andExpect(jsonPath("$.candidateCount").value(2));
+
+        verify(articleCrawlService).runAllBackfill(40);
     }
 
     @Test

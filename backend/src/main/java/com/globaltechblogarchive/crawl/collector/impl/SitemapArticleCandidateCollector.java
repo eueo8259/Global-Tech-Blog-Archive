@@ -3,7 +3,7 @@ package com.globaltechblogarchive.crawl.collector.impl;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.crawl.support.ArticleDateParser;
 import com.globaltechblogarchive.crawl.support.ArticleCandidateCollectionPolicy;
 import com.globaltechblogarchive.crawl.support.HtmlMetadataExtractor;
@@ -31,7 +31,7 @@ public class SitemapArticleCandidateCollector implements ArticleCandidateCollect
     }
 
     @Override
-    public List<ParsedArticle> collect(BlogSource source, CrawlMode mode) {
+    public List<ParsedArticle> collect(BlogSource source, CrawlPolicy policy) {
         String sitemapUrl = source.getFeedUrl();
         if (sitemapUrl == null || sitemapUrl.isBlank()) {
             sitemapUrl = source.getSiteUrl().replaceAll("/+$", "") + "/sitemap.xml";
@@ -39,11 +39,15 @@ public class SitemapArticleCandidateCollector implements ArticleCandidateCollect
         List<SitemapEntry> entries = parse(source, fetcher.fetch(sitemapUrl)).stream()
                 .filter(entry -> isArticleUrl(source, entry.location()))
                 .toList();
-        List<ParsedArticle> cards = ArticleCandidateCollectionPolicy.select(entries, mode, SitemapEntry::lastModified).stream()
+        List<ParsedArticle> cards = ArticleCandidateCollectionPolicy.select(
+                        entries,
+                        policy,
+                        SitemapEntry::lastModified
+                ).stream()
                 .map(entry -> toCard(source, entry))
                 .filter(card -> !card.originalTitle().isBlank())
                 .toList();
-        return ArticleCandidateCollectionPolicy.apply(cards, mode);
+        return ArticleCandidateCollectionPolicy.apply(cards, policy);
     }
 
     List<SitemapEntry> parse(BlogSource source, String xml) {
