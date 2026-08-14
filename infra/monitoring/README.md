@@ -62,5 +62,14 @@ docker compose --env-file .env -f docker-compose.monitoring.yml pull
 docker compose --env-file .env -f docker-compose.monitoring.yml up -d
 ```
 
-Prometheus는 현재 자기 자신만 수집한다. 개발·운영 Spring Boot 메트릭 연결은
-별도 이슈에서 추가한다.
+## 수집 대상
+
+Prometheus는 15초마다 다음 관리 엔드포인트를 수집한다.
+
+```text
+개발  172.31.52.9:9090/actuator/prometheus
+운영  172.31.15.143:9090/actuator/prometheus
+```
+
+두 애플리케이션 EC2의 보안그룹에는 TCP `9090` 인바운드를 추가하되, 소스는
+`techport-monitoring-sg`로 제한한다. `9090`은 인터넷 전체에 공개하지 않는다.
