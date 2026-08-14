@@ -22,6 +22,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: 8080
+      MANAGEMENT_SERVER_PORT: 9090
+      METRICS_ENVIRONMENT: dev
       DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-global_tech_blog_archive_dev}
       DB_USERNAME: ${DB_USERNAME:-archive_user}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -50,8 +52,10 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8080:8080"
+      - "9090:9090"
     expose:
       - "8080"
+      - "9090"
     networks:
       - techport-dev
 
@@ -79,6 +83,20 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+    networks:
+      - techport-dev
+
+  node-exporter:
+    image: prom/node-exporter:v1.10.2
+    container_name: techport-dev-node-exporter
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "9100:9100"
     networks:
       - techport-dev
 
