@@ -65,6 +65,27 @@ docker compose --env-file .env -f docker-compose.monitoring.yml pull
 docker compose --env-file .env -f docker-compose.monitoring.yml up -d
 ```
 
+## GitHub Actions CD
+
+최초 배포와 HTTPS 인증서 발급 후에는 `develop` 브랜치의 `infra/monitoring/**`
+변경을 GitHub Actions가 AWS SSM을 통해 자동 배포한다. 서버의 `.env`와 인증서는
+그대로 유지한다.
+
+필요한 GitHub Actions Secrets:
+
+| Secret | 설명 |
+| --- | --- |
+| `AWS_REGION` | AWS 리전. 예: `ap-northeast-2` |
+| `MONITORING_AWS_ROLE_TO_ASSUME` | GitHub Actions가 사용할 OIDC 배포 역할 ARN |
+| `MONITORING_EC2_INSTANCE_ID` | 모니터링 EC2 인스턴스 ID |
+
+GitHub Actions OIDC 역할에는 모니터링 EC2를 대상으로 SSM 명령을 실행하고 결과를
+조회할 권한이 필요하다. 기존 배포 역할을 재사용할 경우 같은 ARN을 새 Secret에
+등록하고 IAM 정책의 SSM 대상에 모니터링 EC2를 추가한다.
+
+모니터링 EC2에는 `AmazonSSMManagedInstanceCore` 권한을 가진 인스턴스 프로파일과
+실행 중인 SSM Agent가 필요하다.
+
 ## 수집 대상
 
 Prometheus는 15초마다 애플리케이션과 EC2 호스트 메트릭을 수집한다.
