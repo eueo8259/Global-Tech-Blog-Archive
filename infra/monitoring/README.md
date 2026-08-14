@@ -37,6 +37,8 @@ docker compose --env-file .env -f docker-compose.monitoring.yml ps
 ```
 
 브라우저에서 `https://monitor.techport.dev`로 접속한다.
+`TechPort/TechPort 인프라 현황` 대시보드는 파일 프로비저닝으로 자동 생성된다.
+상단 서버 필터에서 `monitoring`, `dev`, `prod`를 선택할 수 있다.
 
 ## 4. 인증서 갱신
 
