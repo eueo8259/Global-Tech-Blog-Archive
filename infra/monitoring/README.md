@@ -21,6 +21,7 @@ git checkout develop
 ```bash
 cd /opt/techport-monitoring/infra/monitoring
 cp .env.example .env
+chmod 600 .env
 nano .env
 ```
 
