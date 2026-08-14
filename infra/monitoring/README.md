@@ -64,12 +64,18 @@ docker compose --env-file .env -f docker-compose.monitoring.yml up -d
 
 ## 수집 대상
 
-Prometheus는 15초마다 다음 관리 엔드포인트를 수집한다.
+Prometheus는 15초마다 애플리케이션과 EC2 호스트 메트릭을 수집한다.
 
 ```text
+애플리케이션
 개발  172.31.52.9:9090/actuator/prometheus
 운영  172.31.15.143:9090/actuator/prometheus
+
+EC2 호스트(Node Exporter)
+모니터링  node-exporter:9100
+개발      172.31.52.9:9100
+운영      172.31.15.143:9100
 ```
 
-두 애플리케이션 EC2의 보안그룹에는 TCP `9090` 인바운드를 추가하되, 소스는
-`techport-monitoring-sg`로 제한한다. `9090`은 인터넷 전체에 공개하지 않는다.
+두 애플리케이션 EC2의 보안그룹에는 TCP `9090`, `9100` 인바운드를 추가하되,
+소스는 `techport-monitoring-sg`로 제한한다. 두 포트 모두 인터넷 전체에 공개하지 않는다.

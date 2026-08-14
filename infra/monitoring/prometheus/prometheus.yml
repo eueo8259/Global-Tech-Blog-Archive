@@ -25,3 +25,22 @@ scrape_configs:
           - 172.31.15.143:9090
         labels:
           environment: prod
+
+  - job_name: techport-node
+    scrape_timeout: 10s
+    static_configs:
+      - targets:
+          - node-exporter:9100
+        labels:
+          environment: monitoring
+          instance: monitoring
+      - targets:
+          - 172.31.52.9:9100
+        labels:
+          environment: dev
+          instance: dev
+      - targets:
+          - 172.31.15.143:9100
+        labels:
+          environment: prod
+          instance: prod
