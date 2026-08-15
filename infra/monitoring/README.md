@@ -76,12 +76,12 @@ docker compose --env-file .env -f docker-compose.monitoring.yml up -d
 | Secret | 설명 |
 | --- | --- |
 | `AWS_REGION` | AWS 리전. 예: `ap-northeast-2` |
-| `MONITORING_AWS_ROLE_TO_ASSUME` | GitHub Actions가 사용할 OIDC 배포 역할 ARN |
+| `BACKEND_AWS_ROLE_TO_ASSUME` | 기존 백엔드 CD와 공유하는 OIDC 배포 역할 ARN |
 | `MONITORING_EC2_INSTANCE_ID` | 모니터링 EC2 인스턴스 ID |
 
 GitHub Actions OIDC 역할에는 모니터링 EC2를 대상으로 SSM 명령을 실행하고 결과를
-조회할 권한이 필요하다. 기존 배포 역할을 재사용할 경우 같은 ARN을 새 Secret에
-등록하고 IAM 정책의 SSM 대상에 모니터링 EC2를 추가한다.
+조회할 권한이 필요하다. 기존 백엔드 배포 역할의 IAM 정책에서 SSM 대상에
+모니터링 EC2를 추가한다.
 
 모니터링 EC2에는 `AmazonSSMManagedInstanceCore` 권한을 가진 인스턴스 프로파일과
 실행 중인 SSM Agent가 필요하다.

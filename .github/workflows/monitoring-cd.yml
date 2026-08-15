@@ -27,7 +27,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.MONITORING_AWS_ROLE_TO_ASSUME }}
+          role-to-assume: ${{ secrets.BACKEND_AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Deploy monitoring stack through SSM
