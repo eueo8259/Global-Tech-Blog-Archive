@@ -43,7 +43,7 @@ jobs:
               "test -f .env",
               "docker compose --env-file .env -f docker-compose.monitoring.yml config --quiet",
               "docker compose --env-file .env -f docker-compose.monitoring.yml pull",
-              "docker compose --env-file .env -f docker-compose.monitoring.yml up -d --remove-orphans",
+              "docker compose --env-file .env -f docker-compose.monitoring.yml up -d --force-recreate --remove-orphans",
               "docker compose --env-file .env -f docker-compose.monitoring.yml ps",
               "for attempt in $(seq 1 10); do if curl -fsS https://monitor.techport.dev/api/health; then break; fi; if [ \"$attempt\" -eq 10 ]; then exit 1; fi; sleep 3; done",
               "for attempt in $(seq 1 10); do if docker exec techport-monitoring-prometheus wget -qO- http://localhost:9090/-/ready; then break; fi; if [ \"$attempt\" -eq 10 ]; then exit 1; fi; sleep 3; done"
