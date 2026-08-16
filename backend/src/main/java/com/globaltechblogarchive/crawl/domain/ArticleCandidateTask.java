@@ -35,6 +35,9 @@ import lombok.NoArgsConstructor;
 )
 public class ArticleCandidateTask {
 
+    private static final int CATEGORY_HINT_MAX_LENGTH = 500;
+    private static final int ERROR_MESSAGE_MAX_LENGTH = 500;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -60,7 +63,7 @@ public class ArticleCandidateTask {
     @Column(name = "short_context", columnDefinition = "TEXT")
     private String shortContext;
 
-    @Column(name = "category_hint", length = 100)
+    @Column(name = "category_hint", length = CATEGORY_HINT_MAX_LENGTH)
     private String categoryHint;
 
     @Column(name = "published_at")
@@ -119,7 +122,7 @@ public class ArticleCandidateTask {
         this.articleUrlHash = candidate.articleUrlHash();
         this.originalTitle = candidate.originalTitle();
         this.shortContext = candidate.shortContext();
-        this.categoryHint = candidate.categoryHint();
+        this.categoryHint = truncate(candidate.categoryHint(), CATEGORY_HINT_MAX_LENGTH);
         if (candidate.publishedAt() != null) {
             this.publishedAt = candidate.publishedAt();
         }
@@ -179,7 +182,7 @@ public class ArticleCandidateTask {
         nextRetryAt = retryAt;
         processingStartedAt = null;
         lastErrorCode = errorCode;
-        lastErrorMessage = truncate(errorMessage);
+        lastErrorMessage = truncate(errorMessage, ERROR_MESSAGE_MAX_LENGTH);
     }
 
     public void fail(String errorCode, String errorMessage) {
@@ -187,7 +190,7 @@ public class ArticleCandidateTask {
         nextRetryAt = null;
         processingStartedAt = null;
         lastErrorCode = errorCode;
-        lastErrorMessage = truncate(errorMessage);
+        lastErrorMessage = truncate(errorMessage, ERROR_MESSAGE_MAX_LENGTH);
     }
 
     public void recover(LocalDateTime retryAt) {
@@ -222,11 +225,11 @@ public class ArticleCandidateTask {
         processingPromptVersion = null;
     }
 
-    private String truncate(String value) {
-        if (value == null || value.length() <= 500) {
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
             return value;
         }
-        return value.substring(0, 500);
+        return value.substring(0, maxLength);
     }
 
     @PrePersist

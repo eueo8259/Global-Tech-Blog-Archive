@@ -176,7 +176,7 @@ class HtmlArticleCandidateCollectorTest {
                 """;
         RecordingClient client = new RecordingClient(Map.of(
                 source.getSiteUrl(), list,
-                "https://stripe.com/blog/how-we-built-it-real-time-analytics-for-stripe-billing",
+                "https://stripe.dev/blog/how-we-built-it-real-time-analytics-for-stripe-billing",
                 """
                 <html>
                   <head>
@@ -195,7 +195,7 @@ class HtmlArticleCandidateCollectorTest {
         assertThat(articles.getFirst().originalTitle())
                 .isEqualTo("How we built it: Real-time analytics for Stripe Billing");
         assertThat(articles.getFirst().originalUrl())
-                .isEqualTo("https://stripe.com/blog/how-we-built-it-real-time-analytics-for-stripe-billing");
+                .isEqualTo("https://stripe.dev/blog/how-we-built-it-real-time-analytics-for-stripe-billing");
         assertThat(articles.getFirst().publishedAt()).isEqualTo(LocalDateTime.of(2025, 3, 17, 0, 0));
         assertThat(articles.getFirst().shortContext()).isEqualTo("Detail context from Stripe's article page.");
     }
@@ -251,7 +251,7 @@ class HtmlArticleCandidateCollectorTest {
                 Company.create("stripe", "Stripe"),
                 "stripe",
                 "Stripe Engineering Blog",
-                "https://stripe.com/blog/engineering",
+                "https://stripe.dev/blog/topic/engineering",
                 null,
                 CollectionMethod.HTML_SCRAPING
         );

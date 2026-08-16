@@ -76,7 +76,34 @@ class ArticleCandidateTaskTest {
         assertThat(task.getPublishedAt()).isEqualTo(knownPublishedAt);
     }
 
+    @Test
+    void categoryHintIsTruncatedToDatabaseColumnLength() {
+        String categoryHint = "a".repeat(501);
+        ArticleCandidate candidate = new ArticleCandidate(
+                "test",
+                "Test",
+                "Original",
+                "https://example.com/article",
+                LocalDateTime.of(2026, 8, 1, 9, 0),
+                "Context",
+                categoryHint,
+                "hash",
+                false,
+                ArticleCandidateDecisionStatus.NEW,
+                List.of()
+        );
+
+        ArticleCandidateTask task = task(candidate);
+
+        assertThat(task.getCategoryHint()).hasSize(500);
+        assertThat(task.getCategoryHint()).isEqualTo(categoryHint.substring(0, 500));
+    }
+
     private ArticleCandidateTask task() {
+        return task(candidate());
+    }
+
+    private ArticleCandidateTask task(ArticleCandidate candidate) {
         Company company = Company.create("test", "Test");
         BlogSource source = BlogSource.create(
                 company,
@@ -89,7 +116,7 @@ class ArticleCandidateTaskTest {
         return ArticleCandidateTask.create(
                 company,
                 source,
-                candidate(),
+                candidate,
                 ArticleCandidateDecisionStatus.NEW,
                 "v1"
         );

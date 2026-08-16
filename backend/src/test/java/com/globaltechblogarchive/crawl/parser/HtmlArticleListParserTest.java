@@ -128,7 +128,7 @@ class HtmlArticleListParserTest {
     void parseExcludesUnexpectedHostLinks() {
         BlogSource source = source(
                 "stripe",
-                "https://stripe.com/blog/engineering"
+                "https://stripe.dev/blog/topic/engineering"
         );
         String html = """
                 <main>
@@ -145,7 +145,7 @@ class HtmlArticleListParserTest {
 
         assertThat(cards).hasSize(1);
         assertThat(cards.getFirst().originalUrl())
-                .isEqualTo("https://stripe.com/blog/how-we-built-real-time-analytics");
+                .isEqualTo("https://stripe.dev/blog/how-we-built-real-time-analytics");
     }
 
     @org.junit.jupiter.api.Test
@@ -181,7 +181,7 @@ class HtmlArticleListParserTest {
                 Arguments.of("figma", "https://www.figma.com/blog/engineering/", "/blog/realtime-engineering", "Engineering"),
                 Arguments.of("uber", "https://www.uber.com/blog/engineering", "/blog/realtime-platform", "Engineering"),
                 Arguments.of("airbnb", "https://airbnb.tech/", "https://medium.com/airbnb-engineering/platform", "Engineering"),
-                Arguments.of("stripe", "https://stripe.com/blog/engineering", "/blog/database-systems", "Engineering"),
+                Arguments.of("stripe", "https://stripe.dev/blog/topic/engineering", "/blog/database-systems", "Engineering"),
                 Arguments.of("cloudflare", "https://blog.cloudflare.com/", "/networking-at-edge", "Networking"),
                 Arguments.of("doordash", "https://careersatdoordash.com/career-areas/engineering/", "/engineering-blog/backend-platform", "Backend"),
                 Arguments.of("discord", "https://discord.com/category/engineering", "/blog/realtime-engineering", "Developers"),
