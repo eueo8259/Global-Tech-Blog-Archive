@@ -44,7 +44,7 @@ class RealHtmlArticleListParserTest {
                 Company.create("stripe", "Stripe"),
                 "stripe",
                 "Stripe Engineering Blog",
-                "https://stripe.com/blog/engineering",
+                "https://stripe.dev/blog/topic/engineering",
                 null,
                 CollectionMethod.HTML_SCRAPING
         );
@@ -54,7 +54,7 @@ class RealHtmlArticleListParserTest {
         assertThat(cards).isNotEmpty();
         assertThat(cards).allSatisfy(card -> {
             assertThat(card.originalTitle()).isNotBlank();
-            assertThat(card.originalUrl()).startsWith("https://stripe.com/blog/");
+            assertThat(card.originalUrl()).startsWith("https://stripe.dev/blog/");
             assertThat(card.publishedAt()).isNotNull();
             assertThat(card.shortContext()).isNotBlank();
         });

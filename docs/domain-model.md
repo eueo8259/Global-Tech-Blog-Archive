@@ -122,7 +122,7 @@ Database table: `article_candidates`
 | article_url_hash | VARCHAR(64) | yes | Candidate business identity with company |
 | original_title | VARCHAR(500) | yes | Title collected from the source |
 | short_context | TEXT | no | Short AI review context |
-| category_hint | VARCHAR(100) | no | Optional source category hint |
+| category_hint | VARCHAR(500) | no | Optional source category hint |
 | published_at | DATETIME | no | Source publication time |
 | status | VARCHAR(30) | yes | Current candidate processing state |
 | attempt_count | INT | yes | Number of AI processing claims |
