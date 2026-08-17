@@ -2,26 +2,23 @@ package com.globaltechblogarchive.crawl.config;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.binder.MeterBinder;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Configuration
 public class CrawlExecutionConfig {
 
-    @Bean(name = "crawlSourceExecutor", destroyMethod = "close")
-    public ExecutorService crawlSourceExecutor() {
-        return Executors.newThreadPerTaskExecutor(
-                Thread.ofVirtual().name("crawl-source-", 0).factory()
-        );
-    }
-
-    @Bean
-    public Semaphore crawlSourceConcurrencyLimiter(CrawlExecutionProperties properties) {
-        return new Semaphore(properties.sourceConcurrency(), true);
+    @Bean(name = "crawlSourceExecutor")
+    public ThreadPoolTaskExecutor crawlSourceExecutor(CrawlExecutionProperties properties) {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(properties.sourceConcurrency());
+        executor.setMaxPoolSize(properties.sourceConcurrency());
+        executor.setThreadNamePrefix("crawl-source-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(120);
+        return executor;
     }
 
     @Bean
@@ -32,19 +29,19 @@ public class CrawlExecutionConfig {
     @Bean
     public MeterBinder crawlSourceConcurrencyMetrics(
             CrawlExecutionProperties properties,
-            @Qualifier("crawlSourceConcurrencyLimiter") Semaphore crawlSourceConcurrencyLimiter
+            ThreadPoolTaskExecutor crawlSourceExecutor
     ) {
         return registry -> {
             Gauge.builder(
                             "crawl.source.concurrency.active",
-                            crawlSourceConcurrencyLimiter,
-                            limiter -> properties.sourceConcurrency() - limiter.availablePermits()
+                            crawlSourceExecutor,
+                            ThreadPoolTaskExecutor::getActiveCount
                     )
                     .register(registry);
             Gauge.builder(
                             "crawl.source.concurrency.queued",
-                            crawlSourceConcurrencyLimiter,
-                            Semaphore::getQueueLength
+                            crawlSourceExecutor,
+                            executor -> executor.getThreadPoolExecutor().getQueue().size()
                     )
                     .register(registry);
             Gauge.builder(

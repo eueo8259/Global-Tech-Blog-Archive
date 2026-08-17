@@ -41,7 +41,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,6 +53,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @ExtendWith(MockitoExtension.class)
 class ArticleCrawlServiceTest {
@@ -74,12 +74,15 @@ class ArticleCrawlServiceTest {
     private ArticleAiReviewService aiReviewService;
 
     private ArticleCrawlService crawlService;
-    private ExecutorService crawlSourceExecutor;
+    private ThreadPoolTaskExecutor crawlSourceExecutor;
     private final Map<Long, BlogSource> sourcesById = new ConcurrentHashMap<>();
 
     @BeforeEach
     void setUp() {
-        crawlSourceExecutor = new CrawlExecutionConfig().crawlSourceExecutor();
+        crawlSourceExecutor = new CrawlExecutionConfig().crawlSourceExecutor(
+                new CrawlExecutionProperties(2)
+        );
+        crawlSourceExecutor.initialize();
         lenient().when(persistenceService.persistDiscoveredCandidates(
                         anyLong(), anyLong(), any(), any()
                 ))
@@ -107,7 +110,6 @@ class ArticleCrawlServiceTest {
                         Duration.ofMinutes(30)
                 ),
                 crawlSourceExecutor,
-                new Semaphore(new CrawlExecutionProperties(2).sourceConcurrency(), true),
                 new Semaphore(1, true),
                 new CrawlPipelineMetrics(new SimpleMeterRegistry())
         );
@@ -115,7 +117,7 @@ class ArticleCrawlServiceTest {
 
     @AfterEach
     void tearDown() {
-        crawlSourceExecutor.shutdownNow();
+        crawlSourceExecutor.destroy();
     }
 
     @Test
@@ -181,13 +183,13 @@ class ArticleCrawlServiceTest {
         CountDownLatch releaseTasks = new CountDownLatch(1);
         AtomicInteger activeCount = new AtomicInteger();
         AtomicInteger maxActiveCount = new AtomicInteger();
-        AtomicInteger virtualThreadCount = new AtomicInteger();
+        AtomicInteger platformThreadCount = new AtomicInteger();
         when(transactionService.startRun()).thenReturn(13L);
         when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(first, second, third));
         when(sourceProcessor.prepare(anyLong(), any(CrawlPolicy.class)))
                 .thenAnswer(invocation -> {
-                    if (Thread.currentThread().isVirtual()) {
-                        virtualThreadCount.incrementAndGet();
+                    if (!Thread.currentThread().isVirtual()) {
+                        platformThreadCount.incrementAndGet();
                     }
                     int active = activeCount.incrementAndGet();
                     maxActiveCount.accumulateAndGet(active, Math::max);
@@ -205,7 +207,7 @@ class ArticleCrawlServiceTest {
         assertThat(firstTwoStarted.await(5, TimeUnit.SECONDS)).isTrue();
         assertThat(activeCount).hasValue(2);
         assertThat(maxActiveCount).hasValue(2);
-        assertThat(virtualThreadCount).hasValue(2);
+        assertThat(platformThreadCount).hasValue(2);
         releaseTasks.countDown();
         ArticleCrawlResult result = runResult.get(5, TimeUnit.SECONDS);
 
