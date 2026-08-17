@@ -2,6 +2,8 @@ package com.globaltechblogarchive.crawl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,7 +26,15 @@ import com.globaltechblogarchive.source.domain.CollectionMethod;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,9 +58,11 @@ class ArticleCrawlServiceTest {
     private ArticleAiReviewService aiReviewService;
 
     private ArticleCrawlService crawlService;
+    private ExecutorService crawlSourceExecutor;
 
     @BeforeEach
     void setUp() {
+        crawlSourceExecutor = Executors.newFixedThreadPool(2);
         crawlService = new ArticleCrawlService(
                 sourceRepository,
                 sourceProcessor,
@@ -63,8 +75,14 @@ class ArticleCrawlServiceTest {
                         100,
                         Duration.ofMinutes(5),
                         Duration.ofMinutes(30)
-                )
+                ),
+                crawlSourceExecutor
         );
+    }
+
+    @AfterEach
+    void tearDown() {
+        crawlSourceExecutor.shutdownNow();
     }
 
     @Test
@@ -119,6 +137,49 @@ class ArticleCrawlServiceTest {
         assertThat(result.successCount()).isEqualTo(2);
         verify(sourceProcessor).process(12L, 4L, CrawlPolicy.backfill(40));
         verify(sourceProcessor).process(12L, 5L, CrawlPolicy.backfill(40));
+    }
+
+    @Test
+    void allBackfillRunsSourcesUpToConfiguredConcurrency() throws Exception {
+        BlogSource first = source(6L, "first");
+        BlogSource second = source(7L, "second");
+        BlogSource third = source(8L, "third");
+        Map<Long, BlogSource> sourcesById = Map.of(6L, first, 7L, second, 8L, third);
+        CountDownLatch firstTwoStarted = new CountDownLatch(2);
+        CountDownLatch releaseTasks = new CountDownLatch(1);
+        AtomicInteger activeCount = new AtomicInteger();
+        AtomicInteger maxActiveCount = new AtomicInteger();
+        when(transactionService.startRun()).thenReturn(13L);
+        when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(first, second, third));
+        when(sourceProcessor.process(anyLong(), anyLong(), any(CrawlPolicy.class)))
+                .thenAnswer(invocation -> {
+                    int active = activeCount.incrementAndGet();
+                    maxActiveCount.accumulateAndGet(active, Math::max);
+                    firstTwoStarted.countDown();
+                    releaseTasks.await(2, TimeUnit.SECONDS);
+                    activeCount.decrementAndGet();
+                    Long sourceId = invocation.getArgument(1);
+                    return SourceCrawlResult.success(
+                            sourcesById.get(sourceId),
+                            List.of(),
+                            CrawlRunSummary.empty()
+                    );
+                });
+
+        CompletableFuture<ArticleCrawlResult> runResult = CompletableFuture.supplyAsync(
+                () -> crawlService.runAllBackfill(50)
+        );
+
+        assertThat(firstTwoStarted.await(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(activeCount).hasValue(2);
+        assertThat(maxActiveCount).hasValue(2);
+        releaseTasks.countDown();
+        ArticleCrawlResult result = runResult.get(5, TimeUnit.SECONDS);
+
+        assertThat(result.successCount()).isEqualTo(3);
+        assertThat(result.sources())
+                .extracting(SourceCrawlResult::sourceKey)
+                .containsExactly("first", "second", "third");
     }
 
     @Test
