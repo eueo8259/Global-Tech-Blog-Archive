@@ -10,7 +10,10 @@ import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -91,12 +94,24 @@ public class ArticleCrawlService {
 
     private ArticleCrawlResult runSources(List<BlogSource> sources, CrawlPolicy policy) {
         Long runId = transactionService.startRun();
-        List<CompletableFuture<SourceCrawlResult>> sourceTasks = sources.stream()
-                .map(source -> CompletableFuture.supplyAsync(
-                        () -> processSource(runId, source, policy),
-                        crawlSourceExecutor
-                ))
-                .toList();
+        Map<Long, CompletableFuture<Void>> companyTaskTails = new HashMap<>();
+        List<CompletableFuture<SourceCrawlResult>> sourceTasks = new ArrayList<>();
+        for (BlogSource source : sources) {
+            Long companyId = source.getCompany().getId();
+            CompletableFuture<Void> previousTask = companyTaskTails.getOrDefault(
+                    companyId,
+                    CompletableFuture.completedFuture(null)
+            );
+            CompletableFuture<SourceCrawlResult> sourceTask = previousTask.thenApplyAsync(
+                    ignored -> processSource(runId, source, policy),
+                    crawlSourceExecutor
+            );
+            companyTaskTails.put(
+                    companyId,
+                    sourceTask.handle((ignored, exception) -> null)
+            );
+            sourceTasks.add(sourceTask);
+        }
         List<SourceCrawlResult> sourceResults = sourceTasks.stream()
                 .map(CompletableFuture::join)
                 .toList();

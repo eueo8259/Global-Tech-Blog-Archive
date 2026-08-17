@@ -183,6 +183,48 @@ class ArticleCrawlServiceTest {
     }
 
     @Test
+    void allBackfillSerializesSourcesFromSameCompany() throws Exception {
+        BlogSource first = source(9L, "first", 100L);
+        BlogSource second = source(10L, "second", 100L);
+        CountDownLatch firstStarted = new CountDownLatch(1);
+        CountDownLatch secondStarted = new CountDownLatch(1);
+        CountDownLatch releaseFirst = new CountDownLatch(1);
+        when(transactionService.startRun()).thenReturn(14L);
+        when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(first, second));
+        when(sourceProcessor.process(anyLong(), anyLong(), any(CrawlPolicy.class)))
+                .thenAnswer(invocation -> {
+                    Long sourceId = invocation.getArgument(1);
+                    if (sourceId.equals(9L)) {
+                        firstStarted.countDown();
+                        releaseFirst.await(2, TimeUnit.SECONDS);
+                        return SourceCrawlResult.success(
+                                first,
+                                List.of(),
+                                CrawlRunSummary.empty()
+                        );
+                    }
+                    secondStarted.countDown();
+                    return SourceCrawlResult.success(
+                            second,
+                            List.of(),
+                            CrawlRunSummary.empty()
+                    );
+                });
+
+        CompletableFuture<ArticleCrawlResult> runResult = CompletableFuture.supplyAsync(
+                () -> crawlService.runAllBackfill(50)
+        );
+
+        assertThat(firstStarted.await(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(secondStarted.await(200, TimeUnit.MILLISECONDS)).isFalse();
+        releaseFirst.countDown();
+        ArticleCrawlResult result = runResult.get(5, TimeUnit.SECONDS);
+
+        assertThat(secondStarted.getCount()).isZero();
+        assertThat(result.successCount()).isEqualTo(2);
+    }
+
+    @Test
     void sourceBackfillRejectsUnknownSource() {
         when(sourceRepository.findBySourceKeyAndEnabledTrue("missing")).thenReturn(Optional.empty());
 
@@ -244,8 +286,12 @@ class ArticleCrawlServiceTest {
     }
 
     private BlogSource source(Long id, String key) {
+        return source(id, key, id);
+    }
+
+    private BlogSource source(Long id, String key, Long companyId) {
         Company company = Company.create(key, key);
-        ReflectionTestUtils.setField(company, "id", id);
+        ReflectionTestUtils.setField(company, "id", companyId);
         BlogSource source = BlogSource.create(
                 company,
                 key,
