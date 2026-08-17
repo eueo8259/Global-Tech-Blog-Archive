@@ -1,6 +1,6 @@
 package com.globaltechblogarchive.crawl.application;
 
-import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
+import com.globaltechblogarchive.crawl.application.dto.PreparedSourceCrawl;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
@@ -25,18 +25,16 @@ public class SourceCrawlProcessor {
     private final ArticleAiDecisionRepository decisionRepository;
     private final ArticleCandidateCollectorRegistry collectorRegistry;
     private final ArticleCandidateFactory candidateFactory;
-    private final CrawlPersistenceService persistenceService;
     private final BlogSourceRepository blogSourceRepository;
 
-    public SourceCrawlResult process(Long runId, Long sourceId, CrawlPolicy policy) {
+    public PreparedSourceCrawl prepare(Long sourceId, CrawlPolicy policy) {
         BlogSource source = blogSourceRepository.findWithCompanyById(sourceId)
                 .orElseThrow(() -> new IllegalArgumentException("Blog source not found: " + sourceId));
         ArticleCandidateCollector collector = collectorRegistry.find(source.getCollectionMethod());
         List<ParsedArticle> cards = collector.collect(source, policy);
         Map<String, ArticleAiDecision> decisionsByHash = findDecisionsByHash(source, cards);
         List<ArticleCandidate> candidates = candidateFactory.create(source, cards, decisionsByHash);
-        return persistenceService.persistDiscoveredCandidates(
-                runId,
+        return new PreparedSourceCrawl(
                 sourceId,
                 candidates,
                 decisionsByHash

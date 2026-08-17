@@ -17,8 +17,7 @@ class CrawlTransactionBoundaryTest {
     @Test
     void externalCallOrchestratorsAreNotTransactional() throws NoSuchMethodException {
         assertThat(SourceCrawlProcessor.class.getMethod(
-                "process",
-                Long.class,
+                "prepare",
                 Long.class,
                 CrawlPolicy.class
         ).getAnnotation(Transactional.class)).isNull();

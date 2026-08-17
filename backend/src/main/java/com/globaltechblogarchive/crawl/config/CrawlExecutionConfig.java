@@ -5,6 +5,7 @@ import io.micrometer.core.instrument.binder.MeterBinder;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -24,9 +25,14 @@ public class CrawlExecutionConfig {
     }
 
     @Bean
+    public Semaphore crawlSourcePersistenceLimiter() {
+        return new Semaphore(1, true);
+    }
+
+    @Bean
     public MeterBinder crawlSourceConcurrencyMetrics(
             CrawlExecutionProperties properties,
-            Semaphore crawlSourceConcurrencyLimiter
+            @Qualifier("crawlSourceConcurrencyLimiter") Semaphore crawlSourceConcurrencyLimiter
     ) {
         return registry -> {
             Gauge.builder(
