@@ -31,7 +31,6 @@ public class ArticleCrawlService {
     private final ArticleAiReviewService aiReviewService;
     private final AiReviewProperties aiReviewProperties;
     private final Executor crawlSourceExecutor;
-    private final Semaphore crawlSourceConcurrencyLimiter;
     private final Semaphore crawlSourcePersistenceLimiter;
     private final CrawlPipelineMetrics pipelineMetrics;
 
@@ -43,7 +42,6 @@ public class ArticleCrawlService {
             ArticleAiReviewService aiReviewService,
             AiReviewProperties aiReviewProperties,
             @Qualifier("crawlSourceExecutor") Executor crawlSourceExecutor,
-            @Qualifier("crawlSourceConcurrencyLimiter") Semaphore crawlSourceConcurrencyLimiter,
             @Qualifier("crawlSourcePersistenceLimiter") Semaphore crawlSourcePersistenceLimiter,
             CrawlPipelineMetrics pipelineMetrics
     ) {
@@ -54,7 +52,6 @@ public class ArticleCrawlService {
         this.aiReviewService = aiReviewService;
         this.aiReviewProperties = aiReviewProperties;
         this.crawlSourceExecutor = crawlSourceExecutor;
-        this.crawlSourceConcurrencyLimiter = crawlSourceConcurrencyLimiter;
         this.crawlSourcePersistenceLimiter = crawlSourcePersistenceLimiter;
         this.pipelineMetrics = pipelineMetrics;
     }
@@ -117,7 +114,7 @@ public class ArticleCrawlService {
                     CompletableFuture.completedFuture(null)
             );
             CompletableFuture<SourcePreparation> sourceTask = previousTask.thenApplyAsync(
-                    ignored -> prepareSourceWithConcurrencyLimit(source, policy),
+                    ignored -> prepareSource(source, policy),
                     crawlSourceExecutor
             );
             companyTaskTails.put(
@@ -148,18 +145,6 @@ public class ArticleCrawlService {
         );
 
         return result(runId, sourceResults, summary, successCount, failureCount);
-    }
-
-    private SourcePreparation prepareSourceWithConcurrencyLimit(
-            BlogSource source,
-            CrawlPolicy policy
-    ) {
-        crawlSourceConcurrencyLimiter.acquireUninterruptibly();
-        try {
-            return prepareSource(source, policy);
-        } finally {
-            crawlSourceConcurrencyLimiter.release();
-        }
     }
 
     private SourcePreparation prepareSource(
