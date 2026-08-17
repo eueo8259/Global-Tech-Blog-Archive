@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Semaphore;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +29,7 @@ public class ArticleCrawlService {
     private final ArticleAiReviewService aiReviewService;
     private final AiReviewProperties aiReviewProperties;
     private final Executor crawlSourceExecutor;
+    private final Semaphore crawlSourceConcurrencyLimiter;
 
     public ArticleCrawlService(
             BlogSourceRepository blogSourceRepository,
@@ -35,7 +37,8 @@ public class ArticleCrawlService {
             CrawlTransactionService transactionService,
             ArticleAiReviewService aiReviewService,
             AiReviewProperties aiReviewProperties,
-            @Qualifier("crawlSourceExecutor") Executor crawlSourceExecutor
+            @Qualifier("crawlSourceExecutor") Executor crawlSourceExecutor,
+            Semaphore crawlSourceConcurrencyLimiter
     ) {
         this.blogSourceRepository = blogSourceRepository;
         this.sourceCrawlProcessor = sourceCrawlProcessor;
@@ -43,6 +46,7 @@ public class ArticleCrawlService {
         this.aiReviewService = aiReviewService;
         this.aiReviewProperties = aiReviewProperties;
         this.crawlSourceExecutor = crawlSourceExecutor;
+        this.crawlSourceConcurrencyLimiter = crawlSourceConcurrencyLimiter;
     }
 
     public ArticleCrawlResult runScheduled() {
@@ -103,7 +107,7 @@ public class ArticleCrawlService {
                     CompletableFuture.completedFuture(null)
             );
             CompletableFuture<SourceCrawlResult> sourceTask = previousTask.thenApplyAsync(
-                    ignored -> processSource(runId, source, policy),
+                    ignored -> processSourceWithConcurrencyLimit(runId, source, policy),
                     crawlSourceExecutor
             );
             companyTaskTails.put(
@@ -131,6 +135,19 @@ public class ArticleCrawlService {
         );
 
         return result(runId, sourceResults, summary, successCount, failureCount);
+    }
+
+    private SourceCrawlResult processSourceWithConcurrencyLimit(
+            Long runId,
+            BlogSource source,
+            CrawlPolicy policy
+    ) {
+        crawlSourceConcurrencyLimiter.acquireUninterruptibly();
+        try {
+            return processSource(runId, source, policy);
+        } finally {
+            crawlSourceConcurrencyLimiter.release();
+        }
     }
 
     private SourceCrawlResult processSource(

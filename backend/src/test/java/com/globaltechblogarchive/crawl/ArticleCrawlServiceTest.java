@@ -18,6 +18,8 @@ import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
 import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.config.AiReviewProperties;
+import com.globaltechblogarchive.crawl.config.CrawlExecutionConfig;
+import com.globaltechblogarchive.crawl.config.CrawlExecutionProperties;
 import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
@@ -31,7 +33,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
@@ -62,7 +64,7 @@ class ArticleCrawlServiceTest {
 
     @BeforeEach
     void setUp() {
-        crawlSourceExecutor = Executors.newFixedThreadPool(2);
+        crawlSourceExecutor = new CrawlExecutionConfig().crawlSourceExecutor();
         crawlService = new ArticleCrawlService(
                 sourceRepository,
                 sourceProcessor,
@@ -76,7 +78,8 @@ class ArticleCrawlServiceTest {
                         Duration.ofMinutes(5),
                         Duration.ofMinutes(30)
                 ),
-                crawlSourceExecutor
+                crawlSourceExecutor,
+                new Semaphore(new CrawlExecutionProperties(2).sourceConcurrency(), true)
         );
     }
 
@@ -149,10 +152,14 @@ class ArticleCrawlServiceTest {
         CountDownLatch releaseTasks = new CountDownLatch(1);
         AtomicInteger activeCount = new AtomicInteger();
         AtomicInteger maxActiveCount = new AtomicInteger();
+        AtomicInteger virtualThreadCount = new AtomicInteger();
         when(transactionService.startRun()).thenReturn(13L);
         when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(first, second, third));
         when(sourceProcessor.process(anyLong(), anyLong(), any(CrawlPolicy.class)))
                 .thenAnswer(invocation -> {
+                    if (Thread.currentThread().isVirtual()) {
+                        virtualThreadCount.incrementAndGet();
+                    }
                     int active = activeCount.incrementAndGet();
                     maxActiveCount.accumulateAndGet(active, Math::max);
                     firstTwoStarted.countDown();
@@ -173,6 +180,7 @@ class ArticleCrawlServiceTest {
         assertThat(firstTwoStarted.await(5, TimeUnit.SECONDS)).isTrue();
         assertThat(activeCount).hasValue(2);
         assertThat(maxActiveCount).hasValue(2);
+        assertThat(virtualThreadCount).hasValue(2);
         releaseTasks.countDown();
         ArticleCrawlResult result = runResult.get(5, TimeUnit.SECONDS);
 
