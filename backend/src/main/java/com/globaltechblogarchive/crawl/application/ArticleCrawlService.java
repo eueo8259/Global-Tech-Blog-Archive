@@ -11,12 +11,15 @@ import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 public class ArticleCrawlService {
 
     private final BlogSourceRepository blogSourceRepository;
@@ -24,6 +27,23 @@ public class ArticleCrawlService {
     private final CrawlTransactionService transactionService;
     private final ArticleAiReviewService aiReviewService;
     private final AiReviewProperties aiReviewProperties;
+    private final Executor crawlSourceExecutor;
+
+    public ArticleCrawlService(
+            BlogSourceRepository blogSourceRepository,
+            SourceCrawlProcessor sourceCrawlProcessor,
+            CrawlTransactionService transactionService,
+            ArticleAiReviewService aiReviewService,
+            AiReviewProperties aiReviewProperties,
+            @Qualifier("crawlSourceExecutor") Executor crawlSourceExecutor
+    ) {
+        this.blogSourceRepository = blogSourceRepository;
+        this.sourceCrawlProcessor = sourceCrawlProcessor;
+        this.transactionService = transactionService;
+        this.aiReviewService = aiReviewService;
+        this.aiReviewProperties = aiReviewProperties;
+        this.crawlSourceExecutor = crawlSourceExecutor;
+    }
 
     public ArticleCrawlResult runScheduled() {
         return run(CrawlPolicy.recent());
@@ -74,20 +94,30 @@ public class ArticleCrawlService {
 
     private ArticleCrawlResult runSources(List<BlogSource> sources, CrawlPolicy policy) {
         Long runId = transactionService.startRun();
-        List<SourceCrawlResult> sourceResults = new ArrayList<>();
-        CrawlRunSummary summary = CrawlRunSummary.empty();
-
+        Map<Long, CompletableFuture<Void>> companyTaskTails = new HashMap<>();
+        List<CompletableFuture<SourceCrawlResult>> sourceTasks = new ArrayList<>();
         for (BlogSource source : sources) {
-            SourceCrawlResult sourceResult;
-            try {
-                sourceResult = sourceCrawlProcessor.process(runId, source.getId(), policy);
-            } catch (RuntimeException exception) {
-                transactionService.markSourceFailed(source.getId(), exception.getMessage());
-                sourceResult = SourceCrawlResult.failure(source, exception.getMessage());
-            }
-            sourceResults.add(sourceResult);
-            summary = summary.plus(sourceResult.summary());
+            Long companyId = source.getCompany().getId();
+            CompletableFuture<Void> previousTask = companyTaskTails.getOrDefault(
+                    companyId,
+                    CompletableFuture.completedFuture(null)
+            );
+            CompletableFuture<SourceCrawlResult> sourceTask = previousTask.thenApplyAsync(
+                    ignored -> processSource(runId, source, policy),
+                    crawlSourceExecutor
+            );
+            companyTaskTails.put(
+                    companyId,
+                    sourceTask.handle((ignored, exception) -> null)
+            );
+            sourceTasks.add(sourceTask);
         }
+        List<SourceCrawlResult> sourceResults = sourceTasks.stream()
+                .map(CompletableFuture::join)
+                .toList();
+        CrawlRunSummary summary = sourceResults.stream()
+                .map(SourceCrawlResult::summary)
+                .reduce(CrawlRunSummary.empty(), CrawlRunSummary::plus);
 
         int successCount = (int) sourceResults.stream().filter(SourceCrawlResult::success).count();
         int failureCount = sourceResults.size() - successCount;
@@ -101,6 +131,19 @@ public class ArticleCrawlService {
         );
 
         return result(runId, sourceResults, summary, successCount, failureCount);
+    }
+
+    private SourceCrawlResult processSource(
+            Long runId,
+            BlogSource source,
+            CrawlPolicy policy
+    ) {
+        try {
+            return sourceCrawlProcessor.process(runId, source.getId(), policy);
+        } catch (RuntimeException exception) {
+            transactionService.markSourceFailed(source.getId(), exception.getMessage());
+            return SourceCrawlResult.failure(source, exception.getMessage());
+        }
     }
 
     private ArticleCrawlResult result(
