@@ -3,6 +3,7 @@ package com.globaltechblogarchive.crawl.application;
 import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
 import com.globaltechblogarchive.crawl.application.dto.AiReviewRunResult;
 import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
+import com.globaltechblogarchive.crawl.application.dto.PreparedSourceCrawl;
 import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
 import com.globaltechblogarchive.crawl.config.AiReviewProperties;
 import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
@@ -25,28 +26,37 @@ public class ArticleCrawlService {
 
     private final BlogSourceRepository blogSourceRepository;
     private final SourceCrawlProcessor sourceCrawlProcessor;
+    private final CrawlPersistenceService persistenceService;
     private final CrawlTransactionService transactionService;
     private final ArticleAiReviewService aiReviewService;
     private final AiReviewProperties aiReviewProperties;
     private final Executor crawlSourceExecutor;
     private final Semaphore crawlSourceConcurrencyLimiter;
+    private final Semaphore crawlSourcePersistenceLimiter;
+    private final CrawlPipelineMetrics pipelineMetrics;
 
     public ArticleCrawlService(
             BlogSourceRepository blogSourceRepository,
             SourceCrawlProcessor sourceCrawlProcessor,
+            CrawlPersistenceService persistenceService,
             CrawlTransactionService transactionService,
             ArticleAiReviewService aiReviewService,
             AiReviewProperties aiReviewProperties,
             @Qualifier("crawlSourceExecutor") Executor crawlSourceExecutor,
-            Semaphore crawlSourceConcurrencyLimiter
+            @Qualifier("crawlSourceConcurrencyLimiter") Semaphore crawlSourceConcurrencyLimiter,
+            @Qualifier("crawlSourcePersistenceLimiter") Semaphore crawlSourcePersistenceLimiter,
+            CrawlPipelineMetrics pipelineMetrics
     ) {
         this.blogSourceRepository = blogSourceRepository;
         this.sourceCrawlProcessor = sourceCrawlProcessor;
+        this.persistenceService = persistenceService;
         this.transactionService = transactionService;
         this.aiReviewService = aiReviewService;
         this.aiReviewProperties = aiReviewProperties;
         this.crawlSourceExecutor = crawlSourceExecutor;
         this.crawlSourceConcurrencyLimiter = crawlSourceConcurrencyLimiter;
+        this.crawlSourcePersistenceLimiter = crawlSourcePersistenceLimiter;
+        this.pipelineMetrics = pipelineMetrics;
     }
 
     public ArticleCrawlResult runScheduled() {
@@ -99,15 +109,15 @@ public class ArticleCrawlService {
     private ArticleCrawlResult runSources(List<BlogSource> sources, CrawlPolicy policy) {
         Long runId = transactionService.startRun();
         Map<Long, CompletableFuture<Void>> companyTaskTails = new HashMap<>();
-        List<CompletableFuture<SourceCrawlResult>> sourceTasks = new ArrayList<>();
+        List<CompletableFuture<SourcePreparation>> sourceTasks = new ArrayList<>();
         for (BlogSource source : sources) {
             Long companyId = source.getCompany().getId();
             CompletableFuture<Void> previousTask = companyTaskTails.getOrDefault(
                     companyId,
                     CompletableFuture.completedFuture(null)
             );
-            CompletableFuture<SourceCrawlResult> sourceTask = previousTask.thenApplyAsync(
-                    ignored -> processSourceWithConcurrencyLimit(runId, source, policy),
+            CompletableFuture<SourcePreparation> sourceTask = previousTask.thenApplyAsync(
+                    ignored -> prepareSourceWithConcurrencyLimit(source, policy),
                     crawlSourceExecutor
             );
             companyTaskTails.put(
@@ -116,8 +126,11 @@ public class ArticleCrawlService {
             );
             sourceTasks.add(sourceTask);
         }
-        List<SourceCrawlResult> sourceResults = sourceTasks.stream()
+        List<SourcePreparation> preparedSources = sourceTasks.stream()
                 .map(CompletableFuture::join)
+                .toList();
+        List<SourceCrawlResult> sourceResults = preparedSources.stream()
+                .map(prepared -> persistSource(runId, prepared))
                 .toList();
         CrawlRunSummary summary = sourceResults.stream()
                 .map(SourceCrawlResult::summary)
@@ -137,29 +150,74 @@ public class ArticleCrawlService {
         return result(runId, sourceResults, summary, successCount, failureCount);
     }
 
-    private SourceCrawlResult processSourceWithConcurrencyLimit(
-            Long runId,
+    private SourcePreparation prepareSourceWithConcurrencyLimit(
             BlogSource source,
             CrawlPolicy policy
     ) {
         crawlSourceConcurrencyLimiter.acquireUninterruptibly();
         try {
-            return processSource(runId, source, policy);
+            return prepareSource(source, policy);
         } finally {
             crawlSourceConcurrencyLimiter.release();
         }
     }
 
-    private SourceCrawlResult processSource(
-            Long runId,
+    private SourcePreparation prepareSource(
             BlogSource source,
             CrawlPolicy policy
     ) {
         try {
-            return sourceCrawlProcessor.process(runId, source.getId(), policy);
+            PreparedSourceCrawl prepared = pipelineMetrics.recordCollection(
+                    () -> sourceCrawlProcessor.prepare(source.getId(), policy)
+            );
+            return SourcePreparation.success(source, prepared);
         } catch (RuntimeException exception) {
-            transactionService.markSourceFailed(source.getId(), exception.getMessage());
-            return SourceCrawlResult.failure(source, exception.getMessage());
+            return SourcePreparation.failure(source, exception.getMessage());
+        }
+    }
+
+    private SourceCrawlResult persistSource(Long runId, SourcePreparation preparation) {
+        crawlSourcePersistenceLimiter.acquireUninterruptibly();
+        try {
+            return pipelineMetrics.recordPersistence(
+                    () -> persistSourceInWriter(runId, preparation)
+            );
+        } finally {
+            crawlSourcePersistenceLimiter.release();
+        }
+    }
+
+    private SourceCrawlResult persistSourceInWriter(
+            Long runId,
+            SourcePreparation preparation
+    ) {
+        if (!preparation.success()) {
+            transactionService.markSourceFailed(
+                    preparation.source().getId(),
+                    preparation.errorMessage()
+            );
+            return SourceCrawlResult.failure(
+                    preparation.source(),
+                    preparation.errorMessage()
+            );
+        }
+        try {
+            PreparedSourceCrawl prepared = preparation.prepared();
+            return persistenceService.persistDiscoveredCandidates(
+                    runId,
+                    prepared.sourceId(),
+                    prepared.candidates(),
+                    prepared.decisionsByHash()
+            );
+        } catch (RuntimeException exception) {
+            transactionService.markSourceFailed(
+                    preparation.source().getId(),
+                    exception.getMessage()
+            );
+            return SourceCrawlResult.failure(
+                    preparation.source(),
+                    exception.getMessage()
+            );
         }
     }
 
@@ -209,5 +267,27 @@ public class ArticleCrawlService {
             );
         }
         return CrawlPolicy.backfill(maxCandidatesPerSource);
+    }
+
+    private record SourcePreparation(
+            BlogSource source,
+            PreparedSourceCrawl prepared,
+            String errorMessage
+    ) {
+
+        private static SourcePreparation success(
+                BlogSource source,
+                PreparedSourceCrawl prepared
+        ) {
+            return new SourcePreparation(source, prepared, null);
+        }
+
+        private static SourcePreparation failure(BlogSource source, String errorMessage) {
+            return new SourcePreparation(source, null, errorMessage);
+        }
+
+        private boolean success() {
+            return prepared != null;
+        }
     }
 }

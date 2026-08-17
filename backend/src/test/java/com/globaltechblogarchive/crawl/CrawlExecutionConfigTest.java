@@ -38,4 +38,13 @@ class CrawlExecutionConfigTest {
         assertThat(registry.get("crawl.source.concurrency.active").gauge().value()).isEqualTo(2);
         assertThat(registry.get("crawl.source.concurrency.queued").gauge().value()).isZero();
     }
+
+    @Test
+    void persistenceLimiterAllowsOnlyOneWriter() {
+        Semaphore limiter = config.crawlSourcePersistenceLimiter();
+
+        assertThat(limiter.availablePermits()).isEqualTo(1);
+        limiter.acquireUninterruptibly();
+        assertThat(limiter.availablePermits()).isZero();
+    }
 }
