@@ -79,8 +79,9 @@ class ArticleCrawlServiceTest {
 
     @BeforeEach
     void setUp() {
+        CrawlExecutionProperties executionProperties = new CrawlExecutionProperties(2);
         crawlSourceExecutor = new CrawlExecutionConfig().crawlSourceExecutor(
-                new CrawlExecutionProperties(2)
+                executionProperties
         );
         crawlSourceExecutor.initialize();
         lenient().when(persistenceService.persistDiscoveredCandidates(
@@ -111,7 +112,8 @@ class ArticleCrawlServiceTest {
                 ),
                 crawlSourceExecutor,
                 new Semaphore(1, true),
-                new CrawlPipelineMetrics(new SimpleMeterRegistry())
+                new CrawlPipelineMetrics(new SimpleMeterRegistry()),
+                executionProperties
         );
     }
 
@@ -218,36 +220,29 @@ class ArticleCrawlServiceTest {
     }
 
     @Test
-    void allBackfillSerializesSourcesFromSameCompany() throws Exception {
+    void allBackfillRunsSourcesFromSameCompanyConcurrently() throws Exception {
         BlogSource first = source(9L, "first", 100L);
         BlogSource second = source(10L, "second", 100L);
-        CountDownLatch firstStarted = new CountDownLatch(1);
-        CountDownLatch secondStarted = new CountDownLatch(1);
-        CountDownLatch releaseFirst = new CountDownLatch(1);
+        CountDownLatch bothStarted = new CountDownLatch(2);
+        CountDownLatch releaseTasks = new CountDownLatch(1);
         when(transactionService.startRun()).thenReturn(14L);
         when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(first, second));
         when(sourceProcessor.prepare(anyLong(), any(CrawlPolicy.class)))
                 .thenAnswer(invocation -> {
+                    bothStarted.countDown();
+                    releaseTasks.await(2, TimeUnit.SECONDS);
                     Long sourceId = invocation.getArgument(0);
-                    if (sourceId.equals(9L)) {
-                        firstStarted.countDown();
-                        releaseFirst.await(2, TimeUnit.SECONDS);
-                        return prepared(9L);
-                    }
-                    secondStarted.countDown();
-                    return prepared(10L);
+                    return prepared(sourceId);
                 });
 
         CompletableFuture<ArticleCrawlResult> runResult = CompletableFuture.supplyAsync(
                 () -> crawlService.runAllBackfill(50)
         );
 
-        assertThat(firstStarted.await(5, TimeUnit.SECONDS)).isTrue();
-        assertThat(secondStarted.await(200, TimeUnit.MILLISECONDS)).isFalse();
-        releaseFirst.countDown();
+        assertThat(bothStarted.await(5, TimeUnit.SECONDS)).isTrue();
+        releaseTasks.countDown();
         ArticleCrawlResult result = runResult.get(5, TimeUnit.SECONDS);
 
-        assertThat(secondStarted.getCount()).isZero();
         assertThat(result.successCount()).isEqualTo(2);
     }
 

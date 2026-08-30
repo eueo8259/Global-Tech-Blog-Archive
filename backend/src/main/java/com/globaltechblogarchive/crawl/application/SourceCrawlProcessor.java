@@ -13,11 +13,14 @@ import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class SourceCrawlProcessor {
@@ -28,12 +31,35 @@ public class SourceCrawlProcessor {
     private final BlogSourceRepository blogSourceRepository;
 
     public PreparedSourceCrawl prepare(Long sourceId, CrawlPolicy policy) {
+        long phaseStartedAt = System.nanoTime();
         BlogSource source = blogSourceRepository.findWithCompanyById(sourceId)
                 .orElseThrow(() -> new IllegalArgumentException("Blog source not found: " + sourceId));
+        long sourceLoadDurationNanos = System.nanoTime() - phaseStartedAt;
+
+        phaseStartedAt = System.nanoTime();
         ArticleCandidateCollector collector = collectorRegistry.find(source.getCollectionMethod());
         List<ParsedArticle> cards = collector.collect(source, policy);
+        long collectionDurationNanos = System.nanoTime() - phaseStartedAt;
+
+        phaseStartedAt = System.nanoTime();
         Map<String, ArticleAiDecision> decisionsByHash = findDecisionsByHash(source, cards);
+        long decisionLookupDurationNanos = System.nanoTime() - phaseStartedAt;
+
+        phaseStartedAt = System.nanoTime();
         List<ArticleCandidate> candidates = candidateFactory.create(source, cards, decisionsByHash);
+        long candidateCreationDurationNanos = System.nanoTime() - phaseStartedAt;
+
+        log.info(
+                "crawl_source_phase_measurement sourceKey={} sourceLoadMs={} collectionMs={} "
+                        + "decisionLookupMs={} candidateCreationMs={} cardCount={} candidateCount={}",
+                source.getSourceKey(),
+                millis(sourceLoadDurationNanos),
+                millis(collectionDurationNanos),
+                millis(decisionLookupDurationNanos),
+                millis(candidateCreationDurationNanos),
+                cards.size(),
+                candidates.size()
+        );
         return new PreparedSourceCrawl(
                 sourceId,
                 candidates,
@@ -65,6 +91,10 @@ public class SourceCrawlProcessor {
                         ArticleAiDecision::getArticleUrlHash,
                         Function.identity()
                 ));
+    }
+
+    private long millis(long durationNanos) {
+        return TimeUnit.NANOSECONDS.toMillis(durationNanos);
     }
 
 }

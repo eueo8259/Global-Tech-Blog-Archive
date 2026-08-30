@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.crawl.collector.impl.ArticleDetailExtractor;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 
@@ -71,6 +72,7 @@ class ArticleDetailExtractorTest {
         private final String html;
 
         StubClient(String html) {
+            super(new SimpleMeterRegistry());
             this.html = html;
         }
 

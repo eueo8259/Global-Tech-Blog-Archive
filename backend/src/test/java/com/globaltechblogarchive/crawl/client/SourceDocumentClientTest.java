@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.sun.net.httpserver.HttpServer;
 import com.globaltechblogarchive.crawl.exception.SourceFetchException;
 import com.globaltechblogarchive.global.error.ErrorCode;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.Test;
 class SourceDocumentClientTest {
 
     private HttpServer server;
+    private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     @AfterEach
     void stopServer() {
@@ -38,20 +40,32 @@ class SourceDocumentClientTest {
     void fetchReturnsResponseBodyForSuccessfulRequest() throws IOException {
         startServer(200, "<rss>articles</rss>");
 
-        String body = new SourceDocumentClient().fetch(url());
+        String body = new SourceDocumentClient(meterRegistry).fetch(url());
 
         assertThat(body).isEqualTo("<rss>articles</rss>");
+        assertThat(meterRegistry.get("crawl.http.request.duration")
+                .tag("host", "localhost")
+                .tag("outcome", "success")
+                .timer()
+                .count())
+                .isEqualTo(1);
     }
 
     @Test
     void fetchThrowsHttpStatusExceptionForNotFoundResponse() throws IOException {
         startServer(404, "not found");
 
-        assertThatThrownBy(() -> new SourceDocumentClient().fetch(url()))
+        assertThatThrownBy(() -> new SourceDocumentClient(meterRegistry).fetch(url()))
                 .isInstanceOfSatisfying(SourceFetchException.class, exception -> {
                     assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.SOURCE_FETCH_HTTP_STATUS_ERROR);
                 })
                 .hasMessage("Fetch failed with status 404");
+        assertThat(meterRegistry.get("crawl.http.request.duration")
+                .tag("host", "localhost")
+                .tag("outcome", "http_status_error")
+                .timer()
+                .count())
+                .isEqualTo(1);
     }
 
     @Test
@@ -108,7 +122,8 @@ class SourceDocumentClientTest {
         HttpClient httpClient = throwingClient(new InterruptedException("interrupted"));
 
         try {
-            assertThatThrownBy(() -> new SourceDocumentClient(httpClient).fetch("https://example.com"))
+            assertThatThrownBy(() -> new SourceDocumentClient(httpClient, meterRegistry)
+                    .fetch("https://example.com"))
                     .isInstanceOfSatisfying(SourceFetchException.class, exception -> {
                         assertThat(exception.getErrorCode())
                                 .isEqualTo(ErrorCode.SOURCE_FETCH_INTERRUPTED_ERROR);
@@ -138,7 +153,8 @@ class SourceDocumentClientTest {
     private void assertFailure(IOException cause, ErrorCode expectedErrorCode) throws Exception {
         HttpClient httpClient = throwingClient(cause);
 
-        assertThatThrownBy(() -> new SourceDocumentClient(httpClient).fetch("https://example.com"))
+        assertThatThrownBy(() -> new SourceDocumentClient(httpClient, meterRegistry)
+                .fetch("https://example.com"))
                 .isInstanceOfSatisfying(SourceFetchException.class, exception -> {
                     assertThat(exception.getErrorCode()).isEqualTo(expectedErrorCode);
                 });

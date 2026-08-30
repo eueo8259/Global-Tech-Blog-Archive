@@ -7,13 +7,14 @@ import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.crawl.helper.ArticleListParserPropertiesFixture;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 @Tag("real")
 class RealHtmlArticleListParserTest {
 
-    private final SourceDocumentClient fetcher = new SourceDocumentClient();
+    private final SourceDocumentClient fetcher = new SourceDocumentClient(new SimpleMeterRegistry());
     private final HtmlArticleListParser parser = new HtmlArticleListParser(ArticleListParserPropertiesFixture.full());
 
 
