@@ -8,6 +8,7 @@ import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Tag;
@@ -19,7 +20,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class RealSitemapArticleCandidateCollectorTest {
 
     private final SitemapArticleCandidateCollector collector =
-            new SitemapArticleCandidateCollector(new SourceDocumentClient());
+            new SitemapArticleCandidateCollector(new SourceDocumentClient(new SimpleMeterRegistry()));
 
     @ParameterizedTest(name = "{0} sitemap returns article cards")
     @MethodSource("sitemapSources")

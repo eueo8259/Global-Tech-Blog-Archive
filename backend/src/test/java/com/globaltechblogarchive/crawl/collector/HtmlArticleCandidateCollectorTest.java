@@ -13,6 +13,7 @@ import com.globaltechblogarchive.crawl.parser.HtmlArticleListParser;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -263,6 +264,7 @@ class HtmlArticleCandidateCollectorTest {
         private final List<String> detailRequests = new ArrayList<>();
 
         RecordingClient(Map<String, String> documents) {
+            super(new SimpleMeterRegistry());
             this.documents = documents;
         }
 

@@ -15,6 +15,7 @@ import com.globaltechblogarchive.crawl.parser.ArticleListParserRegistry;
 import com.globaltechblogarchive.crawl.parser.HtmlArticleListParser;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,7 +29,7 @@ class RealArticleSourceCollectionCountTest {
 
     @Test
     void collectAllRealSourcesAndWriteCountReport() throws IOException {
-        SourceDocumentClient fetcher = new SourceDocumentClient();
+        SourceDocumentClient fetcher = new SourceDocumentClient(new SimpleMeterRegistry());
         List<ArticleCandidateCollector> collectors = List.of(
                 new FeedArticleCandidateCollector(fetcher),
                 new SitemapArticleCandidateCollector(fetcher),

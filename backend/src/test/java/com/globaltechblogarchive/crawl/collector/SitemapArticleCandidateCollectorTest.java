@@ -7,6 +7,7 @@ import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Map;
@@ -144,6 +145,7 @@ class SitemapArticleCandidateCollectorTest {
         private final Map<String, String> documents;
 
         StubClient(Map<String, String> documents) {
+            super(new SimpleMeterRegistry());
             this.documents = documents;
         }
 
@@ -158,6 +160,7 @@ class SitemapArticleCandidateCollectorTest {
         private final List<String> detailRequests = new ArrayList<>();
 
         RecordingClient(Map<String, String> documents) {
+            super(new SimpleMeterRegistry());
             this.documents = documents;
         }
 
