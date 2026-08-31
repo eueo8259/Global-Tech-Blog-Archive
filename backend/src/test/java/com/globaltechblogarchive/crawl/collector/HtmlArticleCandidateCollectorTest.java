@@ -269,7 +269,7 @@ class HtmlArticleCandidateCollectorTest {
         }
 
         @Override
-        public String fetch(String url) {
+        public String fetch(String sourceKey, String url) {
             if (url.contains("/category/") || url.contains("/engineering")) {
                 listRequests.add(url);
             } else {

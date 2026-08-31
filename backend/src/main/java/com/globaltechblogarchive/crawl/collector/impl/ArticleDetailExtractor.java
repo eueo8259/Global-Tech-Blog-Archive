@@ -16,7 +16,11 @@ public class ArticleDetailExtractor {
     private final SourceDocumentClient fetcher;
 
     public ParsedArticle extract(ParsedArticle article) {
-        String html = fetcher.fetch(article.originalUrl());
+        return extract("unknown", article);
+    }
+
+    public ParsedArticle extract(String sourceKey, ParsedArticle article) {
+        String html = fetcher.fetch(sourceKey, article.originalUrl());
         String title = firstNonBlank(
                 HtmlMetadataExtractor.heading(html, 1),
                 HtmlMetadataExtractor.jsonLdText(html, "headline"),

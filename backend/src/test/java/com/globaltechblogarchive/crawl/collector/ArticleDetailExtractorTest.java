@@ -77,7 +77,7 @@ class ArticleDetailExtractorTest {
         }
 
         @Override
-        public String fetch(String url) {
+        public String fetch(String sourceKey, String url) {
             return html;
         }
     }

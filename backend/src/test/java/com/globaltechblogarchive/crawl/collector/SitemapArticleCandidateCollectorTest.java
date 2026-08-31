@@ -150,7 +150,7 @@ class SitemapArticleCandidateCollectorTest {
         }
 
         @Override
-        public String fetch(String url) {
+        public String fetch(String sourceKey, String url) {
             return documents.get(url);
         }
     }
@@ -165,7 +165,7 @@ class SitemapArticleCandidateCollectorTest {
         }
 
         @Override
-        public String fetch(String url) {
+        public String fetch(String sourceKey, String url) {
             if (!url.endsWith("sitemap.xml")) {
                 detailRequests.add(url);
             }

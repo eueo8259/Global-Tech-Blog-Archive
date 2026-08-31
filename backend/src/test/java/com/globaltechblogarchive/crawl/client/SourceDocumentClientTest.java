@@ -23,7 +23,11 @@ import java.nio.charset.StandardCharsets;
 import javax.net.ssl.SSLHandshakeException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
+@ExtendWith(OutputCaptureExtension.class)
 class SourceDocumentClientTest {
 
     private HttpServer server;
@@ -66,6 +70,33 @@ class SourceDocumentClientTest {
                 .timer()
                 .count())
                 .isEqualTo(1);
+    }
+
+    @Test
+    void fetchRecordsResponsePhaseMeasurements(CapturedOutput output) throws IOException {
+        startServer(200, "<html>article</html>");
+
+        new SourceDocumentClient(meterRegistry).fetch("test-source", url());
+
+        assertThat(meterRegistry.get("crawl.http.response.headers.duration")
+                .tag("host", "localhost")
+                .tag("outcome", "success")
+                .timer()
+                .count())
+                .isEqualTo(1);
+        assertThat(meterRegistry.get("crawl.http.response.body.duration")
+                .tag("host", "localhost")
+                .tag("outcome", "success")
+                .timer()
+                .count())
+                .isEqualTo(1);
+        assertThat(output)
+                .contains("crawl_http_request_measurement sourceKey=test-source")
+                .contains("path=/")
+                .contains("headersMs=")
+                .contains("bodyMs=")
+                .contains("protocol=HTTP_1_1")
+                .contains("activeRequests=1");
     }
 
     @Test
