@@ -43,7 +43,10 @@ public class FeedArticleCandidateCollector implements ArticleCandidateCollector 
                     "Feed URL is required for " + source.getSourceKey()
             );
         }
-        return ArticleCandidateCollectionPolicy.apply(parse(source, fetcher.fetch(source.getFeedUrl())), policy);
+        return ArticleCandidateCollectionPolicy.apply(
+                parse(source, fetcher.fetch(source.getSourceKey(), source.getFeedUrl())),
+                policy
+        );
     }
 
     List<ParsedArticle> parse(BlogSource source, String xml) {

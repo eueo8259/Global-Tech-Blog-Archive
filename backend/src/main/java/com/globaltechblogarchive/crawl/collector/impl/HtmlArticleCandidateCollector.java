@@ -35,7 +35,7 @@ public class HtmlArticleCandidateCollector implements ArticleCandidateCollector 
         List<ParsedArticle> parsedArticles = collectListPages(source, parser, policy.mode());
         List<ParsedArticle> detailTargets = ArticleCandidateCollectionPolicy.apply(parsedArticles, policy);
         List<ParsedArticle> detailedArticles = detailTargets.stream()
-                .map(detailExtractor::extract)
+                .map(article -> detailExtractor.extract(source.getSourceKey(), article))
                 .toList();
         return ArticleCandidateCollectionPolicy.apply(detailedArticles, policy);
     }
@@ -44,13 +44,13 @@ public class HtmlArticleCandidateCollector implements ArticleCandidateCollector 
         if ("uber".equals(source.getSourceKey()) && mode == CrawlMode.BACKFILL) {
             Map<String, ParsedArticle> articles = new LinkedHashMap<>();
             for (String url : List.of(source.getSiteUrl(), pageUrl(source.getSiteUrl(), 2))) {
-                for (ParsedArticle article : parser.parse(source, fetcher.fetch(url))) {
+                for (ParsedArticle article : parser.parse(source, fetcher.fetch(source.getSourceKey(), url))) {
                     articles.putIfAbsent(article.originalUrl(), article);
                 }
             }
             return List.copyOf(articles.values());
         }
-        return parser.parse(source, fetcher.fetch(source.getSiteUrl()));
+        return parser.parse(source, fetcher.fetch(source.getSourceKey(), source.getSiteUrl()));
     }
 
     private String pageUrl(String siteUrl, int page) {

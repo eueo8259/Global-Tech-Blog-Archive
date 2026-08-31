@@ -36,7 +36,7 @@ public class SitemapArticleCandidateCollector implements ArticleCandidateCollect
         if (sitemapUrl == null || sitemapUrl.isBlank()) {
             sitemapUrl = source.getSiteUrl().replaceAll("/+$", "") + "/sitemap.xml";
         }
-        List<SitemapEntry> entries = parse(source, fetcher.fetch(sitemapUrl)).stream()
+        List<SitemapEntry> entries = parse(source, fetcher.fetch(source.getSourceKey(), sitemapUrl)).stream()
                 .filter(entry -> isArticleUrl(source, entry.location()))
                 .toList();
         List<ParsedArticle> cards = ArticleCandidateCollectionPolicy.select(
@@ -64,7 +64,7 @@ public class SitemapArticleCandidateCollector implements ArticleCandidateCollect
     }
 
     private ParsedArticle toCard(BlogSource source, SitemapEntry entry) {
-        String html = fetcher.fetch(entry.location());
+        String html = fetcher.fetch(source.getSourceKey(), entry.location());
         String title = firstNonBlank(
                 HtmlMetadataExtractor.metaContent(html, "og:title"),
                 HtmlMetadataExtractor.metaContent(html, "twitter:title"),
