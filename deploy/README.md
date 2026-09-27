@@ -38,6 +38,19 @@ sudo certbot renew --webroot -w /var/www/certbot
 docker compose --env-file .env -f docker-compose.prod.yml exec nginx nginx -s reload
 ```
 
+Production deployment installs and enables `techport-certbot-renew.timer`. The
+timer checks for renewal twice daily and reloads Nginx only after Certbot renews
+a certificate. The first installation also runs Certbot immediately and records
+a successful `--dry-run` verification under `/var/lib/techport`.
+
+Check the automatic renewal job on the EC2 host.
+
+```bash
+sudo systemctl status techport-certbot-renew.timer
+sudo systemctl list-timers techport-certbot-renew.timer
+sudo journalctl -u techport-certbot-renew.service
+```
+
 Check HTTPS after deployment.
 
 ```bash
