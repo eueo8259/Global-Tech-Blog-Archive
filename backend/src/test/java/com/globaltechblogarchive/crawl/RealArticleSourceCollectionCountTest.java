@@ -9,12 +9,13 @@ import com.globaltechblogarchive.crawl.collector.impl.ArticleDetailExtractor;
 import com.globaltechblogarchive.crawl.collector.impl.FeedArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.collector.impl.HtmlArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.collector.impl.SitemapArticleCandidateCollector;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.crawl.helper.ArticleListParserPropertiesFixture;
 import com.globaltechblogarchive.crawl.parser.ArticleListParserRegistry;
 import com.globaltechblogarchive.crawl.parser.HtmlArticleListParser;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,7 +29,7 @@ class RealArticleSourceCollectionCountTest {
 
     @Test
     void collectAllRealSourcesAndWriteCountReport() throws IOException {
-        SourceDocumentClient fetcher = new SourceDocumentClient();
+        SourceDocumentClient fetcher = new SourceDocumentClient(new SimpleMeterRegistry());
         List<ArticleCandidateCollector> collectors = List.of(
                 new FeedArticleCandidateCollector(fetcher),
                 new SitemapArticleCandidateCollector(fetcher),
@@ -63,7 +64,7 @@ class RealArticleSourceCollectionCountTest {
                 .findFirst()
                 .orElseThrow();
         try {
-            int count = collector.collect(source, CrawlMode.RECENT).size();
+            int count = collector.collect(source, CrawlPolicy.recent()).size();
             return new SourceCount(
                     source.getCompany().getCompanyKey(),
                     source.getCompany().getCompanyName(),
@@ -112,7 +113,7 @@ class RealArticleSourceCollectionCountTest {
                 html("uber", "Uber", "https://www.uber.com/blog/engineering"),
                 rss("airbnb", "Airbnb", "https://medium.com/airbnb-engineering", "https://medium.com/feed/airbnb-engineering"),
                 rss("pinterest", "Pinterest", "https://medium.com/pinterest-engineering", "https://medium.com/feed/pinterest-engineering"),
-                html("stripe", "Stripe", "https://stripe.com/blog/engineering"),
+                html("stripe", "Stripe", "https://stripe.dev/blog/topic/engineering"),
                 rss("cloudflare", "Cloudflare", "https://blog.cloudflare.com/", "https://blog.cloudflare.com/tag/engineering/rss/"),
                 rss("github", "GitHub", "https://github.blog/engineering/", "https://github.blog/engineering/feed/"),
                 html("discord", "Discord", "https://discord.com/category/engineering"),

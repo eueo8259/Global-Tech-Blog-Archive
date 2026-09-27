@@ -75,7 +75,7 @@ class FeedArticleCandidateCollectorTest {
                 CollectionMethod.RSS
         );
 
-        assertThatThrownBy(() -> collector.collect(source, com.globaltechblogarchive.crawl.domain.CrawlMode.RECENT))
+        assertThatThrownBy(() -> collector.collect(source, com.globaltechblogarchive.crawl.domain.CrawlPolicy.recent()))
                 .isInstanceOfSatisfying(SourceCollectionException.class, exception ->
                         assertThat(exception.getErrorCode())
                                 .isEqualTo(ErrorCode.SOURCE_COLLECTION_CONFIGURATION_ERROR));
@@ -92,4 +92,3 @@ class FeedArticleCandidateCollectorTest {
         );
     }
 }
-

@@ -24,9 +24,9 @@ public interface SlackDeliveryRepository extends JpaRepository<SlackDelivery, Lo
             Collection<SlackDeliveryStatus> statuses
     );
 
-    Optional<SlackDelivery> findTopBySlackChannelAndStatusOrderByWindowEndedAtDesc(
+    Optional<SlackDelivery> findTopBySlackChannelAndStatusInOrderByWindowEndedAtDesc(
             SlackChannel slackChannel,
-            SlackDeliveryStatus status
+            Collection<SlackDeliveryStatus> statuses
     );
 
     @Query("""
@@ -39,6 +39,18 @@ public interface SlackDeliveryRepository extends JpaRepository<SlackDelivery, Lo
     List<Long> findReadyDeliveryIds(
             @Param("pending") SlackDeliveryStatus pending,
             @Param("retryWaiting") SlackDeliveryStatus retryWaiting,
+            @Param("now") LocalDateTime now
+    );
+
+    @Query("""
+            select delivery.id
+            from SlackDelivery delivery
+            where delivery.status = :verifying
+              and delivery.nextVerificationAt <= :now
+            order by delivery.id
+            """)
+    List<Long> findReadyVerificationIds(
+            @Param("verifying") SlackDeliveryStatus verifying,
             @Param("now") LocalDateTime now
     );
 

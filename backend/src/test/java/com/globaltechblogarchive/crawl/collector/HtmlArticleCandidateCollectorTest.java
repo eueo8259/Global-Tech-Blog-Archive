@@ -6,13 +6,14 @@ import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
 import com.globaltechblogarchive.crawl.collector.impl.ArticleDetailExtractor;
 import com.globaltechblogarchive.crawl.collector.impl.HtmlArticleCandidateCollector;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.crawl.helper.ArticleListParserPropertiesFixture;
 import com.globaltechblogarchive.crawl.parser.ArticleListParserRegistry;
 import com.globaltechblogarchive.crawl.parser.HtmlArticleListParser;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,7 +59,7 @@ class HtmlArticleCandidateCollectorTest {
         ));
         HtmlArticleCandidateCollector collector = collector(client);
 
-        var articles = collector.collect(source, CrawlMode.BACKFILL);
+        var articles = collector.collect(source, CrawlPolicy.backfill(50));
 
         assertThat(articles).hasSize(1);
         assertThat(articles.getFirst().originalTitle())
@@ -86,7 +87,7 @@ class HtmlArticleCandidateCollectorTest {
         documents.put(source.getSiteUrl(), list.toString());
         RecordingClient client = new RecordingClient(documents);
 
-        var articles = collector(client).collect(source, CrawlMode.BACKFILL);
+        var articles = collector(client).collect(source, CrawlPolicy.backfill(50));
 
         assertThat(articles).hasSize(30);
         assertThat(client.detailRequests()).containsExactlyElementsOf(expectedDetails);
@@ -125,7 +126,7 @@ class HtmlArticleCandidateCollectorTest {
                 detail("How Uber Executed A JUnit Migration at Massive Scale")
         ));
 
-        var articles = collector(client).collect(source, CrawlMode.BACKFILL);
+        var articles = collector(client).collect(source, CrawlPolicy.backfill(50));
 
         assertThat(articles).extracting(ParsedArticle::originalTitle)
                 .containsExactly(
@@ -154,7 +155,7 @@ class HtmlArticleCandidateCollectorTest {
                 detail("Scaling Real-Time Traffic Forecasting with a Graph-Aware Transformer")
         ));
 
-        collector(client).collect(source, CrawlMode.RECENT);
+        collector(client).collect(source, CrawlPolicy.recent());
 
         assertThat(client.listRequests()).containsExactly(source.getSiteUrl());
     }
@@ -176,7 +177,7 @@ class HtmlArticleCandidateCollectorTest {
                 """;
         RecordingClient client = new RecordingClient(Map.of(
                 source.getSiteUrl(), list,
-                "https://stripe.com/blog/how-we-built-it-real-time-analytics-for-stripe-billing",
+                "https://stripe.dev/blog/how-we-built-it-real-time-analytics-for-stripe-billing",
                 """
                 <html>
                   <head>
@@ -189,13 +190,13 @@ class HtmlArticleCandidateCollectorTest {
                 """
         ));
 
-        var articles = collector(client).collect(source, CrawlMode.BACKFILL);
+        var articles = collector(client).collect(source, CrawlPolicy.backfill(50));
 
         assertThat(articles).hasSize(1);
         assertThat(articles.getFirst().originalTitle())
                 .isEqualTo("How we built it: Real-time analytics for Stripe Billing");
         assertThat(articles.getFirst().originalUrl())
-                .isEqualTo("https://stripe.com/blog/how-we-built-it-real-time-analytics-for-stripe-billing");
+                .isEqualTo("https://stripe.dev/blog/how-we-built-it-real-time-analytics-for-stripe-billing");
         assertThat(articles.getFirst().publishedAt()).isEqualTo(LocalDateTime.of(2025, 3, 17, 0, 0));
         assertThat(articles.getFirst().shortContext()).isEqualTo("Detail context from Stripe's article page.");
     }
@@ -251,7 +252,7 @@ class HtmlArticleCandidateCollectorTest {
                 Company.create("stripe", "Stripe"),
                 "stripe",
                 "Stripe Engineering Blog",
-                "https://stripe.com/blog/engineering",
+                "https://stripe.dev/blog/topic/engineering",
                 null,
                 CollectionMethod.HTML_SCRAPING
         );
@@ -263,11 +264,12 @@ class HtmlArticleCandidateCollectorTest {
         private final List<String> detailRequests = new ArrayList<>();
 
         RecordingClient(Map<String, String> documents) {
+            super(new SimpleMeterRegistry());
             this.documents = documents;
         }
 
         @Override
-        public String fetch(String url) {
+        public String fetch(String sourceKey, String url) {
             if (url.contains("/category/") || url.contains("/engineering")) {
                 listRequests.add(url);
             } else {

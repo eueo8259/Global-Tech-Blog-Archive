@@ -20,7 +20,11 @@ public class SlackDeliveryPreparationService {
     private static final EnumSet<SlackDeliveryStatus> ACTIVE_STATUSES = EnumSet.of(
             SlackDeliveryStatus.PENDING,
             SlackDeliveryStatus.PROCESSING,
+            SlackDeliveryStatus.VERIFYING,
             SlackDeliveryStatus.RETRY_WAITING
+    );
+    private static final EnumSet<SlackDeliveryStatus> DELIVERED_STATUSES = EnumSet.of(
+            SlackDeliveryStatus.SENT
     );
 
     private final SlackChannelRepository channelRepository;
@@ -62,9 +66,9 @@ public class SlackDeliveryPreparationService {
     }
 
     private LocalDateTime previousWindowEnd(SlackChannel channel) {
-        return deliveryRepository.findTopBySlackChannelAndStatusOrderByWindowEndedAtDesc(
+        return deliveryRepository.findTopBySlackChannelAndStatusInOrderByWindowEndedAtDesc(
                         channel,
-                        SlackDeliveryStatus.SENT
+                        DELIVERED_STATUSES
                 )
                 .map(SlackDelivery::getWindowEndedAt)
                 .orElse(channel.getCreatedAt());

@@ -14,6 +14,7 @@ public record CrawlSummaryResponse(
         int aiApprovedCount,
         int aiRejectedCount,
         int aiFailedCount,
+        int aiRetryWaitingCount,
         int previouslyApprovedCount,
         int previouslyRejectedCount,
         List<SourceCrawlSummaryResponse> sources
@@ -31,6 +32,7 @@ public record CrawlSummaryResponse(
                 result.aiApprovedCount(),
                 result.aiRejectedCount(),
                 result.aiFailedCount(),
+                result.aiRetryWaitingCount(),
                 result.previouslyApprovedCount(),
                 result.previouslyRejectedCount(),
                 result.sources().stream()

@@ -14,6 +14,7 @@ public record ArticleCrawlResult(
         int aiApprovedCount,
         int aiRejectedCount,
         int aiFailedCount,
+        int aiRetryWaitingCount,
         int previouslyApprovedCount,
         int previouslyRejectedCount,
         List<SourceCrawlResult> sources

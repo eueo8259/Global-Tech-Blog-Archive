@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Profile("local")
+@Profile({"local", "dev"})
 @RestController
 @RequiredArgsConstructor
 public class ArticleCrawlController {
@@ -22,8 +22,18 @@ public class ArticleCrawlController {
     }
 
     @PostMapping("/api/admin/article-crawls/sources/{sourceKey}/backfill-run")
-    public CrawlSummaryResponse runSourceBackfill(@PathVariable String sourceKey) {
-        return CrawlSummaryResponse.from(articleCrawlService.runSourceBackfill(sourceKey));
+    public CrawlSummaryResponse runSourceBackfill(
+            @PathVariable String sourceKey,
+            @RequestParam(defaultValue = "50") int limit
+    ) {
+        return CrawlSummaryResponse.from(articleCrawlService.runSourceBackfill(sourceKey, limit));
+    }
+
+    @PostMapping("/api/admin/article-crawls/backfill-run")
+    public CrawlSummaryResponse runAllBackfill(
+            @RequestParam(defaultValue = "50") int limit
+    ) {
+        return CrawlSummaryResponse.from(articleCrawlService.runAllBackfill(limit));
     }
 
     @PostMapping("/api/admin/article-crawls/ai-failures/retry")

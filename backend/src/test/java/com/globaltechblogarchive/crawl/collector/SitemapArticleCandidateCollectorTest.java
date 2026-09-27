@@ -4,9 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Map;
@@ -57,7 +58,7 @@ class SitemapArticleCandidateCollectorTest {
                 "https://www.anthropic.com/engineering/building-effective-agents", detail
         )));
 
-        var cards = collector.collect(source, CrawlMode.RECENT);
+        var cards = collector.collect(source, CrawlPolicy.recent());
 
         assertThat(cards).hasSize(1);
         assertThat(cards.getFirst().originalTitle()).isEqualTo("Building Effective AI Agents");
@@ -100,7 +101,7 @@ class SitemapArticleCandidateCollectorTest {
                 "https://www.anthropic.com/engineering/old-but-recently-modified", detail
         )));
 
-        var cards = collector.collect(source, CrawlMode.RECENT);
+        var cards = collector.collect(source, CrawlPolicy.recent());
 
         assertThat(cards).isEmpty();
     }
@@ -134,7 +135,7 @@ class SitemapArticleCandidateCollectorTest {
         RecordingClient client = new RecordingClient(documents);
         SitemapArticleCandidateCollector collector = new SitemapArticleCandidateCollector(client);
 
-        List<?> cards = collector.collect(source, CrawlMode.BACKFILL);
+        List<?> cards = collector.collect(source, CrawlPolicy.backfill(50));
 
         assertThat(cards).hasSize(29);
         assertThat(client.detailRequests()).containsExactlyElementsOf(expectedDetails);
@@ -144,11 +145,12 @@ class SitemapArticleCandidateCollectorTest {
         private final Map<String, String> documents;
 
         StubClient(Map<String, String> documents) {
+            super(new SimpleMeterRegistry());
             this.documents = documents;
         }
 
         @Override
-        public String fetch(String url) {
+        public String fetch(String sourceKey, String url) {
             return documents.get(url);
         }
     }
@@ -158,11 +160,12 @@ class SitemapArticleCandidateCollectorTest {
         private final List<String> detailRequests = new ArrayList<>();
 
         RecordingClient(Map<String, String> documents) {
+            super(new SimpleMeterRegistry());
             this.documents = documents;
         }
 
         @Override
-        public String fetch(String url) {
+        public String fetch(String sourceKey, String url) {
             if (!url.endsWith("sitemap.xml")) {
                 detailRequests.add(url);
             }

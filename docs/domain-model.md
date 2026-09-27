@@ -107,6 +107,52 @@ Required constraints:
 UNIQUE KEY uq_article_ai_decision_company_url_hash_prompt (company_id, article_url_hash, prompt_version);
 ```
 
+### Article Candidate
+
+`ArticleCandidate` is the durable work item between source collection and AI review.
+
+Database table: `article_candidates`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | yes | Primary key |
+| company_id | BIGINT | yes | Foreign key to `companies.id` |
+| source_id | BIGINT | yes | Foreign key to `blog_sources.id` |
+| article_url | VARCHAR(2000) | yes | Normalized source URL |
+| article_url_hash | VARCHAR(64) | yes | Candidate business identity with company |
+| original_title | VARCHAR(500) | yes | Title collected from the source |
+| short_context | TEXT | no | Short AI review context |
+| category_hint | VARCHAR(500) | no | Optional source category hint |
+| published_at | DATETIME | no | Source publication time |
+| status | VARCHAR(30) | yes | Current candidate processing state |
+| attempt_count | INT | yes | Number of AI processing claims |
+| next_retry_at | DATETIME | no | Earliest retry claim time |
+| processing_started_at | DATETIME | no | Claim time and stale-work reference |
+| last_error_code | VARCHAR(100) | no | Last processing failure code |
+| last_error_message | VARCHAR(500) | no | Truncated diagnostic message |
+| processing_prompt_version | VARCHAR(50) | no | Prompt version used by the current/latest claim |
+| created_at | DATETIME | yes | First discovery time |
+| updated_at | DATETIME | yes | Last state change time |
+
+Required constraints and indexes:
+
+```sql
+UNIQUE KEY uq_article_candidates_company_url_hash (company_id, article_url_hash);
+INDEX idx_article_candidates_status_retry (status, next_retry_at);
+INDEX idx_article_candidates_status_processing (status, processing_started_at);
+```
+
+Candidate state transitions:
+
+```text
+NEW -> AI_PROCESSING -> AI_APPROVED | AI_REJECTED
+AI_PROCESSING -> AI_RETRY_WAITING -> AI_PROCESSING
+AI_PROCESSING -> AI_FAILED
+```
+
+`PREVIOUSLY_APPROVED`, `PREVIOUSLY_REJECTED`, and `DUPLICATE` preserve cached
+decision and existing-article behavior without another OpenAI call.
+
 ### Source
 
 `Source` is a configured company blog endpoint used by the collector.
@@ -177,7 +223,8 @@ The aggregate does not include:
 - RSS and Atom collection use `feed_url`.
 - Sitemap collection uses `feed_url`.
 - HTML scraping uses `site_url`.
-- Article category assignment is handled by AI decision before persistence.
+- Collected candidates are committed as durable work before an OpenAI call.
+- Article category assignment is handled by AI decision before Article persistence.
 - Each article has exactly one stored category.
 - The crawler stores the source-provided URL as `article_url`.
 - `article_url` is both the user-facing article link and the deduplication base.
@@ -190,7 +237,11 @@ The aggregate does not include:
 - `article_ai_decisions.save_target=false` or `category=ELSE` prevents saving to `articles`.
 - Previously approved decisions may save article rows without calling AI again.
 - Previously rejected decisions do not call AI again and do not save article rows.
-- AI failures are recorded in crawl logs as `AI_FAILED`; no decision row is created because no valid AI decision exists.
+- OpenAI calls run without an active database transaction.
+- AI decisions, approved Articles, and final candidate status are committed in one short transaction.
+- Timeout, HTTP 429, and temporary 5xx failures move candidates to `AI_RETRY_WAITING` until the maximum attempt count is reached.
+- Stale `AI_PROCESSING` candidates move to `AI_RETRY_WAITING`; candidates that reached the maximum attempt count move to `AI_FAILED`. A claim timestamp prevents an older worker result from overwriting a newer claim.
+- AI failures remain in `article_candidates` as `AI_FAILED`; no decision row is created because no valid AI decision exists.
 - If the prompt changes, increment `prompt_version` to allow re-review.
 - If the source does not provide a publication time, set `published_at` to the collection time.
 - `created_at` represents the first time the article row was stored.
@@ -274,7 +325,7 @@ INDEX idx_slack_channel_subscriptions_company (company_id);
 Delivery lookup direction:
 
 ```text
-09:00 Daily Digest batch
+09:00 Daily Digest scheduler
 -> find subscribed Slack channels
 -> find articles created in each channel's delivery window for subscribed companies
 -> group articles by company
@@ -282,11 +333,55 @@ Delivery lookup direction:
 -> send one message per channel and delivery date
 ```
 
+### Slack Daily Digest Run
+
+`SlackDailyDigestRun` records the technical execution state of the once-per-day
+Daily Digest orchestration. It replaces framework-owned Job and Step metadata
+with the smaller set of fields required by this service.
+
+Database table: `slack_daily_digest_runs`
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| id | BIGINT | yes | Primary key |
+| delivery_date | DATE | yes | Business identity of the daily run |
+| window_ended_at | DATETIME | yes | Inclusive article window upper bound |
+| status | VARCHAR(30) | yes | `RUNNING`, `COMPLETED`, or `FAILED` |
+| attempt_count | INT | yes | Number of starts including stale or failed restarts |
+| recovered_delivery_count | INT | yes | Stale deliveries recovered during the run |
+| created_delivery_count | INT | yes | New delivery rows prepared during the run |
+| ready_delivery_count | INT | yes | Delivery rows selected for dispatch |
+| started_at | DATETIME | yes | Latest attempt start time |
+| ended_at | DATETIME | no | Completion or failure time |
+| last_error_code | VARCHAR(100) | no | Last orchestration error code |
+| last_error_message | VARCHAR(500) | no | Truncated diagnostic message |
+| created_at | DATETIME | yes | First attempt creation time |
+| updated_at | DATETIME | yes | Last state change time |
+
+Required constraint:
+
+```sql
+UNIQUE KEY uq_slack_daily_digest_runs_delivery_date (delivery_date);
+```
+
+Daily run rules:
+
+- A `COMPLETED` delivery date is never started again.
+- A `FAILED` run may restart and increments `attempt_count`.
+- A persisted `RUNNING` run may restart immediately after a later schedule
+  acquires the process-local execution guard.
+- After the daily cutoff, the five-minute retry schedule catches up a missing,
+  failed, or persisted `RUNNING` daily execution.
+- Five-minute delivery retries do not create daily run rows.
+- Run completion describes orchestration completion, not guaranteed success of
+  every channel delivery. Channel outcomes remain in `SlackDelivery`.
+- Legacy Spring Batch metadata tables are retained temporarily for release
+  rollback compatibility and are not part of the current runtime model.
+
 ### Slack Delivery
 
-`SlackDelivery` records the business result of one channel's Daily Digest. Spring
-Batch metadata records Job and Step execution only and does not replace this
-delivery state.
+`SlackDelivery` records the business result of one channel's Daily Digest. The
+daily run record does not replace this channel-level delivery state.
 
 Database table: `slack_deliveries`
 
@@ -295,13 +390,19 @@ Database table: `slack_deliveries`
 | id | BIGINT | yes | Primary key |
 | slack_channel_id | BIGINT | yes | Target channel foreign key |
 | delivery_date | DATE | yes | Delivery date in the configured digest time zone |
-| status | VARCHAR(30) | yes | `PENDING`, `PROCESSING`, `RETRY_WAITING`, `SENT`, or `FAILED` |
-| attempt_count | INT | yes | Number of claimed send attempts |
+| status | VARCHAR(30) | yes | `PENDING`, `PROCESSING`, `VERIFYING`, `RETRY_WAITING`, `SENT`, or `FAILED` |
+| attempt_count | INT | yes | Number of actual Slack send attempts |
+| preparation_failure_count | INT | yes | Number of failures before a Slack send attempt starts |
+| delivery_key | VARCHAR(36) | yes | Stable UUID correlation key stored in Slack message metadata |
+| verification_count | INT | yes | Successful History lookups that completed without finding the message |
 | window_started_at | DATETIME | yes | Exclusive article creation lower bound |
 | window_ended_at | DATETIME | yes | Inclusive article creation upper bound |
 | processing_started_at | DATETIME | no | Used to recover stale processing claims |
 | sent_at | DATETIME | no | Successful completion time |
 | next_retry_at | DATETIME | no | Earliest time a retry may claim the delivery |
+| next_verification_at | DATETIME | no | Earliest time a `VERIFYING` delivery may query Slack History again |
+| history_cursor | VARCHAR(500) | no | Cursor used to resume a multi-page Slack History verification |
+| history_latest_at | DATETIME | no | Fixed upper bound for the current multi-page History scan |
 | last_error_code | VARCHAR(100) | no | Last Slack or internal error code |
 | last_error_message | VARCHAR(500) | no | Truncated diagnostic message |
 | slack_message_ts | VARCHAR(50) | no | Slack message timestamp returned by `chat.postMessage` |
@@ -313,17 +414,36 @@ Required constraint:
 ```sql
 UNIQUE KEY uq_slack_deliveries_channel_date
     (slack_channel_id, delivery_date);
+UNIQUE KEY uq_slack_deliveries_delivery_key (delivery_key);
+INDEX idx_slack_deliveries_status_verification
+    (status, next_verification_at, id);
 ```
 
 Delivery rules:
 
 - The first window starts at the Slack channel creation time.
-- Later windows start at the previous `SENT` delivery's `window_ended_at`.
+- Later windows start at the latest verified `SENT` delivery's `window_ended_at`.
 - Article lookup uses `(window_started_at, window_ended_at]` and includes only
   companies subscribed at or before the article was stored.
 - A channel receives at most one Slack API call for one Daily Digest attempt.
-- `SENT` deliveries are never selected for retry.
-- A stale `PROCESSING` delivery becomes `RETRY_WAITING`.
+- Repeated failures while querying articles or building a message stop at the
+  configured maximum attempt count without increasing `attempt_count`.
+- `VERIFYING` is active work and blocks creation of a later delivery for the
+  same channel until the result becomes `SENT` or retryable.
+- Each send attempt reuses the delivery's original `delivery_key`. Slack message
+  metadata is a correlation key for later lookup, not Slack-side deduplication.
+- A network timeout, HTTP 5xx, ambiguous Slack error, failed `SENT` state write,
+  or stale `PROCESSING` claim moves to `VERIFYING` instead of immediate retry.
+- `processing_started_at` remains the actual send-attempt time while verifying
+  and defines the lower bound for Slack History lookup.
+- A matching History message moves the delivery to `SENT`. A successful lookup
+  that finds no matching message increments `verification_count`; only the third
+  such result moves the delivery to `RETRY_WAITING`.
+- History pagination reads one page per verification run and persists its cursor
+  and fixed upper bound until the complete scan finishes.
+- A History request failure does not increment `verification_count`. Permission
+  and authentication failures leave the delivery in `VERIFYING` and prevent
+  automatic resend until lookup succeeds.
 - Delivery items are not snapshotted in the MVP; retry re-queries the fixed
   delivery window using current subscription data.
 
@@ -332,13 +452,16 @@ Flyway migrations. Locally collected articles and AI decisions may be promoted
 once through the bootstrap archive process documented in
 `backend/docs/bootstrap-deployment.md`; collection run logs are not promoted.
 
-Candidate decision statuses used in crawl logs:
+Candidate processing and observed decision statuses:
 
 ```text
 NEW
+AI_PROCESSING
+AI_RETRY_WAITING
 PREVIOUSLY_APPROVED
 PREVIOUSLY_REJECTED
 AI_APPROVED
 AI_REJECTED
 AI_FAILED
+DUPLICATE
 ```

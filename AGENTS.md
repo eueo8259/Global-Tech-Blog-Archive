@@ -61,6 +61,7 @@ Follow `docs/git-workflow.md`.
 
 - Repository design decisions: `docs/`
 - Git workflow details: `docs/git-workflow.md`
+- Code review workflow: `docs/code-review-workflow.md`
 - Domain model: `docs/domain-model.md`
 - Source strategy: `docs/article-source-strategy.md`
 - Architecture: `docs/architecture.md`

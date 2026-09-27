@@ -120,8 +120,10 @@ jobs:
               "BACKEND_IMAGE=${{ steps.image.outputs.image-uri }}:${{ steps.image.outputs.image-tag }} docker compose --env-file .env -f docker-compose.prod.yml pull backend",
               "BACKEND_IMAGE=${{ steps.image.outputs.image-uri }}:${{ steps.image.outputs.image-tag }} docker compose --env-file .env -f docker-compose.prod.yml up -d",
               "docker compose --env-file .env -f docker-compose.prod.yml up -d --force-recreate --no-deps nginx",
+              "sudo TECHPORT_REPO_ROOT=/home/ubuntu/Global-Tech-Blog-Archive bash deploy/scripts/setup-tls-renewal.sh",
               "docker compose --env-file .env -f docker-compose.prod.yml ps",
-              "curl -fsS http://localhost/health"
+              "curl -fsS http://localhost/health",
+              "curl -fsS https://api.techport.dev/health"
             ]
           }
           JSON

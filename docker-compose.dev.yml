@@ -22,12 +22,20 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: dev
       SERVER_PORT: 8080
+      MANAGEMENT_SERVER_PORT: 9090
+      METRICS_ENVIRONMENT: dev
       DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-global_tech_blog_archive_dev}
       DB_USERNAME: ${DB_USERNAME:-archive_user}
       DB_PASSWORD: ${DB_PASSWORD}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://techport-frontend-dev.vercel.app}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
+      OPENAI_CONNECT_TIMEOUT: ${OPENAI_CONNECT_TIMEOUT:-3s}
+      OPENAI_READ_TIMEOUT: ${OPENAI_READ_TIMEOUT:-2m}
+      CRAWL_AI_REVIEW_ENABLED: ${CRAWL_AI_REVIEW_ENABLED:-false}
+      CRAWL_SOURCE_CONCURRENCY: ${CRAWL_SOURCE_CONCURRENCY:-2}
+      CRAWL_AI_REVIEW_MAX_FAILURE_RETRY_LIMIT: ${CRAWL_AI_REVIEW_MAX_FAILURE_RETRY_LIMIT:-100}
+      CRAWL_AI_REVIEW_STALE_TIMEOUT: ${CRAWL_AI_REVIEW_STALE_TIMEOUT:-30m}
       SLACK_CLIENT_ID: ${SLACK_CLIENT_ID}
       SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET}
       SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET}
@@ -44,8 +52,10 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8080:8080"
+      - "9090:9090"
     expose:
       - "8080"
+      - "9090"
     networks:
       - techport-dev
 
@@ -73,6 +83,20 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+    networks:
+      - techport-dev
+
+  node-exporter:
+    image: prom/node-exporter:v1.10.2
+    container_name: techport-dev-node-exporter
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "9100:9100"
     networks:
       - techport-dev
 

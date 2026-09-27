@@ -3,6 +3,7 @@ package com.globaltechblogarchive.slack.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -51,17 +52,22 @@ class SlackTestDeliveryServiceTest {
                 LocalDateTime.now()
         );
         SlackChannel channel = SlackChannel.create(workspace, "C123", "tech-news");
-        SlackChatMessage message = new SlackChatMessage("C123", "test", List.of());
+        SlackChatMessage message = new SlackChatMessage(
+                "C123",
+                "test",
+                List.of(),
+                SlackChatMessage.Metadata.digest("delivery-key")
+        );
         when(companyRepository.findByCompanyKey("airbnb")).thenReturn(Optional.of(airbnb));
         when(channelRepository.findSubscribedChannelsWithWorkspaceByCompanyKey("airbnb"))
                 .thenReturn(List.of(channel));
-        when(messageFactory.create(eq("C123"), anyList())).thenReturn(message);
+        when(messageFactory.create(eq("C123"), anyString(), anyList())).thenReturn(message);
         when(tokenEncryptor.decrypt("encrypted-token")).thenReturn("xoxb-token");
 
         int sentCount = service.send("airbnb", "Test article", "https://example.com/article");
 
         assertThat(sentCount).isEqualTo(1);
-        verify(messageFactory).create(eq("C123"), argThat(articles ->
+        verify(messageFactory).create(eq("C123"), anyString(), argThat(articles ->
                 articles.size() == 1
                         && "Airbnb".equals(articles.getFirst().companyName())
                         && "Test article".equals(articles.getFirst().title())

@@ -2,465 +2,424 @@ package com.globaltechblogarchive.crawl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyIterable;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.globaltechblogarchive.article.application.ArticleMetadataAiClient;
-import com.globaltechblogarchive.article.application.ArticleMetadataAiClient.ArticleMetadataDecision;
-import com.globaltechblogarchive.article.domain.Article;
-import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
-import com.globaltechblogarchive.article.domain.ArticleCategory;
-import com.globaltechblogarchive.crawl.repository.ArticleAiDecisionRepository;
-import com.globaltechblogarchive.article.repository.ArticleRepository;
-import com.globaltechblogarchive.crawl.application.ArticleCandidateCollectorRegistry;
-import com.globaltechblogarchive.crawl.application.ArticleCandidateFactory;
+import com.globaltechblogarchive.company.domain.Company;
+import com.globaltechblogarchive.crawl.application.ArticleAiReviewService;
 import com.globaltechblogarchive.crawl.application.ArticleCrawlService;
-import com.globaltechblogarchive.crawl.application.ArticleDecisionProcessor;
-import com.globaltechblogarchive.crawl.application.SourceCrawlProcessor;
 import com.globaltechblogarchive.crawl.application.CrawlTransactionService;
 import com.globaltechblogarchive.crawl.application.CrawlPersistenceService;
+import com.globaltechblogarchive.crawl.application.CrawlPipelineMetrics;
+import com.globaltechblogarchive.crawl.application.SourceCrawlProcessor;
+import com.globaltechblogarchive.crawl.application.dto.AiReviewRunResult;
 import com.globaltechblogarchive.crawl.application.dto.ArticleCrawlResult;
 import com.globaltechblogarchive.crawl.application.dto.CrawlRunSummary;
-import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
+import com.globaltechblogarchive.crawl.application.dto.PreparedSourceCrawl;
+import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
+import com.globaltechblogarchive.crawl.config.AiReviewProperties;
+import com.globaltechblogarchive.crawl.config.CrawlExecutionConfig;
+import com.globaltechblogarchive.crawl.config.CrawlExecutionProperties;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
-import com.globaltechblogarchive.crawl.domain.ArticleCandidateDecisionStatus;
-import com.globaltechblogarchive.crawl.domain.ArticleCollectionRun;
-import com.globaltechblogarchive.crawl.domain.ArticleDiscoveryLog;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
-import com.globaltechblogarchive.crawl.parser.ParsedArticle;
-import com.globaltechblogarchive.crawl.repository.ArticleDiscoveryLogRepository;
-import com.globaltechblogarchive.crawl.repository.ArticleCollectionRunRepository;
-import com.globaltechblogarchive.crawl.support.UrlHash;
-import com.globaltechblogarchive.crawl.support.UrlNormalizer;
-import com.globaltechblogarchive.company.domain.Company;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.global.error.ErrorCode;
 import com.globaltechblogarchive.global.error.exception.InvalidInputException;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
-import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.List;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentHashMap;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @ExtendWith(MockitoExtension.class)
 class ArticleCrawlServiceTest {
 
     @Mock
-    private BlogSourceRepository blogSourceRepository;
+    private BlogSourceRepository sourceRepository;
 
     @Mock
-    private ArticleRepository articleRepository;
+    private SourceCrawlProcessor sourceProcessor;
 
     @Mock
-    private ArticleAiDecisionRepository decisionRepository;
-
-    @Mock
-    private ArticleMetadataAiClient aiClient;
-
-    @Mock
-    private ArticleCollectionRunRepository collectionRunRepository;
-
-    @Mock
-    private ArticleDiscoveryLogRepository collectionItemRepository;
-
-    @Mock
-    private ArticleCandidateCollectorRegistry collectorRegistry;
-
-    @Mock
-    private ArticleCandidateCollector collector;
+    private CrawlPersistenceService persistenceService;
 
     @Mock
     private CrawlTransactionService transactionService;
 
-    private ArticleCrawlService articleCrawlService;
-    private final Map<Long, BlogSource> sourcesById = new HashMap<>();
+    @Mock
+    private ArticleAiReviewService aiReviewService;
+
+    private ArticleCrawlService crawlService;
+    private ThreadPoolTaskExecutor crawlSourceExecutor;
+    private final Map<Long, BlogSource> sourcesById = new ConcurrentHashMap<>();
 
     @BeforeEach
     void setUp() {
-        lenient().when(articleRepository.save(any(Article.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        lenient().when(decisionRepository.save(any(ArticleAiDecision.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        lenient().when(aiClient.model()).thenReturn("test-model");
-        lenient().when(transactionService.startRun()).thenReturn(1L);
-        lenient().when(collectionRunRepository.findById(any())).thenAnswer(invocation ->
-                Optional.of(run(invocation.getArgument(0))));
-        lenient().when(blogSourceRepository.findWithCompanyById(any())).thenAnswer(invocation ->
-                Optional.ofNullable(sourcesById.get(invocation.getArgument(0))));
-        CrawlPersistenceService persistenceService = new CrawlPersistenceService(
-                articleRepository,
-                decisionRepository,
-                collectionItemRepository,
-                collectionRunRepository,
-                blogSourceRepository
+        CrawlExecutionProperties executionProperties = new CrawlExecutionProperties(2);
+        crawlSourceExecutor = new CrawlExecutionConfig().crawlSourceExecutor(
+                executionProperties
         );
-
-        articleCrawlService = new ArticleCrawlService(
-                blogSourceRepository,
-                collectionItemRepository,
-                new SourceCrawlProcessor(
-                        decisionRepository,
-                        collectionItemRepository,
-                        collectorRegistry,
-                        new ArticleCandidateFactory(articleRepository),
-                        new ArticleDecisionProcessor(aiClient),
-                        persistenceService,
-                        blogSourceRepository
+        crawlSourceExecutor.initialize();
+        lenient().when(persistenceService.persistDiscoveredCandidates(
+                        anyLong(), anyLong(), any(), any()
+                ))
+                .thenAnswer(invocation -> {
+                    Long sourceId = invocation.getArgument(1);
+                    List<ArticleCandidate> candidates = invocation.getArgument(2);
+                    return SourceCrawlResult.success(
+                            sourcesById.get(sourceId),
+                            candidates,
+                            CrawlRunSummary.empty()
+                    );
+                });
+        crawlService = new ArticleCrawlService(
+                sourceRepository,
+                sourceProcessor,
+                persistenceService,
+                transactionService,
+                aiReviewService,
+                new AiReviewProperties(
+                        50,
+                        10,
+                        3,
+                        100,
+                        Duration.ofMinutes(5),
+                        Duration.ofMinutes(30)
                 ),
-                transactionService
+                crawlSourceExecutor,
+                new Semaphore(1, true),
+                new CrawlPipelineMetrics(new SimpleMeterRegistry()),
+                executionProperties
         );
     }
 
-    @Test
-    void retryAiFailuresProcessesOnlyUnresolvedCandidatesReturnedByRepository() {
-        BlogSource source = source(1L, "openai");
-        ArticleDiscoveryLog failure = failedLog(10L, source, "hash-failed");
-        when(collectionItemRepository.findUnresolvedAiFailures(
-                any(),
-                any(),
-                any()
-        )).thenReturn(List.of(failure));
-        when(collectionItemRepository.findAllById(anyIterable())).thenReturn(List.of(failure));
-        when(aiClient.decide(anyList())).thenReturn(List.of(
-                new ArticleMetadataDecision(0, "Translated", ArticleCategory.ELSE, false, "NOT_ENGINEERING")
-        ));
-
-        ArticleCrawlResult result = articleCrawlService.retryAiFailures(20);
-
-        assertThat(result.runId()).isEqualTo(1L);
-        assertThat(result.sourceCount()).isEqualTo(1);
-        assertThat(result.candidateCount()).isEqualTo(1);
-        assertThat(result.aiRejectedCount()).isEqualTo(1);
-        assertThat(result.aiFailedCount()).isZero();
-        assertThat(result.storedCount()).isZero();
-        verify(decisionRepository).saveAll(anyIterable());
-        verify(collectionItemRepository).saveAll(anyIterable());
-        verify(transactionService).completeRun(1L, 1, 1, 0, result.sources().getFirst().summary());
+    @AfterEach
+    void tearDown() {
+        crawlSourceExecutor.destroy();
     }
 
     @Test
-    void retryAiFailuresRejectsLimitOutsideAllowedRange() {
-        assertThatThrownBy(() -> articleCrawlService.retryAiFailures(0))
-                .isInstanceOfSatisfying(InvalidInputException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE))
-                .hasMessage("AI failure retry limit must be between 1 and 100");
-
-        verify(collectionItemRepository, never()).findUnresolvedAiFailures(any(), any(), any());
-        verify(transactionService, never()).startRun();
-    }
-
-    @Test
-    void runContinuesWhenOneSourceFails() {
+    void scheduledCollectionContinuesWhenOneSourceFails() {
         BlogSource failing = source(1L, "failing");
         BlogSource succeeding = source(2L, "succeeding");
-        when(transactionService.startRun()).thenReturn(1L);
-        when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(failing, succeeding));
-        when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(failing, CrawlMode.RECENT)).thenThrow(new IllegalStateException("network failed"));
-        when(collector.collect(succeeding, CrawlMode.RECENT)).thenReturn(List.of(new ParsedArticle(
-                "Scaling systems",
-                "https://example.com/scaling?utm_source=test#section",
-                LocalDateTime.of(2026, 6, 1, 10, 0),
-                "Architecture context"
-        )));
-        when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
-                .thenReturn(List.of());
-        when(aiClient.decide(anyList())).thenReturn(List.of(
-                new ArticleMetadataDecision(0, "Translated scaling systems", ArticleCategory.ARCHITECTURE, true, null)
-        ));
+        when(transactionService.startRun()).thenReturn(10L);
+        when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(failing, succeeding));
+        when(sourceProcessor.prepare(1L, CrawlPolicy.recent()))
+                .thenThrow(new IllegalStateException("network failed"));
+        when(sourceProcessor.prepare(2L, CrawlPolicy.recent()))
+                .thenReturn(prepared(2L));
 
-        ArticleCrawlResult result = articleCrawlService.runScheduled();
+        ArticleCrawlResult result = crawlService.runScheduled();
 
         assertThat(result.sourceCount()).isEqualTo(2);
         assertThat(result.successCount()).isEqualTo(1);
         assertThat(result.failureCount()).isEqualTo(1);
-        assertThat(result.candidateCount()).isEqualTo(1);
-        assertThat(result.storedCount()).isEqualTo(1);
-        assertThat(result.aiApprovedCount()).isEqualTo(1);
-        assertThat(result.runId()).isEqualTo(1L);
-        assertThat(result.sources().getFirst().success()).isFalse();
-        assertThat(result.sources().get(1).candidates()).hasSize(1);
         verify(transactionService).markSourceFailed(1L, "network failed");
-        assertThat(succeeding.getLastCollectedAt()).isNotNull();
-        verify(collectionItemRepository).saveAll(anyIterable());
+        verify(transactionService).completeRun(10L, 2, 1, 1, CrawlRunSummary.empty());
     }
 
     @Test
-    void runScheduledUsesRecentCollectionMode() {
-        BlogSource source = source(1L, "openai");
-        when(transactionService.startRun()).thenReturn(7L);
-        when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
-        when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of());
+    void sourceBackfillUsesOnlyRequestedSource() {
+        BlogSource source = source(3L, "uber");
+        when(transactionService.startRun()).thenReturn(11L);
+        when(sourceRepository.findBySourceKeyAndEnabledTrue("uber")).thenReturn(Optional.of(source));
+        when(sourceProcessor.prepare(3L, CrawlPolicy.backfill(30)))
+                .thenReturn(prepared(3L));
 
-        ArticleCrawlResult result = articleCrawlService.runScheduled();
+        ArticleCrawlResult result = crawlService.runSourceBackfill("uber", 30);
 
-        assertThat(result.runId()).isEqualTo(7L);
-        assertThat(result.sourceCount()).isEqualTo(1);
-        verify(collector).collect(source, CrawlMode.RECENT);
-        verify(transactionService).completeRun(7L, 1, 1, 0, CrawlRunSummary.empty());
+        assertThat(result.runId()).isEqualTo(11L);
+        verify(sourceRepository, never()).findByEnabledTrue();
+        verify(sourceProcessor).prepare(3L, CrawlPolicy.backfill(30));
     }
 
     @Test
-    void runSourceBackfillUsesOnlyRequestedSource() {
-        BlogSource source = source(1L, "uber");
-        when(transactionService.startRun()).thenReturn(8L);
-        when(blogSourceRepository.findBySourceKeyAndEnabledTrue("uber")).thenReturn(Optional.of(source));
-        when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source, CrawlMode.BACKFILL)).thenReturn(List.of());
+    void allBackfillUsesEveryEnabledSourceAndRequestedLimit() {
+        BlogSource first = source(4L, "first");
+        BlogSource second = source(5L, "second");
+        when(transactionService.startRun()).thenReturn(12L);
+        when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(first, second));
+        when(sourceProcessor.prepare(4L, CrawlPolicy.backfill(40)))
+                .thenReturn(prepared(4L));
+        when(sourceProcessor.prepare(5L, CrawlPolicy.backfill(40)))
+                .thenReturn(prepared(5L));
 
-        ArticleCrawlResult result = articleCrawlService.runSourceBackfill("uber");
+        ArticleCrawlResult result = crawlService.runAllBackfill(40);
 
-        assertThat(result.runId()).isEqualTo(8L);
-        assertThat(result.sourceCount()).isEqualTo(1);
-        assertThat(result.sources().getFirst().sourceKey()).isEqualTo("uber");
-        verify(blogSourceRepository, never()).findByEnabledTrue();
-        verify(collector).collect(source, CrawlMode.BACKFILL);
-        verify(transactionService).completeRun(8L, 1, 1, 0, CrawlRunSummary.empty());
+        assertThat(result.sourceCount()).isEqualTo(2);
+        assertThat(result.successCount()).isEqualTo(2);
+        verify(sourceProcessor).prepare(4L, CrawlPolicy.backfill(40));
+        verify(sourceProcessor).prepare(5L, CrawlPolicy.backfill(40));
     }
 
     @Test
-    void runSourceBackfillUsesBackfillModeForRequestedSource() {
-        BlogSource source = source(1L, "uber");
-        when(transactionService.startRun()).thenReturn(9L);
-        when(blogSourceRepository.findBySourceKeyAndEnabledTrue("uber")).thenReturn(Optional.of(source));
-        when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source, CrawlMode.BACKFILL)).thenReturn(List.of());
+    void allBackfillRunsSourcesUpToConfiguredConcurrency() throws Exception {
+        BlogSource first = source(6L, "first");
+        BlogSource second = source(7L, "second");
+        BlogSource third = source(8L, "third");
+        CountDownLatch firstTwoStarted = new CountDownLatch(2);
+        CountDownLatch releaseTasks = new CountDownLatch(1);
+        AtomicInteger activeCount = new AtomicInteger();
+        AtomicInteger maxActiveCount = new AtomicInteger();
+        AtomicInteger platformThreadCount = new AtomicInteger();
+        when(transactionService.startRun()).thenReturn(13L);
+        when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(first, second, third));
+        when(sourceProcessor.prepare(anyLong(), any(CrawlPolicy.class)))
+                .thenAnswer(invocation -> {
+                    if (!Thread.currentThread().isVirtual()) {
+                        platformThreadCount.incrementAndGet();
+                    }
+                    int active = activeCount.incrementAndGet();
+                    maxActiveCount.accumulateAndGet(active, Math::max);
+                    firstTwoStarted.countDown();
+                    releaseTasks.await(2, TimeUnit.SECONDS);
+                    activeCount.decrementAndGet();
+                    Long sourceId = invocation.getArgument(0);
+                    return prepared(sourceId);
+                });
 
-        ArticleCrawlResult result = articleCrawlService.runSourceBackfill("uber");
+        CompletableFuture<ArticleCrawlResult> runResult = CompletableFuture.supplyAsync(
+                () -> crawlService.runAllBackfill(50)
+        );
 
-        assertThat(result.runId()).isEqualTo(9L);
-        assertThat(result.sourceCount()).isEqualTo(1);
-        verify(collector).collect(source, CrawlMode.BACKFILL);
+        assertThat(firstTwoStarted.await(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(activeCount).hasValue(2);
+        assertThat(maxActiveCount).hasValue(2);
+        assertThat(platformThreadCount).hasValue(2);
+        releaseTasks.countDown();
+        ArticleCrawlResult result = runResult.get(5, TimeUnit.SECONDS);
+
+        assertThat(result.successCount()).isEqualTo(3);
+        assertThat(result.sources())
+                .extracting(SourceCrawlResult::sourceKey)
+                .containsExactly("first", "second", "third");
     }
 
     @Test
-    void runSourceThrowsInvalidInputWhenEnabledSourceDoesNotExist() {
-        when(blogSourceRepository.findBySourceKeyAndEnabledTrue("missing")).thenReturn(Optional.empty());
+    void allBackfillRunsSourcesFromSameCompanyConcurrently() throws Exception {
+        BlogSource first = source(9L, "first", 100L);
+        BlogSource second = source(10L, "second", 100L);
+        CountDownLatch bothStarted = new CountDownLatch(2);
+        CountDownLatch releaseTasks = new CountDownLatch(1);
+        when(transactionService.startRun()).thenReturn(14L);
+        when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(first, second));
+        when(sourceProcessor.prepare(anyLong(), any(CrawlPolicy.class)))
+                .thenAnswer(invocation -> {
+                    bothStarted.countDown();
+                    releaseTasks.await(2, TimeUnit.SECONDS);
+                    Long sourceId = invocation.getArgument(0);
+                    return prepared(sourceId);
+                });
 
-        assertThatThrownBy(() -> articleCrawlService.runSourceBackfill("missing"))
+        CompletableFuture<ArticleCrawlResult> runResult = CompletableFuture.supplyAsync(
+                () -> crawlService.runAllBackfill(50)
+        );
+
+        assertThat(bothStarted.await(5, TimeUnit.SECONDS)).isTrue();
+        releaseTasks.countDown();
+        ArticleCrawlResult result = runResult.get(5, TimeUnit.SECONDS);
+
+        assertThat(result.successCount()).isEqualTo(2);
+    }
+
+    @Test
+    void allBackfillPersistsOnlyAfterEverySourceIsPreparedAndUsesSingleWriter() {
+        BlogSource first = source(11L, "first");
+        BlogSource second = source(12L, "second");
+        BlogSource third = source(13L, "third");
+        AtomicInteger preparedCount = new AtomicInteger();
+        AtomicInteger persistenceActive = new AtomicInteger();
+        AtomicInteger maxPersistenceActive = new AtomicInteger();
+        List<Long> persistedSourceIds = Collections.synchronizedList(new ArrayList<>());
+        when(transactionService.startRun()).thenReturn(15L);
+        when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(first, second, third));
+        when(sourceProcessor.prepare(anyLong(), any(CrawlPolicy.class)))
+                .thenAnswer(invocation -> {
+                    preparedCount.incrementAndGet();
+                    return prepared(invocation.getArgument(0));
+                });
+        doAnswer(invocation -> {
+            assertThat(preparedCount).hasValue(3);
+            int active = persistenceActive.incrementAndGet();
+            maxPersistenceActive.accumulateAndGet(active, Math::max);
+            Long sourceId = invocation.getArgument(1);
+            persistedSourceIds.add(sourceId);
+            persistenceActive.decrementAndGet();
+            return SourceCrawlResult.success(
+                    sourcesById.get(sourceId),
+                    List.of(),
+                    CrawlRunSummary.empty()
+            );
+        }).when(persistenceService).persistDiscoveredCandidates(
+                anyLong(), anyLong(), any(), any()
+        );
+
+        ArticleCrawlResult result = crawlService.runAllBackfill(50);
+
+        assertThat(result.successCount()).isEqualTo(3);
+        assertThat(maxPersistenceActive).hasValue(1);
+        assertThat(persistedSourceIds).containsExactly(11L, 12L, 13L);
+    }
+
+    @Test
+    void persistenceFailureDoesNotStopLaterSources() {
+        BlogSource failing = source(14L, "failing");
+        BlogSource succeeding = source(15L, "succeeding");
+        when(transactionService.startRun()).thenReturn(16L);
+        when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(failing, succeeding));
+        when(sourceProcessor.prepare(14L, CrawlPolicy.backfill(50))).thenReturn(prepared(14L));
+        when(sourceProcessor.prepare(15L, CrawlPolicy.backfill(50))).thenReturn(prepared(15L));
+        doThrow(new IllegalStateException("database failed"))
+                .when(persistenceService)
+                .persistDiscoveredCandidates(16L, 14L, List.of(), Map.of());
+
+        ArticleCrawlResult result = crawlService.runAllBackfill(50);
+
+        assertThat(result.successCount()).isEqualTo(1);
+        assertThat(result.failureCount()).isEqualTo(1);
+        verify(transactionService).markSourceFailed(14L, "database failed");
+        verify(persistenceService).persistDiscoveredCandidates(
+                16L, 15L, List.of(), Map.of()
+        );
+    }
+
+    @Test
+    void concurrentRunsShareSinglePersistenceWriter() throws Exception {
+        BlogSource source = source(16L, "shared");
+        CountDownLatch firstPersistenceStarted = new CountDownLatch(1);
+        CountDownLatch releasePersistence = new CountDownLatch(1);
+        AtomicInteger persistenceActive = new AtomicInteger();
+        AtomicInteger maxPersistenceActive = new AtomicInteger();
+        when(transactionService.startRun()).thenReturn(17L, 18L);
+        when(sourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
+        when(sourceProcessor.prepare(16L, CrawlPolicy.backfill(50)))
+                .thenReturn(prepared(16L));
+        doAnswer(invocation -> {
+            int active = persistenceActive.incrementAndGet();
+            maxPersistenceActive.accumulateAndGet(active, Math::max);
+            firstPersistenceStarted.countDown();
+            releasePersistence.await(2, TimeUnit.SECONDS);
+            persistenceActive.decrementAndGet();
+            return SourceCrawlResult.success(source, List.of(), CrawlRunSummary.empty());
+        }).when(persistenceService).persistDiscoveredCandidates(
+                anyLong(), anyLong(), any(), any()
+        );
+
+        CompletableFuture<ArticleCrawlResult> firstRun = CompletableFuture.supplyAsync(
+                () -> crawlService.runAllBackfill(50)
+        );
+        CompletableFuture<ArticleCrawlResult> secondRun = CompletableFuture.supplyAsync(
+                () -> crawlService.runAllBackfill(50)
+        );
+
+        assertThat(firstPersistenceStarted.await(5, TimeUnit.SECONDS)).isTrue();
+        Thread.sleep(200);
+        assertThat(persistenceActive).hasValue(1);
+        assertThat(maxPersistenceActive).hasValue(1);
+        releasePersistence.countDown();
+
+        assertThat(firstRun.get(5, TimeUnit.SECONDS).successCount()).isEqualTo(1);
+        assertThat(secondRun.get(5, TimeUnit.SECONDS).successCount()).isEqualTo(1);
+        assertThat(maxPersistenceActive).hasValue(1);
+    }
+
+    @Test
+    void sourceBackfillRejectsUnknownSource() {
+        when(sourceRepository.findBySourceKeyAndEnabledTrue("missing")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> crawlService.runSourceBackfill("missing", 50))
                 .isInstanceOfSatisfying(InvalidInputException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE))
-                .hasMessage("Enabled source not found: missing");
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE));
 
         verify(transactionService, never()).startRun();
     }
 
     @Test
-    void runStoresOnlyAiApprovedCandidatesAsArticles() {
-        BlogSource source = source(1L, "openai");
-        ParsedArticle approvedCard = new ParsedArticle(
-                "How we scaled inference",
-                "https://openai.com/news/approved",
-                null,
-                ""
-        );
-        ParsedArticle rejectedCard = new ParsedArticle(
-                "Introducing GPT-Rosalind",
-                "https://openai.com/news/rejected",
-                LocalDateTime.of(2026, 6, 1, 10, 0),
-                ""
-        );
-        when(transactionService.startRun()).thenReturn(2L);
-        when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
-        when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of(approvedCard, rejectedCard));
-        when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
-                .thenReturn(List.of());
-        when(aiClient.decide(anyList())).thenReturn(List.of(
-                new ArticleMetadataDecision(0, "Inference scaling", ArticleCategory.AI, true, null),
-                new ArticleMetadataDecision(1, "GPT-Rosalind introduction", ArticleCategory.ELSE, false, "PRODUCT_NEWS")
-        ));
+    void backfillRejectsLimitOutsideAllowedRange() {
+        assertThatThrownBy(() -> crawlService.runAllBackfill(51))
+                .isInstanceOf(InvalidInputException.class)
+                .hasMessage("Backfill max candidates per source must be between 1 and 50");
 
-        ArticleCrawlResult result = articleCrawlService.runScheduled();
+        verify(sourceRepository, never()).findByEnabledTrue();
+        verify(transactionService, never()).startRun();
+    }
 
-        List<ArticleCandidate> candidates = result.sources().getFirst().candidates();
-        assertThat(candidates).extracting(ArticleCandidate::decisionStatus)
-                .containsExactly(
-                        ArticleCandidateDecisionStatus.AI_APPROVED,
-                        ArticleCandidateDecisionStatus.AI_REJECTED
-                );
-        assertThat(result.duplicateCount()).isZero();
-        assertThat(result.storedCount()).isEqualTo(1);
+    @Test
+    void retryAiFailuresReturnsAiResultWithoutCreatingCollectionRun() {
+        when(aiReviewService.retryFailed(20)).thenReturn(
+                new AiReviewRunResult(3, 1, 0, 1, 1, 1, 0)
+        );
+
+        ArticleCrawlResult result = crawlService.retryAiFailures(20);
+
+        assertThat(result.runId()).isNull();
+        assertThat(result.candidateCount()).isEqualTo(3);
         assertThat(result.aiApprovedCount()).isEqualTo(1);
-        assertThat(result.aiRejectedCount()).isEqualTo(1);
-        assertThat(result.aiFailedCount()).isZero();
-        assertThat(result.previouslyApprovedCount()).isZero();
-        assertThat(result.previouslyRejectedCount()).isZero();
-        ArgumentCaptor<Iterable<Article>> articleCaptor = ArgumentCaptor.forClass(Iterable.class);
-        verify(articleRepository).saveAll(articleCaptor.capture());
-        assertThat(articleCaptor.getValue()).singleElement().satisfies(article -> {
-            assertThat(article.getTitle()).isEqualTo("Inference scaling");
-            assertThat(article.getCategory()).isEqualTo(ArticleCategory.AI);
-        });
-        ArgumentCaptor<Iterable<ArticleAiDecision>> decisionCaptor = ArgumentCaptor.forClass(Iterable.class);
-        verify(decisionRepository).saveAll(decisionCaptor.capture());
-        assertThat(decisionCaptor.getValue()).extracting(ArticleAiDecision::getModel)
-                .containsOnly("test-model");
-        verify(collectionItemRepository).saveAll(anyIterable());
-    }
-
-    @Test
-    void runSkipsAiForPreviousRejectedAndStoresPreviousApprovedArticle() {
-        BlogSource source = source(1L, "openai");
-        ParsedArticle approvedCard = new ParsedArticle(
-                "Approved post",
-                "https://openai.com/news/approved",
-                null,
-                ""
-        );
-        ParsedArticle rejectedCard = new ParsedArticle(
-                "Rejected post",
-                "https://openai.com/news/rejected",
-                null,
-                ""
-        );
-        String approvedHash = UrlHash.sha256(UrlNormalizer.normalize(approvedCard.originalUrl()));
-        String rejectedHash = UrlHash.sha256(UrlNormalizer.normalize(rejectedCard.originalUrl()));
-        when(transactionService.startRun()).thenReturn(3L);
-        when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
-        when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of(approvedCard, rejectedCard));
-        when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
-                .thenReturn(List.of(
-                        decision(source, approvedHash, true, ArticleCategory.AI),
-                        decision(source, rejectedHash, false, ArticleCategory.ELSE)
-                ));
-
-        ArticleCrawlResult result = articleCrawlService.runScheduled();
-
-        assertThat(result.sources().getFirst().candidates()).extracting(ArticleCandidate::decisionStatus)
-                .containsExactly(
-                        ArticleCandidateDecisionStatus.PREVIOUSLY_APPROVED,
-                        ArticleCandidateDecisionStatus.PREVIOUSLY_REJECTED
-                );
-        assertThat(result.storedCount()).isEqualTo(1);
-        assertThat(result.aiApprovedCount()).isZero();
         assertThat(result.aiRejectedCount()).isZero();
-        assertThat(result.aiFailedCount()).isZero();
-        assertThat(result.previouslyApprovedCount()).isEqualTo(1);
-        assertThat(result.previouslyRejectedCount()).isEqualTo(1);
-        verify(aiClient, never()).decide(anyList());
-        verify(articleRepository).saveAll(anyIterable());
-    }
-
-    @Test
-    void runMarksNewCandidatesFailedWhenAiClientFails() {
-        BlogSource source = source(1L, "openai");
-        ParsedArticle card = new ParsedArticle(
-                "How we scaled inference",
-                "https://openai.com/news/failed",
-                null,
-                ""
-        );
-        when(transactionService.startRun()).thenReturn(4L);
-        when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
-        when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of(card));
-        when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
-                .thenReturn(List.of());
-        when(aiClient.decide(anyList())).thenThrow(new IllegalStateException("ai failed"));
-
-        ArticleCrawlResult result = articleCrawlService.runScheduled();
-
-        assertThat(result.sources().getFirst().candidates()).extracting(ArticleCandidate::decisionStatus)
-                .containsExactly(ArticleCandidateDecisionStatus.AI_FAILED);
-        assertThat(result.storedCount()).isZero();
         assertThat(result.aiFailedCount()).isEqualTo(1);
-        verify(articleRepository, never()).saveAll(anyIterable());
-        verify(collectionItemRepository).saveAll(anyIterable());
+        assertThat(result.aiRetryWaitingCount()).isEqualTo(1);
+        assertThat(result.storedCount()).isEqualTo(1);
+        assertThat(result.sources()).isEmpty();
+        verify(transactionService, never()).startRun();
     }
 
     @Test
-    void runSkipsAiAndArticleSaveWhenArticleAlreadyExists() {
-        BlogSource source = source(1L, "openai");
-        ParsedArticle card = new ParsedArticle(
-                "How we scaled inference",
-                "https://openai.com/news/duplicate",
-                null,
-                ""
-        );
-        String hash = UrlHash.sha256(UrlNormalizer.normalize(card.originalUrl()));
-        when(transactionService.startRun()).thenReturn(5L);
-        when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
-        when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of(card));
-        when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
-                .thenReturn(List.of());
-        when(articleRepository.findExistingHashes(1L, List.of(hash))).thenReturn(Set.of(hash));
+    void retryAiFailuresDoesNotLeaveCollectionRunWhenReviewAborts() {
+        when(aiReviewService.retryFailed(20)).thenThrow(new IllegalStateException("claim failed"));
 
-        ArticleCrawlResult result = articleCrawlService.runScheduled();
+        assertThatThrownBy(() -> crawlService.retryAiFailures(20))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("claim failed");
 
-        ArticleCandidate candidate = result.sources().getFirst().candidates().getFirst();
-        assertThat(candidate.duplicate()).isTrue();
-        assertThat(candidate.decisionStatus()).isEqualTo(ArticleCandidateDecisionStatus.NEW);
-        assertThat(result.duplicateCount()).isEqualTo(1);
-        assertThat(result.storedCount()).isZero();
-        assertThat(result.aiApprovedCount()).isZero();
-        verify(aiClient, never()).decide(anyList());
-        verify(articleRepository, never()).saveAll(anyIterable());
-        verify(collectionItemRepository).saveAll(anyIterable());
+        verify(transactionService, never()).startRun();
     }
 
     @Test
-    void runSkipsArticleSaveWhenPreviousApprovedDecisionAlreadyHasArticle() {
-        BlogSource source = source(1L, "openai");
-        ParsedArticle card = new ParsedArticle(
-                "Approved post",
-                "https://openai.com/news/approved-duplicate",
-                null,
-                ""
-        );
-        String hash = UrlHash.sha256(UrlNormalizer.normalize(card.originalUrl()));
-        when(transactionService.startRun()).thenReturn(6L);
-        when(blogSourceRepository.findByEnabledTrue()).thenReturn(List.of(source));
-        when(collectorRegistry.find(CollectionMethod.RSS)).thenReturn(collector);
-        when(collector.collect(source, CrawlMode.RECENT)).thenReturn(List.of(card));
-        when(decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(any(), anyList(), any()))
-                .thenReturn(List.of(decision(source, hash, true, ArticleCategory.AI)));
-        when(articleRepository.findExistingHashes(1L, List.of(hash))).thenReturn(Set.of(hash));
+    void retryAiFailuresRejectsLimitOutsideAllowedRange() {
+        assertThatThrownBy(() -> crawlService.retryAiFailures(0))
+                .isInstanceOf(InvalidInputException.class)
+                .hasMessage("AI failure retry limit must be between 1 and 100");
 
-        ArticleCrawlResult result = articleCrawlService.runScheduled();
-
-        ArticleCandidate candidate = result.sources().getFirst().candidates().getFirst();
-        assertThat(candidate.duplicate()).isTrue();
-        assertThat(candidate.decisionStatus()).isEqualTo(ArticleCandidateDecisionStatus.PREVIOUSLY_APPROVED);
-        assertThat(result.duplicateCount()).isEqualTo(1);
-        assertThat(result.previouslyApprovedCount()).isZero();
-        assertThat(result.storedCount()).isZero();
-        verify(aiClient, never()).decide(anyList());
-        verify(articleRepository, never()).saveAll(anyIterable());
-        verify(collectionItemRepository).saveAll(anyIterable());
+        verify(aiReviewService, never()).retryFailed(0);
+        verify(transactionService, never()).startRun();
     }
 
-    private ArticleCollectionRun run(Long id) {
-        ArticleCollectionRun run = ArticleCollectionRun.start(LocalDateTime.of(2026, 6, 1, 9, 0));
-        ReflectionTestUtils.setField(run, "id", id);
-        return run;
+    private BlogSource source(Long id, String key) {
+        return source(id, key, id);
     }
 
-    private BlogSource source(Long id, String companyKey) {
-        Company company = Company.create(companyKey, companyKey);
-        ReflectionTestUtils.setField(company, "id", id);
+    private BlogSource source(Long id, String key, Long companyId) {
+        Company company = Company.create(key, key);
+        ReflectionTestUtils.setField(company, "id", companyId);
         BlogSource source = BlogSource.create(
                 company,
-                companyKey,
-                companyKey,
-                "https://example.com/",
+                key,
+                key,
+                "https://example.com",
                 "https://example.com/feed",
                 CollectionMethod.RSS
         );
@@ -469,40 +428,7 @@ class ArticleCrawlServiceTest {
         return source;
     }
 
-    private ArticleAiDecision decision(
-            BlogSource source,
-            String articleUrlHash,
-            boolean saveTarget,
-            ArticleCategory category
-    ) {
-        return ArticleAiDecision.create(
-                source.getCompany(),
-                articleUrlHash,
-                "https://example.com/" + articleUrlHash,
-                "Original",
-                "Translated",
-                category,
-                saveTarget,
-                "gpt-5-mini",
-                "v1"
-        );
-    }
-
-    private ArticleDiscoveryLog failedLog(Long id, BlogSource source, String articleUrlHash) {
-        ArticleCandidate candidate = new ArticleCandidate(
-                source.getCompany().getCompanyKey(),
-                source.getCompany().getCompanyName(),
-                "Failed article",
-                "https://example.com/" + articleUrlHash,
-                LocalDateTime.of(2026, 6, 1, 10, 0),
-                "Context",
-                articleUrlHash,
-                false,
-                ArticleCandidateDecisionStatus.AI_FAILED,
-                List.of()
-        );
-        ArticleDiscoveryLog log = ArticleDiscoveryLog.create(run(99L), source, candidate);
-        ReflectionTestUtils.setField(log, "id", id);
-        return log;
+    private PreparedSourceCrawl prepared(Long sourceId) {
+        return new PreparedSourceCrawl(sourceId, List.of(), Map.of());
     }
 }

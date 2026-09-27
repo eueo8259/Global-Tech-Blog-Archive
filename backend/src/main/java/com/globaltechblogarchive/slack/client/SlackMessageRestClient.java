@@ -3,6 +3,7 @@ package com.globaltechblogarchive.slack.client;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.globaltechblogarchive.slack.application.SlackMessageClient;
 import com.globaltechblogarchive.slack.application.SlackMessageSendResult;
+import com.globaltechblogarchive.slack.application.SlackSendCertainty;
 import com.globaltechblogarchive.slack.application.digest.SlackChatMessage;
 import com.globaltechblogarchive.slack.exception.SlackMessageSendException;
 import java.net.http.HttpClient;
@@ -62,7 +63,8 @@ public class SlackMessageRestClient implements SlackMessageClient {
                     "NETWORK_ERROR",
                     "Slack chat.postMessage 네트워크 요청에 실패했습니다.",
                     true,
-                    null
+                    null,
+                    SlackSendCertainty.UNKNOWN
             );
         }
 
@@ -71,7 +73,8 @@ public class SlackMessageRestClient implements SlackMessageClient {
                     "EMPTY_RESPONSE",
                     "Slack chat.postMessage 응답이 비어 있습니다.",
                     true,
-                    null
+                    null,
+                    SlackSendCertainty.UNKNOWN
             );
         }
         if (!response.ok()) {
@@ -83,7 +86,17 @@ public class SlackMessageRestClient implements SlackMessageClient {
                     errorCode,
                     "Slack chat.postMessage 실패: " + errorCode,
                     RETRYABLE_SLACK_ERRORS.contains(errorCode),
-                    null
+                    null,
+                    certainty(errorCode)
+            );
+        }
+        if (response.ts() == null || response.ts().isBlank()) {
+            throw new SlackMessageSendException(
+                    "MISSING_MESSAGE_TS",
+                    "Slack chat.postMessage 성공 응답에 메시지 timestamp가 없습니다.",
+                    true,
+                    null,
+                    SlackSendCertainty.UNKNOWN
             );
         }
         return new SlackMessageSendResult(response.ts());
@@ -95,7 +108,8 @@ public class SlackMessageRestClient implements SlackMessageClient {
                     "HTTP_429",
                     "Slack API 호출 한도를 초과했습니다.",
                     true,
-                    retryAfter(exception.getResponseHeaders())
+                    retryAfter(exception.getResponseHeaders()),
+                    SlackSendCertainty.DEFINITELY_NOT_SENT
             );
         }
         if (exception.getStatusCode().is5xxServerError()) {
@@ -103,15 +117,27 @@ public class SlackMessageRestClient implements SlackMessageClient {
                     "HTTP_" + exception.getStatusCode().value(),
                     "Slack API 서버 오류가 발생했습니다.",
                     true,
-                    null
+                    null,
+                    SlackSendCertainty.UNKNOWN
             );
         }
         return new SlackMessageSendException(
                 "HTTP_" + exception.getStatusCode().value(),
                 "Slack API 요청이 거부되었습니다.",
                 false,
-                null
+                null,
+                SlackSendCertainty.DEFINITELY_NOT_SENT
         );
+    }
+
+    private SlackSendCertainty certainty(String errorCode) {
+        if (errorCode.equals("internal_error")
+                || errorCode.equals("fatal_error")
+                || errorCode.equals("request_timeout")
+                || errorCode.equals("service_unavailable")) {
+            return SlackSendCertainty.UNKNOWN;
+        }
+        return SlackSendCertainty.DEFINITELY_NOT_SENT;
     }
 
     private Duration retryAfter(HttpHeaders headers) {

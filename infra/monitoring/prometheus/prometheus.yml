@@ -1,0 +1,46 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - prometheus:9090
+
+  - job_name: techport-dev
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 10s
+    static_configs:
+      - targets:
+          - 172.31.52.9:9090
+        labels:
+          environment: dev
+
+  - job_name: techport-prod
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 10s
+    static_configs:
+      - targets:
+          - 172.31.15.143:9090
+        labels:
+          environment: prod
+
+  - job_name: techport-node
+    scrape_timeout: 10s
+    static_configs:
+      - targets:
+          - node-exporter:9100
+        labels:
+          environment: monitoring
+          instance: monitoring
+      - targets:
+          - 172.31.52.9:9100
+        labels:
+          environment: dev
+          instance: dev
+      - targets:
+          - 172.31.15.143:9100
+        labels:
+          environment: prod
+          instance: prod

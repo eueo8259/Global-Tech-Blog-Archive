@@ -8,3 +8,7 @@ spring:
 openai:
   api-key: test-key
   model: test-model
+
+crawl:
+  ai-review:
+    enabled: false

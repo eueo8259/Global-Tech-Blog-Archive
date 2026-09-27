@@ -4,10 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.globaltechblogarchive.company.domain.Company;
 import com.globaltechblogarchive.crawl.client.SourceDocumentClient;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.domain.CollectionMethod;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Tag;
@@ -19,7 +20,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class RealFeedArticleCandidateCollectorTest {
 
     private final FeedArticleCandidateCollector collector =
-            new FeedArticleCandidateCollector(new SourceDocumentClient());
+            new FeedArticleCandidateCollector(new SourceDocumentClient(new SimpleMeterRegistry()));
 
     @ParameterizedTest(name = "{0} feed returns parseable article cards")
     @MethodSource("feedSources")
@@ -38,7 +39,7 @@ class RealFeedArticleCandidateCollectorTest {
                 method
         );
 
-        List<ParsedArticle> cards = collector.collect(source, CrawlMode.RECENT);
+        List<ParsedArticle> cards = collector.collect(source, CrawlPolicy.recent());
 
         assertThat(cards).isNotEmpty();
         assertThat(cards).allSatisfy(card -> {

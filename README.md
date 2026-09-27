@@ -74,7 +74,7 @@ AI 검수를 통과한 아티클은 웹 아카이브에 노출됩니다. Slack D
 | 영역           | 기술                                                            |
 | -------------- | --------------------------------------------------------------- |
 | Frontend       | React 19, TypeScript 5, Vite 6, Playwright                      |
-| Backend        | Java 21, Spring Boot 3.5, Spring Data JPA, Spring Batch         |
+| Backend        | Java 21, Spring Boot 3.5, Spring Data JPA                       |
 | Database       | MySQL 8.4 LTS, Flyway                                           |
 | External API   | OpenAI API, Slack API                                           |
 | Infrastructure | AWS EC2, ECR, SSM, Docker Compose, Nginx, Let's Encrypt, Vercel |
@@ -94,7 +94,7 @@ AWS SSM을 통해 EC2에 배포합니다. 수집기는 외부 기술 블로그�
 가져오고, OpenAI API의 선별·번역·분류를 거친 결과를 저장합니다.
 
 Slack 앱 설치는 OAuth 2.0으로 처리하고 워크스페이스의 Bot Token은 암호화해 저장합니다.
-Spring Batch 기반 Daily Digest 작업은 채널별 기업 구독과 새 아티클을 조회해 메시지를 만들고,
+Scheduler가 시작하는 Daily Digest 작업은 채널별 기업 구독과 새 아티클을 조회해 메시지를 만들고,
 Slack Web API를 통해 구독 채널에 전달합니다.
 
 ## 프로젝트 구조

@@ -91,6 +91,7 @@ chore: update dependencies
 * Create one Pull Request per Issue.
 * Keep Pull Requests focused on a single purpose.
 * Do not mix features, refactoring, and formatting changes in the same Pull Request.
+* Complete the pre-PR review defined in `docs/code-review-workflow.md` before creating a Pull Request.
 * Include a summary of what changed and why.
 * 팀원이 내용을 직접 이해하고 검토할 수 있도록 Pull Request 제목과 본문은 한국어로 작성한다.
 * Conventional Commit 타입은 영어로 유지하고, 제목 설명은 한국어로 작성한다. 예: `feat: 기사 목록 페이지 구현`.

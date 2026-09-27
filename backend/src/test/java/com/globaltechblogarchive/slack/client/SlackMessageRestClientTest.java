@@ -7,11 +7,14 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
 
 import com.globaltechblogarchive.slack.application.SlackMessageSendResult;
+import com.globaltechblogarchive.slack.application.SlackSendCertainty;
 import com.globaltechblogarchive.slack.application.digest.SlackChatMessage;
 import com.globaltechblogarchive.slack.application.digest.SlackChatMessage.Block;
 import com.globaltechblogarchive.slack.exception.SlackMessageSendException;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -31,6 +34,8 @@ class SlackMessageRestClientTest {
                 .andExpect(header("Authorization", "Bearer xoxb-token"))
                 .andExpect(jsonPath("$.channel").value("C123"))
                 .andExpect(jsonPath("$.blocks[0].type").value("header"))
+                .andExpect(jsonPath("$.metadata.event_type").value("techport_digest_sent"))
+                .andExpect(jsonPath("$.metadata.event_payload.delivery_key").value("delivery-key"))
                 .andRespond(withSuccess(
                         "{\"ok\":true,\"ts\":\"1720937160.000100\"}",
                         MediaType.APPLICATION_JSON
@@ -58,6 +63,7 @@ class SlackMessageRestClientTest {
                 .isInstanceOfSatisfying(SlackMessageSendException.class, exception -> {
                     assertThat(exception.getErrorCode()).isEqualTo("invalid_auth");
                     assertThat(exception.isRetryable()).isFalse();
+                    assertThat(exception.getCertainty()).isEqualTo(SlackSendCertainty.DEFINITELY_NOT_SENT);
                 });
         server.verify();
     }
@@ -75,6 +81,7 @@ class SlackMessageRestClientTest {
                 .isInstanceOfSatisfying(SlackMessageSendException.class, exception -> {
                     assertThat(exception.isRetryable()).isTrue();
                     assertThat(exception.getRetryAfter()).isEqualTo(Duration.ofSeconds(30));
+                    assertThat(exception.getCertainty()).isEqualTo(SlackSendCertainty.DEFINITELY_NOT_SENT);
                 });
         server.verify();
     }
@@ -89,7 +96,52 @@ class SlackMessageRestClientTest {
 
         assertThatThrownBy(() -> client.send("xoxb-token", message()))
                 .isInstanceOfSatisfying(SlackMessageSendException.class, exception ->
-                        assertThat(exception.isRetryable()).isTrue());
+                        assertThat(exception.getCertainty()).isEqualTo(SlackSendCertainty.UNKNOWN));
+        server.verify();
+    }
+
+    @Test
+    void sendClassifiesSlackInternalErrorAsUnknown() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://slack.com");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://slack.com/api/chat.postMessage"))
+                .andRespond(withSuccess(
+                        "{\"ok\":false,\"error\":\"internal_error\"}",
+                        MediaType.APPLICATION_JSON
+                ));
+        SlackMessageRestClient client = new SlackMessageRestClient(builder.build());
+
+        assertThatThrownBy(() -> client.send("xoxb-token", message()))
+                .isInstanceOfSatisfying(SlackMessageSendException.class, exception ->
+                        assertThat(exception.getCertainty()).isEqualTo(SlackSendCertainty.UNKNOWN));
+        server.verify();
+    }
+
+    @Test
+    void sendClassifiesEmptyResponseAsUnknown() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://slack.com");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://slack.com/api/chat.postMessage"))
+                .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+        SlackMessageRestClient client = new SlackMessageRestClient(builder.build());
+
+        assertThatThrownBy(() -> client.send("xoxb-token", message()))
+                .isInstanceOfSatisfying(SlackMessageSendException.class, exception ->
+                        assertThat(exception.getCertainty()).isEqualTo(SlackSendCertainty.UNKNOWN));
+        server.verify();
+    }
+
+    @Test
+    void sendClassifiesNetworkErrorAsUnknown() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://slack.com");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://slack.com/api/chat.postMessage"))
+                .andRespond(withException(new SocketTimeoutException("timeout")));
+        SlackMessageRestClient client = new SlackMessageRestClient(builder.build());
+
+        assertThatThrownBy(() -> client.send("xoxb-token", message()))
+                .isInstanceOfSatisfying(SlackMessageSendException.class, exception ->
+                        assertThat(exception.getCertainty()).isEqualTo(SlackSendCertainty.UNKNOWN));
         server.verify();
     }
 
@@ -97,7 +149,8 @@ class SlackMessageRestClientTest {
         return new SlackChatMessage(
                 "C123",
                 "오늘의 새로운 기술 아티클 1개",
-                List.of(Block.header("오늘의 새로운 기술 아티클 1개"))
+                List.of(Block.header("오늘의 새로운 기술 아티클 1개")),
+                SlackChatMessage.Metadata.digest("delivery-key")
         );
     }
 }

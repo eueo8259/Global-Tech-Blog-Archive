@@ -1,75 +1,70 @@
 package com.globaltechblogarchive.crawl.application;
 
-import com.globaltechblogarchive.crawl.application.ArticleDecisionProcessor.ProcessedCandidates;
-import com.globaltechblogarchive.crawl.application.dto.SourceCrawlResult;
+import com.globaltechblogarchive.crawl.application.dto.PreparedSourceCrawl;
 import com.globaltechblogarchive.crawl.collector.ArticleCandidateCollector;
 import com.globaltechblogarchive.crawl.domain.ArticleAiDecision;
 import com.globaltechblogarchive.crawl.domain.ArticleCandidate;
-import com.globaltechblogarchive.crawl.domain.ArticleDiscoveryLog;
-import com.globaltechblogarchive.crawl.domain.CrawlMode;
+import com.globaltechblogarchive.crawl.domain.CrawlPolicy;
 import com.globaltechblogarchive.crawl.parser.ParsedArticle;
 import com.globaltechblogarchive.crawl.repository.ArticleAiDecisionRepository;
-import com.globaltechblogarchive.crawl.repository.ArticleDiscoveryLogRepository;
 import com.globaltechblogarchive.crawl.support.UrlHash;
 import com.globaltechblogarchive.crawl.support.UrlNormalizer;
 import com.globaltechblogarchive.source.domain.BlogSource;
 import com.globaltechblogarchive.source.repository.BlogSourceRepository;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class SourceCrawlProcessor {
 
-    private static final String PROMPT_VERSION = "v1";
-
     private final ArticleAiDecisionRepository decisionRepository;
-    private final ArticleDiscoveryLogRepository collectionItemRepository;
     private final ArticleCandidateCollectorRegistry collectorRegistry;
     private final ArticleCandidateFactory candidateFactory;
-    private final ArticleDecisionProcessor decisionProcessor;
-    private final CrawlPersistenceService persistenceService;
     private final BlogSourceRepository blogSourceRepository;
 
-    public SourceCrawlResult process(Long runId, Long sourceId, CrawlMode mode) {
+    public PreparedSourceCrawl prepare(Long sourceId, CrawlPolicy policy) {
+        long phaseStartedAt = System.nanoTime();
         BlogSource source = blogSourceRepository.findWithCompanyById(sourceId)
                 .orElseThrow(() -> new IllegalArgumentException("Blog source not found: " + sourceId));
-        ArticleCandidateCollector collector = collectorRegistry.find(source.getCollectionMethod());
-        List<ParsedArticle> cards = collector.collect(source, mode);
-        Map<String, ArticleAiDecision> decisionsByHash = findDecisionsByHash(source, cards);
-        List<ArticleCandidate> candidates = candidateFactory.create(source, cards, decisionsByHash);
-        Map<String, PreparedArticleDecision> preparedDecisions = decisionsByHash.values().stream()
-                .map(PreparedArticleDecision::from)
-                .collect(Collectors.toMap(
-                        PreparedArticleDecision::articleUrlHash,
-                        Function.identity()
-                ));
-        ProcessedCandidates processed = decisionProcessor.process(
-                source,
-                candidates,
-                preparedDecisions,
-                PROMPT_VERSION
-        );
-        return persistenceService.persistCollection(runId, sourceId, processed);
-    }
+        long sourceLoadDurationNanos = System.nanoTime() - phaseStartedAt;
 
-    public SourceCrawlResult retryAiFailures(Long runId, Long sourceId, List<Long> failureLogIds) {
-        BlogSource source = blogSourceRepository.findWithCompanyById(sourceId)
-                .orElseThrow(() -> new IllegalArgumentException("Blog source not found: " + sourceId));
-        List<ArticleCandidate> candidates = collectionItemRepository.findAllById(failureLogIds).stream()
-                .map(ArticleDiscoveryLog::toRetryCandidate)
-                .toList();
-        ProcessedCandidates processed = decisionProcessor.process(
-                source,
-                candidates,
-                new java.util.HashMap<>(),
-                PROMPT_VERSION
+        phaseStartedAt = System.nanoTime();
+        ArticleCandidateCollector collector = collectorRegistry.find(source.getCollectionMethod());
+        List<ParsedArticle> cards = collector.collect(source, policy);
+        long collectionDurationNanos = System.nanoTime() - phaseStartedAt;
+
+        phaseStartedAt = System.nanoTime();
+        Map<String, ArticleAiDecision> decisionsByHash = findDecisionsByHash(source, cards);
+        long decisionLookupDurationNanos = System.nanoTime() - phaseStartedAt;
+
+        phaseStartedAt = System.nanoTime();
+        List<ArticleCandidate> candidates = candidateFactory.create(source, cards, decisionsByHash);
+        long candidateCreationDurationNanos = System.nanoTime() - phaseStartedAt;
+
+        log.info(
+                "crawl_source_phase_measurement sourceKey={} sourceLoadMs={} collectionMs={} "
+                        + "decisionLookupMs={} candidateCreationMs={} cardCount={} candidateCount={}",
+                source.getSourceKey(),
+                millis(sourceLoadDurationNanos),
+                millis(collectionDurationNanos),
+                millis(decisionLookupDurationNanos),
+                millis(candidateCreationDurationNanos),
+                cards.size(),
+                candidates.size()
         );
-        return persistenceService.persistRetry(runId, sourceId, processed);
+        return new PreparedSourceCrawl(
+                sourceId,
+                candidates,
+                decisionsByHash
+        );
     }
 
     private Map<String, ArticleAiDecision> findDecisionsByHash(
@@ -89,13 +84,17 @@ public class SourceCrawlProcessor {
         return decisionRepository.findByCompanyIdAndArticleUrlHashInAndPromptVersion(
                         source.getCompany().getId(),
                         hashes,
-                        PROMPT_VERSION
+                        ArticleAiReviewService.PROMPT_VERSION
                 )
                 .stream()
                 .collect(Collectors.toMap(
                         ArticleAiDecision::getArticleUrlHash,
                         Function.identity()
                 ));
+    }
+
+    private long millis(long durationNanos) {
+        return TimeUnit.NANOSECONDS.toMillis(durationNanos);
     }
 
 }

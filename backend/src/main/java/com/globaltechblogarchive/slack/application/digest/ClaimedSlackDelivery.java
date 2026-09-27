@@ -7,6 +7,7 @@ public record ClaimedSlackDelivery(
         Long channelId,
         String slackChannelId,
         String encryptedBotToken,
+        String deliveryKey,
         LocalDateTime windowStartedAt,
         LocalDateTime windowEndedAt,
         int attemptCount
