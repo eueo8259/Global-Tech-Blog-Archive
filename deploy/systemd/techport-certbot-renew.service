@@ -1,0 +1,8 @@
+[Unit]
+Description=Renew TechPort TLS certificates
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/techport-renew-tls
